@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Models;
 using ExamBook.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,8 +27,12 @@ namespace ExamBook.Http
         }
 
 
-        public async Task<IEnumerable<Space>> List()
+        public async Task<IEnumerable<Space>> List([FromQuery] string userId)
         {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return await ListByUser(userId);
+            }
             IQueryable<Space> query =  _dbContext.Set<Space>();
 
             return await query.ToListAsync();
@@ -49,6 +54,7 @@ namespace ExamBook.Http
                 .Concat(students.Select(s => s.Classroom.Space))
                 .DistinctBy(s => s.Id);
 
+            
             return spaces;
         }
     }

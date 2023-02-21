@@ -8,6 +8,18 @@ namespace ExamBook.Models
         public DateTime StartAt { get; set; }
     }
     
+    public class ExaminationSpecialityAddModel
+    {
+        public string Name { get; set; } = "";
+    }
+    
+    public class ExaminationSpecialityChangeNameModel
+    {
+        public string Name { get; set; } = "";
+    }
+    
+    
+    
     
     public class ExaminationEditModel
     {
