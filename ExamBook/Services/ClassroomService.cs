@@ -17,6 +17,12 @@ namespace ExamBook.Services
         private DbContext _dbContext;
         private ILogger<ClassroomService> _logger;
 
+        public ClassroomService(DbContext dbContext, ILogger<ClassroomService> logger)
+        {
+            _dbContext = dbContext;
+            _logger = logger;
+        }
+
 
         public async Task<Classroom> AddClassroom(Space space, ClassroomAddModel model)
         {
@@ -33,11 +39,13 @@ namespace ExamBook.Services
                 Space = space,
                 Name = model.Name
             };
+            classroom.ClassroomSpecialities = await CreateClassroomSpecialitiesAsync(classroom, model.SpecialityIds);
 
-           await _dbContext.AddAsync(classroom);
-           await _dbContext.SaveChangesAsync();
+            await _dbContext.AddAsync(classroom);
+            await _dbContext.SaveChangesAsync();
 
-           return classroom;
+            _logger.LogInformation("New classroom {} in space: {}", classroom.Name, space.Name);
+            return classroom;
         }
 
 
@@ -50,7 +58,7 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
             return classroomSpecialities;
         }
-        
+
 
         public async Task<ClassroomSpeciality> AddSpeciality(Classroom classroom, Speciality speciality)
         {
@@ -60,7 +68,7 @@ namespace ExamBook.Services
             return classroomSpeciality;
         }
 
-        public async Task<List<ClassroomSpeciality>> CreateClassroomSpecialitiesAsync(Classroom classroom, 
+        public async Task<List<ClassroomSpeciality>> CreateClassroomSpecialitiesAsync(Classroom classroom,
             List<ulong> specialityIds)
         {
             Asserts.NotNull(classroom, nameof(classroom));
@@ -69,7 +77,7 @@ namespace ExamBook.Services
             var specialities = await _dbContext.Set<Speciality>()
                 .Where(s => specialityIds.Contains(s.Id))
                 .ToListAsync();
-            
+
             var classroomSpecialities = new List<ClassroomSpeciality>();
 
             foreach (var speciality in specialities)
@@ -91,7 +99,7 @@ namespace ExamBook.Services
             {
                 throw new IncompatibleEntityException(classroom, speciality);
             }
-            
+
             if (await ContainsSpecialityAsync(classroom, speciality))
             {
                 SpaceHelper.ThrowDuplicateClassroomSpeciality();
@@ -120,11 +128,11 @@ namespace ExamBook.Services
             Asserts.NotNull(space, nameof(space));
             Asserts.NotNullOrWhiteSpace(name, nameof(name));
             var normalized = name.Normalize().ToUpper();
-            return await  _dbContext.Set<Classroom>()
+            return await _dbContext.Set<Classroom>()
                 .AnyAsync(c => space.Equals(c.Space) && c.NormalizedName == normalized);
         }
-        
-        
+
+
         public async Task<Classroom?> FindAsync(Space space, string name)
         {
             var normalized = name.Normalize().ToUpper();
@@ -132,7 +140,5 @@ namespace ExamBook.Services
                 .Where(c => space.Equals(c.Space) && normalized == c.Name)
                 .FirstOrDefaultAsync();
         }
-        
-        
     }
 }

@@ -11,7 +11,8 @@ namespace ExamBook.Entities.School
 
         public HashSet<Student> Students { get; set; } = new();
         public HashSet<Course> Courses { get; set; } = new();
-        
+        public List<ClassroomSpeciality> ClassroomSpecialities { get; set; } = new();
+
     }
 
 
