@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Entities.School;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -39,18 +41,57 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<Classroom> AddSpeciality(Classroom classroom, Speciality speciality)
+        public async Task<List<ClassroomSpeciality>> AddClassroomSpecialitiesAsync(
+            Classroom classroom,
+            List<ulong> specialityIds)
         {
-            
+            var classroomSpecialities = await CreateClassroomSpecialitiesAsync(classroom, specialityIds);
+            await _dbContext.AddRangeAsync(classroomSpecialities);
+            await _dbContext.SaveChangesAsync();
+            return classroomSpecialities;
         }
         
-        
-        
+
+        public async Task<ClassroomSpeciality> AddSpeciality(Classroom classroom, Speciality speciality)
+        {
+            var classroomSpeciality = await CreateSpecialityAsync(classroom, speciality);
+            await _dbContext.AddAsync(classroomSpeciality);
+            await _dbContext.SaveChangesAsync();
+            return classroomSpeciality;
+        }
+
+        public async Task<List<ClassroomSpeciality>> CreateClassroomSpecialitiesAsync(Classroom classroom, 
+            List<ulong> specialityIds)
+        {
+            Asserts.NotNull(classroom, nameof(classroom));
+            Asserts.NotNull(specialityIds, nameof(specialityIds));
+
+            var specialities = await _dbContext.Set<Speciality>()
+                .Where(s => specialityIds.Contains(s.Id))
+                .ToListAsync();
+            
+            var classroomSpecialities = new List<ClassroomSpeciality>();
+
+            foreach (var speciality in specialities)
+            {
+                var classroomSpeciality = await CreateSpecialityAsync(classroom, speciality);
+                classroomSpecialities.Add(classroomSpeciality);
+            }
+
+            return classroomSpecialities;
+        }
+
         public async Task<ClassroomSpeciality> CreateSpecialityAsync(Classroom classroom, Speciality speciality)
         {
             Asserts.NotNull(classroom, nameof(classroom));
             Asserts.NotNull(speciality, nameof(speciality));
+            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
 
+            if (!classroom.Space!.Equals(speciality.Space))
+            {
+                throw new IncompatibleEntityException(classroom, speciality);
+            }
+            
             if (await ContainsSpecialityAsync(classroom, speciality))
             {
                 SpaceHelper.ThrowDuplicateClassroomSpeciality();
