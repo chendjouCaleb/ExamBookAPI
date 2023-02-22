@@ -1,7 +1,12 @@
-﻿namespace ExamBook.Entities
+﻿namespace ExamBook.Entities.School
 {
-    public class Speciality
+    public class Speciality:Entity
     {
+        public Space? Space { get; set; }
+        public ulong? SpaceId { get; set; }
+        
+        
         public string Name { get; set; } = "";
+        public string NormalizedName { get; set; } = "";
     }
 }

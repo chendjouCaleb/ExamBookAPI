@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using ExamBook.Entities.School;
 using Newtonsoft.Json;
 
 namespace ExamBook.Entities
