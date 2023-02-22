@@ -140,5 +140,17 @@ namespace ExamBook.Services
                 .Where(c => space.Equals(c.Space) && normalized == c.Name)
                 .FirstOrDefaultAsync();
         }
+        
+        
+        public async Task Delete(Classroom classroom)
+        {
+            Asserts.NotNull(classroom, nameof(classroom));
+            var classroomSpecialities = _dbContext.Set<ClassroomSpeciality>()
+                .Where(cs => classroom.Equals(cs.Classroom));
+
+            _dbContext.RemoveRange(classroomSpecialities);
+            _dbContext.Remove(classroom);
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }
