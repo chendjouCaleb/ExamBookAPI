@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Helpers;
@@ -11,6 +12,7 @@ namespace ExamBook.Services
     public class TestService
     {
         private readonly DbContext _dbContext;
+        private readonly PaperService _paperService;
 
 
         public async Task<Test> Add(Examination examination, TestAddModel model)
@@ -31,7 +33,9 @@ namespace ExamBook.Services
                 Radical = model.Radical,
                 Duration = model.Duration,
             };
+            var papers = _paperService.CreateTestPapers(test);
             await _dbContext.AddAsync(test);
+            await _dbContext.AddRangeAsync(papers);
             await _SetRoomAsync(test, model.RoomId);
 
             
@@ -67,6 +71,15 @@ namespace ExamBook.Services
             string normalized = name.Normalize().ToUpper();
             return await _dbContext.Set<Test>()
                 .AnyAsync(p => examination.Equals(p.Examination) && p.Name == normalized);
+        }
+
+        public async Task Delete(Test test)
+        {
+            var testGroups = _dbContext.Set<TestGroup>().Where(g => test.Equals(g.Test));
+            
+            _dbContext.RemoveRange(testGroups);
+            _dbContext.Remove(test);
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

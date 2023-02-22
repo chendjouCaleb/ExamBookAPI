@@ -18,6 +18,8 @@ namespace ExamBook.Entities
 
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
+
+        public string FullName => $"{FirstName} {LastName}";
         public DateTime BirthDate { get; set; }
         public char Sex { get; set; }
 
