@@ -14,8 +14,8 @@ namespace ExamBook.Services
 {
     public class ClassroomService
     {
-        private DbContext _dbContext;
-        private ILogger<ClassroomService> _logger;
+        private readonly DbContext _dbContext;
+        private readonly ILogger<ClassroomService> _logger;
 
         public ClassroomService(DbContext dbContext, ILogger<ClassroomService> logger)
         {
