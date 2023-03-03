@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
-using ExamBook.Models;
 using ExamBook.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +14,12 @@ namespace ExamBook.Http
     {
         private SpaceService _spaceService;
         private DbContext _dbContext;
+
+        public SpaceController(SpaceService spaceService, DbContext dbContext)
+        {
+            _spaceService = spaceService;
+            _dbContext = dbContext;
+        }
 
 
         [Route("{identifier}")]
@@ -52,6 +55,8 @@ namespace ExamBook.Http
 
             var spaces = members.Select(m => m.Space)
                 .Concat(students.Select(s => s.Classroom.Space))
+                .Where(s => s != null)
+                .Select(s => s!)
                 .DistinctBy(s => s.Id);
 
             

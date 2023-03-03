@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using ExamBook.Entities.School;
 using Newtonsoft.Json;
 
 namespace ExamBook.Entities
@@ -16,9 +15,7 @@ namespace ExamBook.Entities
         public DateTime BirthDate { get; set; }
 
 
-        [JsonIgnore]
-        public User User { get; set; } = null!;
-        public string? UserId { get; set; }
+        public string UserId { get; set; } = "";
         
         [JsonIgnore]
         public Classroom Classroom { get; set; } = null!;

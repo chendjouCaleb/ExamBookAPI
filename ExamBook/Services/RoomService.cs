@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Helpers;
+using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;

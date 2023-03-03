@@ -6,6 +6,7 @@ using ExamBook.Helpers;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ExamBook.Services
 {
@@ -13,6 +14,14 @@ namespace ExamBook.Services
     {
         private readonly DbContext _dbContext;
         private readonly PaperService _paperService;
+        private readonly ILogger<TestService> _logger;
+
+        public TestService(DbContext dbContext, PaperService paperService, ILogger<TestService> logger)
+        {
+            _dbContext = dbContext;
+            _paperService = paperService;
+            _logger = logger;
+        }
 
 
         public async Task<Test> Add(Examination examination, TestAddModel model)
@@ -40,6 +49,7 @@ namespace ExamBook.Services
 
             
             await _dbContext.SaveChangesAsync();
+            _logger.Log(LogLevel.Information, "New test");
 
             return test;
         }

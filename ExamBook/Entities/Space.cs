@@ -6,6 +6,7 @@ namespace ExamBook.Entities
     {
         public string Name { get; set; } = "";
         public string Identifier { get; set; } = "";
+        public string NormalizedIdentifier { get; set; } = "";
         
         public HashSet<Member> Members { get; set; } = new();
     }

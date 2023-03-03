@@ -1,10 +1,12 @@
-﻿namespace ExamBook.Entities
-{
-    public class Member
-    {
-        public Space Space { get; set; } = null!;
+﻿using System;
 
-        public string UserId { get; set; } = null!;
+namespace ExamBook.Entities
+{
+    public class Member:Entity
+    {
+        public string UserId { get; set; } = "";
+        
+        public Space? Space { get; set; }
         public ulong SpaceId { get; set; }
         
         public bool IsAdmin { get; set; }

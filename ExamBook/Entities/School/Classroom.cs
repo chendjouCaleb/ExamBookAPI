@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace ExamBook.Entities.School
+namespace ExamBook.Entities
 {
     public class Classroom:Entity
     {

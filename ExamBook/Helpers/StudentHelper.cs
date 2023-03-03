@@ -1,6 +1,5 @@
 ﻿using System;
 using ExamBook.Entities;
-using ExamBook.Entities.School;
 
 namespace ExamBook.Helpers
 {

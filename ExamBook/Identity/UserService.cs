@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using ExamBook.Entities;
+using ExamBook.Identity.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,8 +8,8 @@ namespace ExamBook.Identity
 {
     public class UserService
     {
-        private UserManager<User> _userManager;
-        private DbContext _dbContext;
+        private readonly UserManager<User> _userManager;
+        private readonly DbContext _dbContext;
 
         public UserService(UserManager<User> userManager, DbContext dbContext)
         {
@@ -41,14 +41,14 @@ namespace ExamBook.Identity
         }
 
        
-        public async Task ChangeUserName(User user, string userName)
+        public async Task ChangeUserNameAsync(User user, string userName)
         {
-            
+            await _userManager.SetUserNameAsync(user, userName);
         }
 
-        public async Task Delete(User user)
+        public async Task DeleteAsync(User user)
         {
-            
+            await _userManager.DeleteAsync(user);
         }
 
         public async Task<bool> ContainsEmail(string email)

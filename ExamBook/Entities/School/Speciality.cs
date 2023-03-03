@@ -1,4 +1,4 @@
-﻿namespace ExamBook.Entities.School
+﻿namespace ExamBook.Entities
 {
     public class Speciality:Entity
     {

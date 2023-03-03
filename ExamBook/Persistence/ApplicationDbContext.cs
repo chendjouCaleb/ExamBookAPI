@@ -5,6 +5,12 @@ namespace ExamBook.Persistence
 {
     public class ApplicationDbContext:DbContext
     {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options):base(options)
+        {
+            
+        }
+        
+        
         public DbSet<Examination> Examinations { get; set; } = null!;
         public DbSet<Space> Groups { get; set; }
         public DbSet<Member> Members { get; set; }

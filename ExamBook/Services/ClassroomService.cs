@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
-using ExamBook.Entities.School;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Models;

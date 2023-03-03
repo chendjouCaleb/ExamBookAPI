@@ -5,12 +5,20 @@ using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ExamBook.Services
 {
     public class TestGroupService
     {
-        public readonly DbContext _dbContext;
+        private readonly DbContext _dbContext;
+        private readonly ILogger<TestGroupService> _logger;
+
+        public TestGroupService(DbContext dbContext, ILogger<TestGroupService> logger)
+        {
+            _dbContext = dbContext;
+            _logger = logger;
+        }
 
 
         public async Task<TestGroup> Add(Test test, Room room)
@@ -38,6 +46,8 @@ namespace ExamBook.Services
 
             await _dbContext.AddAsync(testGroup);
             await _dbContext.SaveChangesAsync();
+            
+            _logger.LogInformation("New Test group");
 
             return testGroup;
         }

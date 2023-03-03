@@ -12,9 +12,13 @@ namespace ExamBook.Http
     [Route("api/examinations")]
     public class ExaminationControllerApi:ControllerBase
     {
-        private ExaminationService _controller;
-        private DbContext _dbContext;
+        
+        private readonly DbContext _dbContext;
 
+        public ExaminationControllerApi(DbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
 
         public async Task<Examination> Get(long id)
         {
