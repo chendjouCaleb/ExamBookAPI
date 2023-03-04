@@ -20,6 +20,9 @@ namespace ExamBook.Entities
         /// </summary>
         public bool IsGeneral { get; set; }
 
+        public Space? Space { get; set; }
+        public ulong SpaceId { get; set; }
+        
         public Classroom? Classroom { get; set; }
         public ulong? ClassroomId { get; set; }
 

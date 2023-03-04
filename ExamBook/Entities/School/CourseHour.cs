@@ -14,6 +14,10 @@ namespace ExamBook.Entities
 
         public TimeSpan EndHour { get; set; }
 
+        public Room? Room { get; set; }
+        public ulong? RoomId { get; set; }
+
+        public Classroom? Classroom { get; set; }
         public ulong ClassroomId { get; set; }
         
         [JsonIgnore]
