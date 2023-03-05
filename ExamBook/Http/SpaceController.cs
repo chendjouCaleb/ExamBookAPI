@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Models;
 using ExamBook.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +24,7 @@ namespace ExamBook.Http
         }
 
 
-        [Route("{identifier}")]
+        [HttpGet("{identifier}")]
         public async Task<Space> Get(string identifier)
         {
             Space space = await _spaceService.GetAsync(identifier);
@@ -30,6 +32,7 @@ namespace ExamBook.Http
         }
 
 
+        [HttpGet]
         public async Task<IEnumerable<Space>> List([FromQuery] string userId)
         {
             if (string.IsNullOrEmpty(userId))
@@ -41,7 +44,8 @@ namespace ExamBook.Http
             return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<Space>> ListByUser(string userId)
+       
+        private async Task<IEnumerable<Space>> ListByUser(string userId)
         {
             var members = await _dbContext.Set<Member>()
                 .Include(m => m.Space)
@@ -61,6 +65,29 @@ namespace ExamBook.Http
 
             
             return spaces;
+        }
+
+
+
+        public async Task<CreatedAtActionResult> AddSpace([FromBody] SpaceAddModel model)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        public async Task<StatusCodeResult> ChangeIdentifier(ulong spaceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<StatusCodeResult> ChangeName(ulong spaceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<NoContentResult> Delete(ulong spaceId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

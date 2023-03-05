@@ -36,18 +36,18 @@ namespace ExamBook.Services
             return space;
         }
 
-        public async Task<Space> AddAsync(User user, SpaceModel model)
+        public async Task<Space> AddAsync(User user, SpaceAddModel addModel)
         {
-            if (await AnyAsync(model.Identifier))
+            if (await AnyAsync(addModel.Identifier))
             {
                 
-                throw new InvalidOperationException($"The identifier '{model.Identifier}' is used.");
+                throw new InvalidOperationException($"The identifier '{addModel.Identifier}' is used.");
             }
 
             Space space = new()
             {
-                Identifier = model.Identifier,
-                Name = model.Name
+                Identifier = addModel.Identifier,
+                Name = addModel.Name
             };
             await _dbContext.AddAsync(space);
 

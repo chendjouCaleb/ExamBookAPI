@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
-    public class CourseHour
+    public class CourseHour:Entity
     {
         public Course? Course { get; set; }
 

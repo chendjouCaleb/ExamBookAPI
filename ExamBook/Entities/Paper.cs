@@ -25,7 +25,7 @@ namespace ExamBook.Entities
         public ulong? TestSpecialityId { get; set; }
     }
         
-        public class PaperSpeciality
+        public class PaperSpeciality:Entity
         {
             public PaperSpeciality() {}
             public PaperSpeciality(Paper paper, ParticipantSpeciality? participantSpeciality)

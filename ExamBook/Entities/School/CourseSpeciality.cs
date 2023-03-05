@@ -1,8 +1,6 @@
-﻿using ExamBook.Entities;
-
-namespace ExamBook.Entities
+﻿namespace ExamBook.Entities
 {
-    public class CourseSpeciality
+    public class CourseSpeciality:Entity
     {
         public Course? Course { get; set; }
         public ulong? CourseId { get; set; }

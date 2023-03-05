@@ -2,7 +2,7 @@
 
 namespace ExamBook.Entities
 {
-    public class CourseTeacher
+    public class CourseTeacher:Entity
     {
         public Course? Course { get; set; }
         public ulong? CourseId { get; set; }

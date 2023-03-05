@@ -2,7 +2,7 @@
 
 namespace ExamBook.Entities
 {
-    public class Test
+    public class Test:Entity
     {
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }

@@ -3,8 +3,11 @@ using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
-    public class CourseSession
+    public class CourseSession:Entity
     {
+        public Classroom? Classroom { get; set; }
+        public ulong ClassroomId { get; set; }
+        
         public CourseHour? CourseHour { get; set; }
         public ulong? CourseHourId { get; set; }
 
@@ -18,14 +21,15 @@ namespace ExamBook.Entities
         public CourseTeacher? CourseTeacher { get; set; }
         public long? CourseTeacherId { get; set; }
         
-        public DateTime? ExpectedStartDate { get; set; }
-        public DateTime? ExpectedEndDate { get; set; }
+        public DateTime? ExpectedStartDateTime { get; set; }
+        public DateTime? ExpectedEndDateTime { get; set; }
         
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
+        public DateTime? StartDateTime { get; set; }
+        public DateTime? EndDateTime { get; set; }
 
-        public string Objective { get; set; } = "";
+        public string Description { get; set; } = "";
         public string Report { get; set; } = "";
-        public bool Lecture { get; set; }
     }
+
+    
 }

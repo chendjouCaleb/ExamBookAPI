@@ -62,7 +62,7 @@ namespace ExamBook.Services
                 .Set<Space>()
                 .FindAsync(course.Classroom!.SpaceId);
 
-            if (await ContainsByCode(space, code))
+            if (await ContainsByCode(space!, code))
             {
                 CourseHelper.ThrowDuplicateCode(code);
             }
@@ -80,7 +80,7 @@ namespace ExamBook.Services
             
             Asserts.NotNull(classroom, nameof(classroom));
             
-            if (await ContainsByName(classroom, name))
+            if (await ContainsByName(classroom!, name))
             {
                 CourseHelper.ThrowDuplicateCode(name);
             }
@@ -149,7 +149,7 @@ namespace ExamBook.Services
 
             if (member == null)
             {
-                
+                throw new InvalidOperationException($"Member with id={model.MemberId} not found.");
             }
 
             if (!member.IsTeacher)
@@ -266,7 +266,7 @@ namespace ExamBook.Services
             var member = await _dbContext.Set<Member>().FindAsync(memberId);
             if (member == null)
             {
-                
+                throw new InvalidOperationException($"Member with id={memberId} not found.");
             }
             return await CourseTeacherExistsAsync(course, member);
         }

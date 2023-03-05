@@ -2,7 +2,7 @@
 
 namespace ExamBook.Models
 {
-    public class SpaceModel
+    public class SpaceAddModel
     {
         
         [Required]

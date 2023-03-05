@@ -13,6 +13,12 @@ namespace ExamBook.Services
         private readonly DbContext _dbContext;
         private readonly ILogger<CourseHourService> _logger;
 
+        public CourseHourService(DbContext dbContext, ILogger<CourseHourService> logger)
+        {
+            _dbContext = dbContext;
+            _logger = logger;
+        }
+
 
         public async Task<CourseHour> AddCourseAsync(Classroom classroom, CourseHourAddModel model)
         {

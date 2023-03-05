@@ -1,4 +1,5 @@
 using ExamBook.Persistence;
+using ExamBook.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,8 @@ services.AddDbContext<DbContext, ApplicationDbContext>(options =>
     var version = ServerVersion.AutoDetect(connectionStrings);
     options.UseMySql(connectionStrings, version);
 });
+
+services.AddApplicationServices();
 
 var app = builder.Build();
 
