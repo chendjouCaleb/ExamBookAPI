@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using ExamBook.Exceptions;
+using ExamBook.Helpers;
 using ExamBook.Identity.Models;
+using ExamBook.Persistence;
+using ExamBook.Validators;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,14 +17,16 @@ namespace ExamBook.Identity
         private readonly UserManager<User> _userManager;
         private readonly DbContext _dbContext;
 
-        public UserService(UserManager<User> userManager, DbContext dbContext)
+        public UserService(UserManager<User> userManager, ApplicationIdentityDbContext dbContext)
         {
             _userManager = userManager;
             _dbContext = dbContext;
         }
 
+        
 
-        public async Task<User> AddUser(UserAddModel model)
+
+        public async Task<User> AddUserAsync(UserAddModel model)
         {
             if (await ContainsUserName(model.UserName))
             {
@@ -35,14 +43,19 @@ namespace ExamBook.Identity
                 CreatedAt = DateTime.UtcNow
             };
 
-            await _userManager.CreateAsync(user, model.Password);
+            var result = await _userManager.CreateAsync(user, model.Password);
 
             return user;
         }
 
        
-        public async Task ChangeUserNameAsync(User user, string userName)
+        public async Task ChangeUserNameAsync(string id, string userName)
         {
+            var user = await FindByIdAsync(id);
+            var validator = new UserNameValidator();
+            validator.Validate(userName);
+            
+            
             await _userManager.SetUserNameAsync(user, userName);
         }
 
@@ -50,17 +63,68 @@ namespace ExamBook.Identity
         {
             await _userManager.DeleteAsync(user);
         }
+        
+        
+        public async Task<List<User>> SelectAllAsync()
+        {
+            var users = await _dbContext.Set<User>()
+                .Select(u => new User
+                {
+                    Id = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    CreatedAt = u.CreatedAt,
+                    DeletedAt = u.DeletedAt,
+                    Deleted = u.Deleted
+                })
+                .ToListAsync();
+
+
+            return users;
+        }
+
+        public async Task<User> SelectById(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<User> FindByIdAsync(string id)
+        {
+            var user = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.Id == id);
+            
+            if (user == null)
+            {
+                UserNotFoundException.ThrowNotFoundId(id);
+            }
+
+            return user!;
+        }
+
+
+        public async Task<User> FindByUserName(string userName)
+        {
+            string normalizedUserName = StringHelper.Normalize(userName);
+            var user = await _dbContext.Set<User>()
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedUserName);
+
+            if (user == null)
+            {
+                UserNotFoundException.ThrowNotFoundUserName(userName);
+            }
+
+            return user!;
+        }
 
         public async Task<bool> ContainsEmail(string email)
         {
             var normalizedEmail = email.Normalize().ToUpper();
-            return await _dbContext.Set<User>().AnyAsync(u => normalizedEmail.Equals(u.NormalizedEmail));
+            return await _dbContext.Set<User>().AnyAsync(u => normalizedEmail == u.NormalizedEmail);
         }
         
         public async Task<bool> ContainsUserName(string userName)
         {
             var normalizedUserName = userName.Normalize().ToUpper();
-            return await _dbContext.Set<User>().AnyAsync(u => normalizedUserName.Equals(u.NormalizedUserName));
+            return await _dbContext.Set<User>().AnyAsync(u => normalizedUserName == u.NormalizedUserName);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace ExamBook.Entities
         
         [JsonIgnore]
         public CourseTeacher? CourseTeacher { get; set; }
-        public long? CourseTeacherId { get; set; }
+        public ulong? CourseTeacherId { get; set; }
         
         public DateTime? ExpectedStartDateTime { get; set; }
         public DateTime? ExpectedEndDateTime { get; set; }

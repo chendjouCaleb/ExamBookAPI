@@ -13,10 +13,10 @@ namespace ExamBook.Entities
         [JsonIgnore] 
         public Room Room { get; set; } = null!;
 
-        public long? RoomId { get; set; }
+        public ulong? RoomId { get; set; }
 
         [JsonIgnore] public Test Test { get; set; } = null!;
-        public long TestId { get; set; }
+        public ulong TestId { get; set; }
 
 
         [JsonIgnore] public List<Paper> Papers { get; set; } = new();

@@ -22,7 +22,7 @@ namespace ExamBook.Entities
         
         [JsonIgnore]
         public CourseTeacher? CourseTeacher { get; set; }
-        public long? CourseTeacherId { get; set; }
+        public ulong? CourseTeacherId { get; set; }
 
         
         public List<CourseSession> CourseSessions { get; set; } = new();

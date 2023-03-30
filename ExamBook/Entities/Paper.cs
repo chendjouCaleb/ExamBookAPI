@@ -17,7 +17,7 @@ namespace ExamBook.Entities
         public ulong? ParticipantId { get; set; }
 
         public Test? Test { get; set; }
-        public long TestId { get; set; }
+        public ulong TestId { get; set; }
 
         public List<PaperSpeciality> PaperSpecialities { get; set; } = new();
 

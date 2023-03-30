@@ -1,13 +1,18 @@
-﻿using System;
-using ExamBook.Identity.Models;
+﻿using ExamBook.Identity.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamBook.Persistence
 {
-    public class IdentityDbContext:DbContext
+    public class ApplicationIdentityDbContext:IdentityDbContext<User>
     {
-        public DbSet<User> Users { get; set; }
-        public DbSet<Role> Roles { get; set; }
+        public ApplicationIdentityDbContext(DbContextOptions<ApplicationIdentityDbContext> options):base(options)
+        {
+            
+        }
+        
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Role> Roles => Set<Role>();
+        public DbSet<Session> Sessions => Set<Session>();
     }
 }

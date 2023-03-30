@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
+using ExamBook.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -26,7 +27,7 @@ namespace ExamBook.Services
             {
                 throw new InvalidOperationException($"User with id={model.UserId} not found.");
             }
-            if (await IsSpaceMember(space, user))
+            if (await IsSpaceMember(space, model.UserId))
             {
                 
             }
@@ -39,24 +40,29 @@ namespace ExamBook.Services
             return member;
         }
 
-        public async Task<Member> CreateMember(Space space, MemberAddModel addModel)
+        public async Task<Member> CreateMember(Space space, MemberAddModel model)
         {
-            var user = await _dbContext.Set<User>().FindAsync(addModel.UserId);
+            //var user = await _dbContext.Set<User>().FindAsync(addModel.UserId);
             var member = new Member
             {
-                UserId = user!.Id,
+                UserId = model.UserId,
                 Space = space,
-                IsAdmin = addModel.IsAdmin
+                IsAdmin = model.IsAdmin
             };
 
             return member;
         }
 
+        public async Task SetAsAdmin(Member member)
+        {
+            
+        }
 
-        public async Task<bool> IsSpaceMember(Space space, User user)
+
+        public async Task<bool> IsSpaceMember(Space space, string userId)
         {
             return await _dbContext.Set<Member>()
-                .AnyAsync(m => m.SpaceId == space.Id && m.UserId == user.Id);
+                .AnyAsync(m => m.SpaceId == space.Id && m.UserId == userId);
         }
     }
 }

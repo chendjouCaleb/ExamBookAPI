@@ -20,4 +20,13 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.2" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Files" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Drive\Drive.csproj" />
+      <ProjectReference Include="..\Social\Social.csproj" />
+    </ItemGroup>
+
 </Project>
