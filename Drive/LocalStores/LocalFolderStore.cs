@@ -23,16 +23,26 @@ namespace DriveIO.LocalStores
             });
         }
 
+        public Task CreateIfNotExistsAsync(string name)
+        {
+            string path = Path.Join(_options.DirectoryPath, name);
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            return Task.CompletedTask;
+        }
+
         public Task<bool> ContainsAsync(string name)
         {
-            string path = string.Join(_options.DirectoryPath, name);
+            string path = Path.Join(_options.DirectoryPath, name);
             var exists = Directory.Exists(path);
             return Task.FromResult(exists);
         }
 
         public Task DeleteAsync(string name)
         {
-            string path = string.Join(_options.DirectoryPath, name);
+            string path = Path.Join(_options.DirectoryPath, name);
             Directory.Delete(path);
             return Task.CompletedTask;
         }

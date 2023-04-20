@@ -5,6 +5,8 @@ namespace DriveIO.Stores
     public interface IFolderStore
     {
         public Task CreateAsync(string name);
+        
+        public Task CreateIfNotExistsAsync(string name);
 
         public Task<bool> ContainsAsync(string name);
 

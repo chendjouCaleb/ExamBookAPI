@@ -34,6 +34,7 @@ namespace DriveIO.EFCore
         {
             await _dbContext.AddAsync(baseFile);
             await _dbContext.SaveChangesAsync();
+            await _dbContext.Entry(baseFile).ReloadAsync();
         }
 
         public async Task<IEnumerable<BaseFile>> ListAsync()

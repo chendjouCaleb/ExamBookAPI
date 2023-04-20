@@ -13,7 +13,7 @@ namespace Social.EFCore
             _dbContext = dbContext;
         }
 
-        public ValueTask<Post?> FindAsync(string id)
+        public ValueTask<Post?> FindAsync(long id)
         {
             return _dbContext.Posts.FindAsync(id);
         }
@@ -21,6 +21,12 @@ namespace Social.EFCore
         public async Task SaveAsync(Post post)
         {
             await _dbContext.AddAsync(post);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        public async Task SavePostFileAsync(PostFile postFile)
+        {
+            await _dbContext.AddAsync(postFile);
             await _dbContext.SaveChangesAsync();
         }
 

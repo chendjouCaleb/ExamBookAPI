@@ -33,6 +33,12 @@ namespace DriveIO.LocalStores
             
             return Task.CompletedTask;
         }
-        
+
+        public Stream GetStreamAsync(BaseFile file)
+        {
+            var folder = file.Folder!;
+            string filePath = Path.Join(_options.DirectoryPath, folder.Name, file.Name);
+            return new FileStream(filePath, FileMode.Open);
+        }
     }
 }

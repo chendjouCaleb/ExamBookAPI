@@ -9,18 +9,32 @@ using ExamBook.Persistence;
 using ExamBook.Validators;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Social.Entities;
+using Social.Services;
+using Vx.Models;
+using Vx.Services;
 
 namespace ExamBook.Identity
 {
     public class UserService
     {
         private readonly UserManager<User> _userManager;
+        private readonly AuthorService _authorService;
+        private readonly ActorService _actorService;
+        private readonly PublisherService _publisherService;
         private readonly DbContext _dbContext;
 
-        public UserService(UserManager<User> userManager, ApplicationIdentityDbContext dbContext)
+        public UserService(UserManager<User> userManager, 
+            ApplicationIdentityDbContext dbContext, 
+            AuthorService authorService, 
+            ActorService actorService, 
+            PublisherService publisherService)
         {
             _userManager = userManager;
             _dbContext = dbContext;
+            _authorService = authorService;
+            _actorService = actorService;
+            _publisherService = publisherService;
         }
 
         
@@ -44,6 +58,15 @@ namespace ExamBook.Identity
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
+            
+            var author = await _authorService.AddAuthorAsync(user.UserName);
+            var actor = await _actorService.AddAsync();
+            var publisher = await _publisherService.AddAsync();
+            
+            user.AuthorId = author.Id;
+            user.ActorId = actor.Id;
+            user.PublisherId = publisher.Id;
+            await _userManager.UpdateAsync(user);
 
             return user;
         }
@@ -98,6 +121,37 @@ namespace ExamBook.Identity
             }
 
             return user!;
+        }
+
+        public async Task<Author> GetAuthor(User user)
+        {
+            if (string.IsNullOrWhiteSpace(user.AuthorId))
+            {
+                throw new IllegalStateException("UserHasNoAuthor");
+            }
+            return await _authorService.GetByIdAsync(user.AuthorId);
+        }
+        
+        
+        public async Task<Actor> GetActor(User user)
+        {
+            if (string.IsNullOrWhiteSpace(user.ActorId))
+            {
+                throw new IllegalStateException("UserHasNoActor");
+            }
+
+            return await _actorService.GetByIdAsync(user.ActorId);
+        }
+        
+        
+        public async Task<Publisher> GetPublisher(User user)
+        {
+            if (string.IsNullOrWhiteSpace(user.PublisherId))
+            {
+                throw new IllegalStateException("UserHasNoPublisher");
+            }
+
+            return await _publisherService.GetByIdAsync(user.PublisherId);
         }
 
 

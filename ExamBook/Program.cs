@@ -1,6 +1,5 @@
 using System.Text;
 using DriveIO;
-using DriveIO.Repositories;
 using DriveIO.Services;
 using ExamBook.Identity;
 using ExamBook.Persistence;
@@ -12,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Social;
+using Social.Services;
+using Vx;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ var configuration = builder.Configuration;
 services.AddControllers()
     .AddNewtonsoftJson(options =>
     {
+        options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
         options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
         options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
     });
@@ -68,6 +70,15 @@ services.AddDbContext<ApplicationSocialDbContext>(options =>
     options.UseMySql(connectionStrings, version);
 });
 
+services.AddDbContext<ApplicationVxDbContext>(options =>
+{
+    options.EnableSensitiveDataLogging();
+    options.EnableDetailedErrors();
+    var connectionStrings = builder.Configuration["Database:ApplicationVxConnectionStrings"];
+    var version = ServerVersion.AutoDetect(connectionStrings);
+    options.UseMySql(connectionStrings, version);
+});
+
 services.AddApplicationIdentity();
 services.AddAuthentication(options =>
 {
@@ -96,24 +107,31 @@ services.AddApplicationServices();
 services.AddSocial(_ => {})
     .AddEntityFrameworkStores<ApplicationSocialDbContext>();
 
-services.AddDrive(options =>
-{
-    
-}).AddEntityFrameworkStores<ApplicationDriveDbContext>()
+services.AddDrive(_ => { })
+    .AddEntityFrameworkStores<ApplicationDriveDbContext>()
     .AddLocalFileStores(options =>
     {
         options.DirectoryPath = "E:/Lab/Drive/ExamBook";
     });
 
+services.AddVx(_ => { })
+    .AddEntityFrameworkStores<ApplicationVxDbContext>()
+    .AddNewtonSoftDataSerializer(settings =>
+    {
+        
+    });
 
 
 var app = builder.Build();
 
 var folderService = app.Services.CreateScope().ServiceProvider.GetRequiredService<FolderService>();
-await folderService.CreateFolder("images");
-await folderService.CreateFolder("videos");
-await folderService.CreateFolder("gifs");
-await folderService.CreateFolder("audios");
+await folderService.CreateIfNotExistsAsync("images");
+await folderService.CreateIfNotExistsAsync("videos");
+await folderService.CreateIfNotExistsAsync("gifs");
+await folderService.CreateIfNotExistsAsync("audios");
+
+var authorServices =  app.Services.CreateScope().ServiceProvider.GetRequiredService<AuthorService>();
+//await authorServices.EnsureAuthorSelfSubscribe();
 
 app.UseAuthentication();
 app.UseAuthorization();

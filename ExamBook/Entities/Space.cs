@@ -23,6 +23,8 @@ namespace ExamBook.Entities
         /// If the space is private, only her members and students or admin can see it.
         /// </summary>
         public bool IsPublic { get; set; }
+
+        public bool IsPrivate => !IsPublic;
         
         
 
@@ -36,6 +38,9 @@ namespace ExamBook.Entities
         public Picture? ImageFile { get; set; }
         public string ImageId { get; set; } = "";
         public string CoverImageId { get; set; } = "";
+
+
+        public string PublisherId { get; set; } = "";
         
         [JsonIgnore] public HashSet<Course> Courses { get; set; } = new();
         [JsonIgnore] public HashSet<Classroom> Classrooms { get; set; } = new();

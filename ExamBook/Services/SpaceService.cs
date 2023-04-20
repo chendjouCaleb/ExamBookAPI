@@ -7,11 +7,14 @@ using DriveIO.Services;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Social.Services;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
@@ -21,15 +24,32 @@ namespace ExamBook.Services
         private readonly MemberService _memberService;
         private readonly FileService _fileService;
         private readonly FolderService _folderService;
+        private readonly EventService _eventService;
+        private readonly PublisherService _publisherService;
+        private readonly AuthorService _authorService;
+        private readonly UserService _userService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<SpaceService> _logger;
+        
 
 
-        public SpaceService(DbContext dbContext, MemberService memberService, ILogger<SpaceService> spaceService)
+        public SpaceService(DbContext dbContext, 
+            MemberService memberService,
+            FileService fileService, 
+            FolderService folderService, 
+            ILogger<SpaceService> spaceService, 
+            IConfiguration configuration, EventService eventService, PublisherService publisherService, UserService userService, AuthorService authorService)
         {
             _dbContext = dbContext;
             _memberService = memberService;
             _logger = spaceService;
+            _fileService = fileService;
+            _folderService = folderService;
+            _configuration = configuration;
+            _eventService = eventService;
+            _publisherService = publisherService;
+            _userService = userService;
+            _authorService = authorService;
         }
 
 
@@ -66,6 +86,10 @@ namespace ExamBook.Services
                 throw new InvalidOperationException($"The identifier '{model.Identifier}' is used.");
             }
 
+            var user = await _userService.FindByIdAsync(userId);
+            var author = await _userService.GetAuthor(user);
+
+            var publisher = await _publisherService.AddAsync();
             Space space = new()
             {
                 Identifier = model.Identifier,
@@ -75,16 +99,22 @@ namespace ExamBook.Services
                 Facebook = model.Facebook,
                 Youtube = model.Youtube,
                 Instagram = model.Instagram,
-                Website = model.Website
+                Website = model.Website,
+                IsPublic = model.IsPublic,
+                
+                PublisherId = publisher.Id
             };
             await _dbContext.AddAsync(space);
 
             MemberAddModel adminAddModel = new() {IsAdmin = true, UserId = userId};
             Member admin = await _memberService.CreateMember(space, adminAddModel);
 
+            _eventService.Emit(new[] {publisher}, author, "SPACE_ADD", space);
+            
+            
 
             _logger.LogInformation("New space created. Name={}", space.Name);
-
+    
             await _dbContext.AddAsync(admin);
             await _dbContext.SaveChangesAsync();
 
@@ -92,13 +122,15 @@ namespace ExamBook.Services
         }
 
 
-        public async Task ChangeIdentifier(Space space, ChangeSpaceIdentifierModel model)
+        public async Task ChangeIdentifier(Space space, string identifier)
         {
-            if (await AnyAsync(model.Identifier))
+            if (await AnyAsync(identifier))
             {
+                throw new InvalidOperationException($"The identifier '{identifier}' is used.");
             }
 
-            space.Identifier = model.Identifier;
+            space.Identifier = identifier;
+            space.NormalizedIdentifier = StringHelper.Normalize(identifier); 
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
         }
@@ -109,6 +141,7 @@ namespace ExamBook.Services
             Asserts.NotNull(space, nameof(space));
             if (space.IsPublic)
             {
+                throw new IllegalOperationException("SpaceIsNotPrivate");
             }
 
             space.IsPublic = true;
@@ -119,8 +152,9 @@ namespace ExamBook.Services
         public async Task SetAsPrivate(Space space)
         {
             Asserts.NotNull(space, nameof(space));
-            if (!space.IsPublic)
+            if (space.IsPrivate)
             {
+                throw new IllegalOperationException("SpaceIsNotPublic");
             }
 
             space.IsPublic = false;

@@ -19,6 +19,11 @@ namespace ExamBook.Identity.Models
         public DateTime BirthDate { get; set; }
         public char Sex { get; set; }
 
+
+        public string AuthorId { get; set; } = "";
+        public string ActorId { get; set; } = "";
+        public string PublisherId { get; set; } = "";
+
         public DateTime? DeletedAt { get; set; }
         public bool Deleted { get; set; }
     }

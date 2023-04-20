@@ -8,5 +8,6 @@ namespace DriveIO.Stores
     {
         public Task WriteFileAsync(Stream fileStream, BaseFile file);
         public Task DeleteAsync(BaseFile file);
+        public Stream GetStreamAsync(BaseFile file);
     }
 }

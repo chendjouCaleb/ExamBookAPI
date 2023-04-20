@@ -17,7 +17,7 @@ namespace DriveIO
             _services = services;
         }
 
-        public DriveBuilder AddEntityFrameworkStores<T>() where T:DriveDbContext
+        public DriveBuilder AddEntityFrameworkStores<T>() where T : DriveDbContext
         {
             _services.AddTransient<IPictureRepository, PictureEFRepository<T>>();
             _services.AddTransient<IVideoRepository, VideoEFRepository<T>>();
@@ -36,9 +36,14 @@ namespace DriveIO
                 throw new InvalidOperationException("Directory path should not be empty or null.");
             }
 
-            if (!Path.Exists(options.DirectoryPath))
+            if (!Path.Exists(options.DirectoryPath) && !options.CreateDirPath)
             {
                 throw new InvalidOperationException($"The dir '{options.DirectoryPath}' does not exists.");
+            }
+
+            if (!Path.Exists(options.DirectoryPath))
+            {
+                Directory.CreateDirectory(options.DirectoryPath);
             }
 
             _services.AddSingleton(options);

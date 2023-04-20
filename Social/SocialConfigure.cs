@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Social.Entities;
 using Social.Services;
 
 namespace Social
@@ -15,7 +16,7 @@ namespace Social
             var builder = new SocialBuilder(services);
             services.AddTransient<PostService>();
             services.AddTransient<AuthorService>();
-
+            services.AddTransient<ReactionService>();
             services.AddSingleton(options);
 
             return builder;
