@@ -1,6 +1,4 @@
-﻿using ExamBook.Entities;
-
-namespace ExamBook.Models
+﻿namespace ExamBook.Models
 {
     public class MemberAddModel
     {

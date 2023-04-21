@@ -41,9 +41,16 @@ namespace Social.Services
         }
 
 
-        public async Task<Post?> FindByAsync(long id)
+        public async Task<Post> FindByAsync(long id)
         {
-            return await _postRepository.FindAsync(id);
+            var post = await _postRepository.FindAsync(id);
+
+            if (post == null)
+            {
+                throw new InvalidOperationException($"Post with id={id} not found");
+            }
+
+            return post;
         }
 
         public async Task<IEnumerable<PostFile>> GetPostFiles(Post post)
@@ -88,7 +95,7 @@ namespace Social.Services
             var authorPublisher = await _publisherService.GetByIdAsync(author.PublisherId);
             var authorActor = await _actorService.GetByIdAsync(author.ActorId);
             
-            await _eventService.Emit(new[] {authorPublisher!}, authorActor, "POST_ADD", new {PostId = post.Id});
+            await _eventService.EmitAsync(authorPublisher, authorActor, "POST_ADD", new {PostId = post.Id});
             _logger.LogInformation("New post; id={}", post.Id);
 
             return post;
@@ -146,7 +153,7 @@ namespace Social.Services
             var publisher = await _publisherService.GetByIdAsync(post.PublisherId);
             Asserts.NotNull(publisher, nameof(publisher));
             
-            var subscriber = await _subscriptionService.SubscribeAsync(publisher!);
+            var subscriber = await _subscriptionService.SubscribeAsync(publisher);
             return subscriber;
         }
 
@@ -158,7 +165,7 @@ namespace Social.Services
         public async Task DeleteAsync(long id)
         {
             var post = await FindByAsync(id);
-            await DeleteAsync(post!);
+            await DeleteAsync(post);
         }
     }
 }

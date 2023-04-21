@@ -38,9 +38,9 @@ namespace ExamBook.Controllers
         }
 
         [HttpGet]
-        public async Task<object> LoggedUser()
+        public string LoggedUser()
         {
-            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             return userId;
         }
 
@@ -57,17 +57,19 @@ namespace ExamBook.Controllers
             {
                 throw new InvalidOperationException($"User with userName={model.Id} not found.");
             }
+
+            _passwordHasher.VerifyHashedPassword(user, user.PasswordHash!, model.Password);
             
             var issuer = _configuration["Jwt:Issuer"];
-            var audience = _configuration["Jwt:Audience"];
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+            //var audience = _configuration["Jwt:Audience"];
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
                 {
                     new Claim("Id", Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                    new Claim(JwtRegisteredClaimNames.Name, user.NormalizedUserName),
+                    new Claim(JwtRegisteredClaimNames.Name, user.NormalizedUserName!),
                   
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 }),
@@ -81,8 +83,8 @@ namespace ExamBook.Controllers
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var jwtToken = tokenHandler.WriteToken(token);
-            var stringToken = tokenHandler.WriteToken(token);
-            return Ok(stringToken);
+            _logger.LogInformation("New Login");
+            return Ok(jwtToken);
             
         }
     }

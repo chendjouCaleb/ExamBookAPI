@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
-
+using Vx.Asserts;
 using Vx.Services;
 
 namespace Vx
@@ -18,6 +18,7 @@ namespace Vx
             services.AddTransient<EventService>();
             services.AddTransient<PublisherService>();
             services.AddTransient<SubscriptionService>();
+            services.AddSingleton<EventAssertionsBuilder>();
 
             services.AddSingleton(options);
 

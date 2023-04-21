@@ -12,17 +12,21 @@ namespace Vx.Services
     public class EventService
     {
         private readonly IEventRepository _eventRepository;
+        private readonly PublisherService _publisherService;
+        private readonly ActorService _actorService;
         private readonly IDataSerializer _dataSerializer;
         private readonly ILogger<EventService> _logger;
 
         public EventService(
             IEventRepository eventRepository, 
             ILogger<EventService> logger, 
-            IDataSerializer dataSerializer)
+            IDataSerializer dataSerializer, ActorService actorService, PublisherService publisherService)
         {
             _eventRepository = eventRepository;
             _logger = logger;
             _dataSerializer = dataSerializer;
+            _actorService = actorService;
+            _publisherService = publisherService;
         }
 
         public async Task<Event> GetByIdAsync(long id)
@@ -37,8 +41,9 @@ namespace Vx.Services
             return action;
         }
 
+        
 
-        public async Task<Event> Emit(IEnumerable<Publisher> publishers, Actor actor, string name, object data)
+        public async Task<Event> EmitAsync(IEnumerable<Publisher> publishers, Actor actor, string name, object data)
         {
             
             if (!publishers.Any())
@@ -60,10 +65,21 @@ namespace Vx.Services
             
             await _eventRepository.SaveAsync(@event, publisherEvents);
             
-            Console.WriteLine("PublisherEvents :" + publisherEvents.Count);
             _logger.LogInformation("New event");
 
             return @event;
+        }
+
+        public async Task<Event> EmitAsync(Publisher publisher, Actor actor, string name, object data)
+        {
+            return await EmitAsync(new[] {publisher}, actor, name, data);
+        }
+
+        public async Task<Event> EmitAsync(ICollection<string> publisherIds, string actorId, string name, object data)
+        {
+            var publishers = await _publisherService.GetByIdAsync(publisherIds);
+            var actor = await _actorService.GetByIdAsync(actorId);
+            return await EmitAsync(publishers, actor, name, data);
         }
 
 

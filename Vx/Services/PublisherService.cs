@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Vx.Models;
 using Vx.Repositories;
@@ -23,6 +25,11 @@ namespace Vx.Services
         /// <exception cref="InvalidOperationException">If the publisher not found.</exception>
         public async Task<Publisher> GetByIdAsync(string publisherId)
         {
+            if (string.IsNullOrWhiteSpace(publisherId))
+            {
+                throw new ArgumentNullException(publisherId);
+            }
+            
             var publisher = await _publisherRepository.GetByIdAsync(publisherId);
 
             if (publisher == null)
@@ -32,7 +39,25 @@ namespace Vx.Services
 
             return publisher;
         }
-        
+
+
+        public async Task<IList<Publisher>> GetByIdAsync(ICollection<string> publisherIds)
+        {
+            var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
+
+            var publisherIdNotFounds = publisherIds.Where(publisherId => 
+                publishers.All(p => p.Id != publisherId))
+                .ToList();
+
+            if (publisherIdNotFounds.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Publishers with id=[{string.Join(',', publisherIdNotFounds)}] not found.");
+            }
+
+            return publishers.ToList();
+        }
+
         /// <summary>
         /// Create a new publisher.
         /// </summary>

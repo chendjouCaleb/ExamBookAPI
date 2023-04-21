@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Vx.Models;
@@ -21,6 +22,13 @@ namespace Vx.EFCore
             return await _dbContext.Publishers
                 .Where(s => s.Id == id)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<ICollection<Publisher>> GetByIdAsync(ICollection<string> id)
+        {
+            return await _dbContext.Publishers
+                .Where(s => id.Contains(s.Id))
+                .ToListAsync();
         }
 
         public async Task SaveAsync(Publisher publisher)

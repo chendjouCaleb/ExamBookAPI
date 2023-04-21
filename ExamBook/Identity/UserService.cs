@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
@@ -22,7 +23,7 @@ namespace ExamBook.Identity
         private readonly AuthorService _authorService;
         private readonly ActorService _actorService;
         private readonly PublisherService _publisherService;
-        private readonly DbContext _dbContext;
+        private readonly ApplicationIdentityDbContext _dbContext;
 
         public UserService(UserManager<User> userManager, 
             ApplicationIdentityDbContext dbContext, 
@@ -58,7 +59,14 @@ namespace ExamBook.Identity
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
-            
+            if (!result.Succeeded)
+            {
+                foreach (var identityError in result.Errors)
+                {
+                    Console.Error.WriteLine(identityError.Code + ": " + identityError.Description);
+                }
+            }
+
             var author = await _authorService.AddAuthorAsync(user.UserName);
             var actor = await _actorService.AddAsync();
             var publisher = await _publisherService.AddAsync();

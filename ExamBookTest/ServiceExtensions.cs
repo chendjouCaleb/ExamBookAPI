@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using DriveIO;
 using ExamBook.Identity;
 using ExamBook.Identity.Models;
@@ -15,7 +16,27 @@ namespace ExamBookTest
 {
     public static class ServiceExtensions
     {
-        public static IServiceCollection Setup(this IServiceCollection services)
+        public static UserAddModel UserAddModel = new ()
+        {
+            FirstName = "first name",
+            LastName = "last name",
+            Sex = 'M',
+            BirthDate = new DateTime(1995,1,1),
+            UserName = "userName",
+            Password = "Password09@"
+        };
+        
+        public static UserAddModel UserAddModel2 = new ()
+        {
+            FirstName = "first name1",
+            LastName = "last name2",
+            Sex = 'M',
+            BirthDate = new DateTime(1995,1,1),
+            UserName = "userName1",
+            Password = "Password09@"
+        };
+        
+        public static IServiceProvider Setup(this IServiceCollection services)
         {
             services.AddDbContext<SocialTestDbContext>(options =>
             {
@@ -25,6 +46,8 @@ namespace ExamBookTest
             
             services.AddDbContext<ApplicationIdentityDbContext>(options =>
             {
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
                 options.UseInMemoryDatabase("identity");
                 
             });
@@ -78,7 +101,16 @@ namespace ExamBookTest
                 .Build();
             services.AddSingleton<IConfiguration>(configuration);
 
-            return services;
+            var _provider = services.BuildServiceProvider();
+            var identityDbContext = _provider.GetRequiredService<ApplicationIdentityDbContext>();
+            var vxDbContext = _provider.GetRequiredService<VxTestDbContext>();
+            var appDbContext = _provider.GetRequiredService<DbContext>();
+
+            identityDbContext.Database.EnsureDeleted();
+            appDbContext.Database.EnsureDeleted();
+            vxDbContext.Database.EnsureDeleted();
+
+            return _provider;
         }
     }
 }

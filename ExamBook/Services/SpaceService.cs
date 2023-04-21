@@ -8,12 +8,14 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity;
+using ExamBook.Identity.Models;
 using ExamBook.Models;
+using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Social.Services;
+using Vx.Models;
 using Vx.Services;
 
 namespace ExamBook.Services
@@ -26,7 +28,6 @@ namespace ExamBook.Services
         private readonly FolderService _folderService;
         private readonly EventService _eventService;
         private readonly PublisherService _publisherService;
-        private readonly AuthorService _authorService;
         private readonly UserService _userService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<SpaceService> _logger;
@@ -38,7 +39,7 @@ namespace ExamBook.Services
             FileService fileService, 
             FolderService folderService, 
             ILogger<SpaceService> spaceService, 
-            IConfiguration configuration, EventService eventService, PublisherService publisherService, UserService userService, AuthorService authorService)
+            IConfiguration configuration, EventService eventService, PublisherService publisherService, UserService userService)
         {
             _dbContext = dbContext;
             _memberService = memberService;
@@ -49,7 +50,6 @@ namespace ExamBook.Services
             _eventService = eventService;
             _publisherService = publisherService;
             _userService = userService;
-            _authorService = authorService;
         }
 
 
@@ -73,21 +73,27 @@ namespace ExamBook.Services
             return space;
         }
 
-        public async Task<Space> AddAsync(string userId, SpaceAddModel model,
-            Stream? image, Stream? coverImage)
+        public async Task<Publisher> GetPublisherAsync(Space space)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(space.PublisherId))
+            {
+                throw new IllegalStateException("SpaceHasNoPublisher");
+            }
+
+            return await _publisherService.GetByIdAsync(space.PublisherId);
         }
 
-        public async Task<Space> AddAsync(string userId, SpaceAddModel model)
+       
+
+        public async Task<ActionResultModel<Space>> AddAsync(string userId, SpaceAddModel model)
         {
             if (await AnyAsync(model.Identifier))
             {
-                throw new InvalidOperationException($"The identifier '{model.Identifier}' is used.");
+                throw new UsedValueException("SpaceIdentifierUsed");
             }
 
             var user = await _userService.FindByIdAsync(userId);
-            var author = await _userService.GetAuthor(user);
+            var actor = await _userService.GetActor(user);
 
             var publisher = await _publisherService.AddAsync();
             Space space = new()
@@ -107,59 +113,86 @@ namespace ExamBook.Services
             await _dbContext.AddAsync(space);
 
             MemberAddModel adminAddModel = new() {IsAdmin = true, UserId = userId};
-            Member admin = await _memberService.CreateMember(space, adminAddModel);
+            Member admin = _memberService.NewMember(space, adminAddModel);
 
-            _eventService.Emit(new[] {publisher}, author, "SPACE_ADD", space);
-            
-            
+            var @event = await _eventService.EmitAsync(new[] {publisher}, actor, "SPACE_ADD", space);
 
             _logger.LogInformation("New space created. Name={}", space.Name);
     
             await _dbContext.AddAsync(admin);
             await _dbContext.SaveChangesAsync();
 
-            return space;
+            return new ActionResultModel<Space>(space, @event);
         }
 
 
-        public async Task ChangeIdentifier(Space space, string identifier)
+        public async Task<Event> ChangeIdentifier(Space space, string identifier, User user)
         {
             if (await AnyAsync(identifier))
             {
-                throw new InvalidOperationException($"The identifier '{identifier}' is used.");
+                throw new UsedValueException("SpaceIdentifierUsed");
             }
 
+            var publisher = await GetPublisherAsync(space);
+            var actor = await _userService.GetActor(user);
+            var data = new ChangeValueData<string>(space.Identifier, identifier);
+            
             space.Identifier = identifier;
             space.NormalizedIdentifier = StringHelper.Normalize(identifier); 
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
+            
+            return await _eventService.EmitAsync(new[] {publisher}, actor, "SPACE_CHANGE_IDENTIFIER", data);
+        }
+        
+        
+        public async Task<Event> ChangeName(Space space, string name, User user)
+        {
+            var publisher = await GetPublisherAsync(space);
+            var actor = await _userService.GetActor(user);
+            var data = new ChangeValueData<string>(space.Name, name);
+            
+            space.Name = name;
+            _dbContext.Update(space);
+            await _dbContext.SaveChangesAsync();
+            
+            return await _eventService.EmitAsync(new[] {publisher}, actor, "SPACE_CHANGE_NAME", data);
         }
 
 
-        public async Task SetAsPublic(Space space)
+        public async Task<Event> SetAsPublic(Space space, User user)
         {
             Asserts.NotNull(space, nameof(space));
             if (space.IsPublic)
             {
                 throw new IllegalOperationException("SpaceIsNotPrivate");
             }
+            var publisher = await GetPublisherAsync(space);
+            var actor = await _userService.GetActor(user);
 
             space.IsPublic = true;
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
+
+            return await _eventService.EmitAsync(publisher, actor, "SPACE_AS_PUBLIC", new { });
         }
 
-        public async Task SetAsPrivate(Space space)
+        public async Task<Event> SetAsPrivate(Space space, User user)
         {
             Asserts.NotNull(space, nameof(space));
             if (space.IsPrivate)
             {
                 throw new IllegalOperationException("SpaceIsNotPublic");
             }
+            
+            var publisher = await GetPublisherAsync(space);
+            var actor = await _userService.GetActor(user);
 
             space.IsPublic = false;
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
+            
+            return await _eventService.EmitAsync(publisher, actor, "SPACE_AS_PRIVATE", new { });
         }
 
 

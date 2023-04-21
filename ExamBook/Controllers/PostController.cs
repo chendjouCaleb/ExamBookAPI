@@ -68,7 +68,7 @@ namespace ExamBook.Controllers
             var thumb = await _pictureRepository.GetByIdAsync(model.ThumbId);
             var post = await _postService.FindByAsync(model.PostId);
 
-            var postFile = await _postService.AddPictureAsync(post!, picture!, thumb!);
+            var postFile = await _postService.AddPictureAsync(post, picture!, thumb!);
             return postFile;
         }
 

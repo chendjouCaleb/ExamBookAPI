@@ -11,8 +11,7 @@ namespace ExamBook.Persistence
             
         }
         
-        public DbSet<User> Users => Set<User>();
-        public DbSet<Role> Roles => Set<Role>();
+        
         public DbSet<Session> Sessions => Set<Session>();
     }
 }

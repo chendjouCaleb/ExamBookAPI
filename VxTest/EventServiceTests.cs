@@ -36,7 +36,7 @@ namespace VxTest
             var actor = await _actorService.AddAsync();
             var publisher = await _publisherService.AddAsync();
             var data = new {Value = 10};
-            var action = await _eventService.Emit(new[] {publisher}, actor, "EVENT_NAME", data);
+            var action = await _eventService.EmitAsync(new[] {publisher}, actor, "EVENT_NAME", data);
 
             action = await _eventService.GetByIdAsync(action.Id);
             var publisherEvents = await _eventRepository.GetEventPublishers(action);

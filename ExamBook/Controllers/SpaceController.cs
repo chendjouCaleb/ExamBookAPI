@@ -79,7 +79,8 @@ namespace ExamBook.Controllers
             [FromBody] SpaceAddModel model)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var space = await _spaceService.AddAsync(userId, model);
+            var result = await _spaceService.AddAsync(userId, model);
+            var space = result.Item;
 
             return CreatedAtAction("Find", new {space.Id}, space);
         }

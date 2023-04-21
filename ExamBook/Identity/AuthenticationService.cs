@@ -8,7 +8,11 @@ namespace ExamBook.Identity
     public class AuthenticationService
     {
         private readonly ApplicationIdentityDbContext _dbContext;
-        
+
+        public AuthenticationService(ApplicationIdentityDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
 
 
         public async Task<Session> Login(LoginModel model)
@@ -27,9 +31,9 @@ namespace ExamBook.Identity
         }
 
 
-        public async Task LogOut(string sessionId)
+        public Task LogOut(string sessionId)
         {
-            
+            throw new NotImplementedException();
         }
     }
 }
