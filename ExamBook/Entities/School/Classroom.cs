@@ -9,9 +9,14 @@ namespace ExamBook.Entities
         public Space? Space { get; set; }
         public ulong SpaceId { get; set; }
 
+        public Room? Room { get; set; }
+        public ulong? RoomId { get; set; }
+
         public HashSet<Student> Students { get; set; } = new();
         public HashSet<Course> Courses { get; set; } = new();
         public List<ClassroomSpeciality> ClassroomSpecialities { get; set; } = new();
+        
+        public string PublisherId { get; set; } = "";
 
     }
 

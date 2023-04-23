@@ -21,10 +21,10 @@ namespace ExamBook.Controllers
     [Route("api/auth")]
     public class AuthenticationHttpController:ControllerBase
     {
-        private ApplicationIdentityDbContext _dbContext;
-        private ILogger<AuthenticationHttpController> _logger;
-        private IPasswordHasher<User> _passwordHasher;
-        private IConfiguration _configuration;
+        private readonly ApplicationIdentityDbContext _dbContext;
+        private readonly ILogger<AuthenticationHttpController> _logger;
+        private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IConfiguration _configuration;
 
         public AuthenticationHttpController(ApplicationIdentityDbContext dbContext,
             ILogger<AuthenticationHttpController> logger, 
@@ -70,7 +70,7 @@ namespace ExamBook.Controllers
                     new Claim("Id", Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                     new Claim(JwtRegisteredClaimNames.Name, user.NormalizedUserName!),
-                  
+                    
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(100000),

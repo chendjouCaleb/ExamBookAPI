@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using DriveIO;
+using ExamBook.Entities;
 using ExamBook.Identity;
 using ExamBook.Identity.Models;
 using ExamBook.Persistence;
@@ -8,6 +9,7 @@ using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using Social;
 using Vx;
 using Vx.EFCore;
@@ -74,7 +76,10 @@ namespace ExamBookTest
 
             services.AddVx(_ => { })
                 .AddEntityFrameworkStores<VxTestDbContext>()
-                .AddNewtonSoftDataSerializer(_ => {});
+                .AddNewtonSoftDataSerializer(options =>
+                {
+                    options.NullValueHandling = NullValueHandling.Ignore;
+                });
 
             services.AddDrive(options =>
                 {
@@ -89,6 +94,9 @@ namespace ExamBookTest
 
             services.AddTransient<SpaceService>();
             services.AddTransient<MemberService>();
+            services.AddTransient<RoomService>();
+            services.AddTransient<SpecialityService>();
+            services.AddTransient<ClassroomService>();
 
             services.AddTransient<UserService>();
             services.AddIdentity<User, Role>()

@@ -2,32 +2,58 @@
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
+using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Vx.Models;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
     public class RoomService
     {
         private readonly DbContext _dbContext;
+        private readonly PublisherService _publisherService;
+        private readonly EventService _eventService;
+        private readonly ILogger<RoomService> _logger;
 
-        public RoomService(DbContext dbContext)
+        public RoomService(DbContext dbContext, ILogger<RoomService> logger, PublisherService publisherService, EventService eventService)
         {
             _dbContext = dbContext;
+            _logger = logger;
+            _publisherService = publisherService;
+            _eventService = eventService;
         }
 
+        public async Task<Room> GetRoomAsync(ulong id)
+        {
+            var room = await _dbContext.Set<Room>().Where(r => r.Id == id)
+                .Include(r => r.Space)
+                .FirstOrDefaultAsync();
 
-        public async Task<Room> AddRoomAsync(Space space, RoomAddModel model)
+            if (room == null)
+            {
+                throw new ElementNotFoundException("RoomNotFound");
+            }
+
+            return room;
+        }
+
+        public async Task<ActionResultModel<Room>> AddRoomAsync(Space space, RoomAddModel model, User user)
         {
             Asserts.NotNull(space, nameof(space));
             Asserts.NotNull(model, nameof(model));
+
+            string normalizedName = StringHelper.Normalize(model.Name);
             
             if (await ContainsAsync(space, model.Name))
             {
-                RoomHelper.ThrowNameUsed(space, model.Name);
+                throw new UsedValueException("RoomNameUsed");
             }
 
             if (model.Capacity < 5)
@@ -35,33 +61,48 @@ namespace ExamBook.Services
                 RoomHelper.ThrowMinimalCapacityError(5);
             }
 
+            var publisher = await _publisherService.AddAsync();
+
             Room room = new()
             {
                 Name = model.Name,
+                NormalizedName = normalizedName,
                 Capacity = model.Capacity,
-                Space = space
+                Space = space,
+                PublisherId = publisher.Id
             };
 
             _dbContext.Add(room);
             await _dbContext.SaveChangesAsync();
-            return room;
+
+            var publisherIds = new[] {publisher.Id, space.PublisherId};
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "ROOM_ADD", room);
+            
+            _logger.LogInformation("New room created: {}", room.NormalizedName);
+            return new ActionResultModel<Room>(room, @event);
         }
 
-        public async Task ChangeNameAsync(Room room, RoomChangeNameModel model)
+        public async Task<Event> ChangeNameAsync(Room room, RoomChangeNameModel model, User user)
         {
             Asserts.NotNull(room.Space, nameof(room.Space));
             
             if (await ContainsAsync(room.Space, model.Name))
             {
-                RoomHelper.ThrowNameUsed(room.Space, model.Name);
+                throw new UsedValueException("RoomNameUsed");
             }
 
+            var data = new ChangeValueData<string>(room.Name, model.Name);
             room.Name = model.Name;
+            room.NormalizedName = StringHelper.Normalize(model.Name);
             _dbContext.Update(room);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new[] {room.PublisherId, room.Space.PublisherId};
+            
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "ROOM_CHANGE_NAME", data);
         }
         
-        public async Task ChangeCapacityAsync(Room room, RoomChangeCapacityModel model)
+        public async Task<Event> ChangeCapacityAsync(Room room, RoomChangeCapacityModel model, User user)
         {
             Asserts.NotNull(room.Space, nameof(room.Space));
             Asserts.NotNull(model, nameof(model));
@@ -71,35 +112,54 @@ namespace ExamBook.Services
                 RoomHelper.ThrowMinimalCapacityError(5);
             }
 
+            var data = new ChangeValueData<uint>(room.Capacity, model.Capacity);
+
             room.Capacity = model.Capacity;
             _dbContext.Update(room);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new[] {room.PublisherId, room.Space.PublisherId};
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "ROOM_CHANGE_CAPACITY", data);
         }
 
         public async Task<bool> ContainsAsync(Space space, string name)
         {
+            string normalizedName = StringHelper.Normalize(name);
             return await _dbContext.Set<Room>()
-                .Where(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && space.Id == r.SpaceId)
+                .Where(r => r.NormalizedName == normalizedName && space.Id == r.SpaceId)
                 .AnyAsync();
         }
         
-        public async Task<Room?> FindAsync(Space space, string name)
+        public async Task<Room> GetByNameAsync(Space space, string name)
         {
-            return await _dbContext.Set<Room>()
-                .Where(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && space.Id == r.SpaceId)
+            string normalizedName = StringHelper.Normalize(name);
+            var room = await _dbContext.Set<Room>()
+                .Where(r => r.NormalizedName == normalizedName && space.Id == r.SpaceId)
                 .FirstOrDefaultAsync();
+
+            if (room == null)
+            {
+                throw new ElementNotFoundException("RoomNotFoundByName");
+            }
+
+            return room;
         }
 
-        public async Task DeleteAsync(Room room, User user)
+        public async Task<Event> DeleteAsync(Room room, User user)
         {
+            Asserts.NotNull(room, nameof(room));
+            Asserts.NotNull(user, nameof(user));
             room.Capacity = 0;
             room.Name = "";
-            
+            room.NormalizedName = "";
             room.DeletedAt = DateTime.UtcNow;
-            room.DeletedById = user.Id;
 
             _dbContext.Update(room);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new[] {room.PublisherId, room.Space.PublisherId};
+            
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "ROOM_DELETE", room);
         }
     }
 }

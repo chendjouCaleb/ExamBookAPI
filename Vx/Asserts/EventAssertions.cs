@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Vx.Models;
 using Vx.Serializers;
+using Vx.Services;
 
 namespace Vx.Asserts
 {
     public class EventAssertions
     {
         private IDataSerializer _serializer;
+        private PublisherService _publisherService;
         public Event Event { get; set; }
         public IEnumerable<PublisherEvent> PublisherEvents { get; set; }
 
@@ -18,6 +21,7 @@ namespace Vx.Asserts
             Event = @event;
             PublisherEvents = Event.PublisherEvents;
             _serializer = provider.GetRequiredService<IDataSerializer>();
+            _publisherService = provider.GetRequiredService<PublisherService>();
         }
 
         public EventAssertions HasPublisher(Publisher publisher)
@@ -30,6 +34,13 @@ namespace Vx.Asserts
             }
 
             return this;
+        }
+        
+        
+        public async Task<EventAssertions> HasPublisherId(string publisherId)
+        {
+            var publisher = await _publisherService.GetByIdAsync(publisherId);
+            return HasPublisher(publisher);
         }
 
         public EventAssertions HasActor(Actor actor)
