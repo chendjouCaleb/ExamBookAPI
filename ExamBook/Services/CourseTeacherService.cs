@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -8,6 +9,7 @@ using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Vx.Models;
 using Vx.Services;
 
 namespace ExamBook.Services
@@ -15,17 +17,14 @@ namespace ExamBook.Services
     public class CourseTeacherService
     {
         private readonly DbContext _dbContext;
-        private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
         private readonly ILogger<CourseTeacherService> _logger;
 
-        public CourseTeacherService(DbContext dbContext, 
-            PublisherService publisherService, 
+        public CourseTeacherService(DbContext dbContext,
             EventService eventService, 
             ILogger<CourseTeacherService> logger)
         {
             _dbContext = dbContext;
-            _publisherService = publisherService;
             _eventService = eventService;
             _logger = logger;
         }
@@ -49,6 +48,7 @@ namespace ExamBook.Services
         {
             return await _dbContext.Set<CourseTeacher>()
                 .Where(ct => ct.CourseId == course.Id && ct.MemberId == member.Id)
+                .Where(ct => ct.DeletedAt == null)
                 .AnyAsync();
         }
 
@@ -72,7 +72,7 @@ namespace ExamBook.Services
                 throw new IllegalOperationException("CourseTeacherAlreadyExists");
             }
 
-            CourseTeacher courseTeacher = new CourseTeacher()
+            CourseTeacher courseTeacher = new ()
             {
                 Course = course,
                 Member = member,
@@ -83,7 +83,76 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string>() { space!.PublisherId, course.PublisherId, member!.PublisherId };
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_TEACHER_ADD", courseTeacher);
+            _logger.LogInformation("course teacher add");
             return new ActionResultModel<CourseTeacher>(courseTeacher, @event);
+        }
+
+
+        public async Task<Event> SetAsPrincipalAsync(CourseTeacher courseTeacher, User user)
+        {
+            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
+            Asserts.NotNull(user, nameof(user));
+
+            if (!courseTeacher.IsPrincipal)
+            {
+                throw new IllegalStateException("CourseTeacherIsAlreadyPrincipal");
+            }
+            
+            var member = await _dbContext.Set<Member>().FindAsync(courseTeacher.MemberId);
+            var course = await _dbContext.Set<Course>().FindAsync(courseTeacher);
+            var space = await _dbContext.Set<Space>().FindAsync(course!.Space);
+            
+            courseTeacher.IsPrincipal = true;
+            _dbContext.Update(courseTeacher);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { space!.PublisherId, course.PublisherId, member!.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_TEACHER_SET_PRINCIPAL", new { });
+        }
+        
+        
+        public async Task<Event> UnSetAsPrincipalAsync(CourseTeacher courseTeacher, User user)
+        {
+            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
+            Asserts.NotNull(user, nameof(user));
+
+            if (courseTeacher.IsPrincipal)
+            {
+                throw new IllegalStateException("CourseTeacherIsPrincipal");
+            }
+            
+            var member = await _dbContext.Set<Member>().FindAsync(courseTeacher.MemberId);
+            var course = await _dbContext.Set<Course>().FindAsync(courseTeacher);
+            var space = await _dbContext.Set<Space>().FindAsync(course!.Space);
+
+            courseTeacher.IsPrincipal = false;
+            _dbContext.Update(courseTeacher);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { space!.PublisherId, course.PublisherId, member!.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_TEACHER_UNSET_PRINCIPAL", new { });
+        }
+
+
+        public async Task<Event> DeleteAsync(CourseTeacher courseTeacher, User user)
+        {
+            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
+            Asserts.NotNull(user, nameof(user));
+
+            var course = await _dbContext.Set<Course>()
+                .Include(c => c.Space)
+                .Where(c => c.Id == courseTeacher.CourseId)
+                .FirstAsync();
+            var member = await _dbContext.Set<Member>().Where(m => m.Id == courseTeacher.MemberId)
+                .FirstAsync();
+            var space = course.Space;
+            
+            courseTeacher.DeletedAt = DateTime.UtcNow;
+            _dbContext.Update(courseTeacher);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { space!.PublisherId, member.PublisherId, course.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_TEACHER_DELETE", courseTeacher);
         }
     }
 }
