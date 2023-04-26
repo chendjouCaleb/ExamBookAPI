@@ -22,9 +22,6 @@ namespace ExamBook.Entities
 
         public Space? Space { get; set; }
         public ulong SpaceId { get; set; }
-        
-        public Classroom? Classroom { get; set; }
-        public ulong? ClassroomId { get; set; }
 
         public List<CourseSpeciality> CourseSpecialities { get; set; } = new();
         public List<CourseSession> CourseSessions { get; set; } = new();

@@ -25,7 +25,7 @@ namespace ExamBook.Identity
 
             if (user != null)
             {
-                
+                throw new UserNotFoundException("UserNotFound");
             }
             
             

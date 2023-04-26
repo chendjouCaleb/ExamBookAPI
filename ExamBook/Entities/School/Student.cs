@@ -18,6 +18,10 @@ namespace ExamBook.Entities
         public string UserId { get; set; } = "";
         
         [JsonIgnore]
+        public Space Space { get; set; } = null!;
+        public ulong? SpaceId { get; set; }
+        
+        [JsonIgnore]
         public Classroom Classroom { get; set; } = null!;
         public ulong? ClassroomId { get; set; }
 

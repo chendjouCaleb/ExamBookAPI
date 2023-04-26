@@ -12,5 +12,7 @@ namespace ExamBook.Entities
         public string DeletedById { get; set; } = "";
 
         public bool IsDeleted => DeletedAt != null;
+
+        public string PublisherId { get; set; } = "";
     }
 }

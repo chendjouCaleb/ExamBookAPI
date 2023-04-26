@@ -10,7 +10,5 @@ namespace ExamBook.Entities
 
         [JsonIgnore] public Space Space { get; set; } = null!;
         public ulong SpaceId { get; set; }
-
-        public string PublisherId { get; set; } = "";
     }
 }

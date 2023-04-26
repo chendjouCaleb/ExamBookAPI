@@ -1,34 +1,48 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Vx.Models;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
     public class StudentService
     {
         private readonly DbContext _dbContext;
+        private readonly EventService _eventService;
+        private readonly PublisherService _publisherService;
 
-        public StudentService(DbContext dbContext)
+        public StudentService(DbContext dbContext, EventService eventService, PublisherService publisherService)
         {
             _dbContext = dbContext;
+            _eventService = eventService;
+            _publisherService = publisherService;
         }
 
 
-        public async Task<Student> Add(Classroom classroom, StudentAddModel model)
+        public async Task<ActionResultModel<Student>> AddAsync(Classroom classroom, StudentAddModel model, User user)
         {
             Asserts.NotNull(classroom, nameof(classroom));
+            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
             Asserts.NotNull(model, nameof(model));
+            Asserts.NotNull(user, nameof(user));
 
-            if (await ContainsAsync(classroom, model.RId))
+            var space = classroom.Space!;
+            if (await ContainsAsync(space, model.RId))
             {
                 StudentHelper.ThrowDuplicateRId(classroom, model.RId);
             }
             string normalizedRid = model.RId.Normalize().ToUpper();
+            var publisher = await _publisherService.AddAsync();
+            
             Student student = new()
             {
                 FirstName = model.FirstName,
@@ -37,39 +51,27 @@ namespace ExamBook.Services
                 Sex = model.Sex,
                 NormalizedRId = normalizedRid,
                 RId = model.RId,
-                Classroom = classroom
+                Classroom = classroom,
+                Space = space,
+                PublisherId = publisher.Id
             };
             await _dbContext.AddAsync(student);
+            await _dbContext.SaveChangesAsync();
 
-            var classroomSpecialities = _dbContext.Set<ClassroomSpeciality>()
-                .Where(e => model.ClassroomSpecialityIds.Contains(e.Id))
-                .ToList();
-
-            foreach (var classroomSpeciality in classroomSpecialities)
-            {
-                var studentSpeciality = await _AddSpecialityAsync(student, classroomSpeciality);
-                await _dbContext.AddAsync(studentSpeciality);
-            }
+            var publisherIds = new List<string> {publisher.Id, space.PublisherId, classroom.PublisherId};
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_ADD", student);
             
-            await _dbContext.SaveChangesAsync();
-            return student;
+            return new ActionResultModel<Student>(student, @event);
         }
 
-        public async Task<StudentSpeciality> AddSpecialityAsync(Student student,
-            ClassroomSpeciality classroomSpeciality)
-        {
-            var studentSpeciality = await _AddSpecialityAsync(student, classroomSpeciality);
-            await _dbContext.AddAsync(studentSpeciality);
-            await _dbContext.SaveChangesAsync();
-            return studentSpeciality;
-        }
+        
 
         public async Task ChangeRId(Student student, StudentChangeRIdModel model)
         {
             Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Classroom, nameof(student.Classroom));
+            Asserts.NotNull(student.Space, nameof(student.Space));
             Asserts.NotNull(model, nameof(model));
-            if (await ContainsAsync(student.Classroom, model.RId))
+            if (await ContainsAsync(student.Space, model.RId))
             {
                 StudentHelper.ThrowDuplicateRId(student.Classroom, model.RId);
             }
@@ -95,89 +97,43 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
         }
         
-        private async Task<StudentSpeciality> _AddSpecialityAsync(
-            Student student,
-            ClassroomSpeciality classroomSpeciality)
+        
+
+
+        public async Task<bool> ContainsAsync(Space space, string rId)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(classroomSpeciality.Classroom, nameof(classroomSpeciality.Classroom));
-
-            if (classroomSpeciality.ClassroomId != student.ClassroomId)
-            {
-                throw new InvalidOperationException("Incompatible entities.");
-            }
-
-            if (await SpecialityContainsAsync(classroomSpeciality, student))
-            {
-                StudentHelper.ThrowDuplicateStudentSpeciality(classroomSpeciality, student);
-            }
-
-            StudentSpeciality studentSpeciality = new()
-            {
-                Student = student,
-                ClassroomSpeciality = classroomSpeciality
-            };
-            return studentSpeciality;
-        }
-
-
-        public async Task<bool> ContainsAsync(Classroom classroom, string rId)
-        {
-            Asserts.NotNull(classroom, nameof(classroom));
+            Asserts.NotNull(space, nameof(space));
             Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             return await _dbContext.Set<Student>()
-                .AnyAsync(p => classroom.Equals(p.Classroom) && p.RId == normalized);
+                .AnyAsync(s => space.Id == s.SpaceId && s.RId == normalized);
         }
         
         
-        public async Task<bool> SpecialityContainsAsync(ClassroomSpeciality classroomSpeciality, string rId)
-        {
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+        
+        
+        
 
-            string normalized = rId.Normalize().ToUpper();
-            return await _dbContext.Set<StudentSpeciality>()
-                .AnyAsync(p => classroomSpeciality.Equals(p.ClassroomSpeciality) 
-                               && p.Student!.RId == normalized);
-        }
-        
-        public async Task<bool> SpecialityContainsAsync(ClassroomSpeciality classroomSpeciality, Student student)
+        public async Task<Student?> FindAsync(Space space, string rId)
         {
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(student, nameof(student));
-            
-            return await _dbContext.Set<StudentSpeciality>()
-                .AnyAsync(p => classroomSpeciality.Equals(p.ClassroomSpeciality) 
-                               && student.Equals(p.StudentId));
-        }
-
-        public async Task<Student?> FindAsync(Classroom classroom, string rId)
-        {
-            Asserts.NotNull(classroom, nameof(classroom));
+            Asserts.NotNull(space, nameof(space));
             Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             var student = await _dbContext.Set<Student>()
-                .FirstOrDefaultAsync(p => classroom.Equals(p.Classroom) && p.RId == normalized);
+                .FirstOrDefaultAsync(s => space.Id == s.SpaceId && s.RId == normalized);
 
             if (student == null)
             {
-                StudentHelper.ThrowStudentNotFound(classroom, rId);
+                throw new ElementNotFoundException("StudentNotFoundByRId");
             }
 
             return student;
         }
 
         
-        public async Task DeleteSpeciality(StudentSpeciality studentSpeciality)
-        {
-            Asserts.NotNull(studentSpeciality, nameof(studentSpeciality));
-            _dbContext.Remove(studentSpeciality);
-            await _dbContext.SaveChangesAsync();
-        }
+        
 
 
         public async Task MarkAsDeleted(Student student)
@@ -194,15 +150,36 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task Delete(Student student)
+        public async Task<Event> DeleteAsync(Student student, User user)
         {
-           var studentSpecialities = await _dbContext.Set<StudentSpeciality>()
-                .Where(p => student.Equals(p.StudentId))
-                .ToListAsync();
-           
-           _dbContext.Set<StudentSpeciality>().RemoveRange(studentSpecialities);
-           _dbContext.Set<Student>().Remove(student);
+            Asserts.NotNull(student, nameof(student));
+            Asserts.NotNull(student.Space, nameof(student.Space));
+            Asserts.NotNull(student.Classroom, nameof(student.Classroom));
+            Asserts.NotNull(user, nameof(user));
+           // var studentSpecialities = await _dbContext.Set<StudentSpeciality>()
+           //      .Where(p => student.Equals(p.StudentId))
+           //      .ToListAsync();
+
+           student.FirstName = "";
+           student.LastName = "";
+           student.Sex = '0';
+           student.BirthDate = DateTime.MinValue;
+           student.RId = "";
+
+           _dbContext.Update(student);
            await _dbContext.SaveChangesAsync();
+           
+           var publisherIds = new List<string> {
+               student.PublisherId, 
+               student.Space.PublisherId
+           };
+
+           if (student.ClassroomId != 0)
+           {
+               publisherIds.Add(student.Classroom.PublisherId);
+           }
+           
+           return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_DELETE", student);
         }
     }
 }

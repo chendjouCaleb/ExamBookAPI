@@ -82,6 +82,7 @@ namespace Vx.Services
             return await EmitAsync(publishers, actor, name, data);
         }
 
+        
 
         private async Task<PublisherEvent> _CreateEventPublisherAsync(Publisher publisher, Event @event)
         {

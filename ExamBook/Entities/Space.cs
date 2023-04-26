@@ -38,9 +38,7 @@ namespace ExamBook.Entities
         public Picture? ImageFile { get; set; }
         public string ImageId { get; set; } = "";
         public string CoverImageId { get; set; } = "";
-
-
-        public string PublisherId { get; set; } = "";
+        
         
         [JsonIgnore] public HashSet<Course> Courses { get; set; } = new();
         [JsonIgnore] public HashSet<Classroom> Classrooms { get; set; } = new();

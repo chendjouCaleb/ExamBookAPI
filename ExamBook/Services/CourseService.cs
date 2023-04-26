@@ -5,33 +5,53 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Models;
 using ExamBook.Models;
+using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Vx.Models;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
     public class CourseService
     {
         private readonly DbContext _dbContext;
+        private readonly PublisherService _publisherService;
+        private readonly EventService _eventService;
         private readonly ILogger<CourseService> _logger;
 
-        public CourseService(DbContext dbContext, ILogger<CourseService> logger)
+        public CourseService(DbContext dbContext, ILogger<CourseService> logger, 
+            PublisherService publisherService, 
+            EventService eventService)
         {
             _dbContext = dbContext;
             _logger = logger;
+            _publisherService = publisherService;
+            _eventService = eventService;
         }
 
 
-        public async Task<Course> AddCourseAsync(Space space, CourseAddModel model)
+        public async Task<ActionResultModel<Course>> AddCourseAsync(Space space, CourseAddModel model, User user)
         {
+            Asserts.NotNull(model, nameof(model));
+            Asserts.NotNull(user, nameof(user));
             string normalizedCode = StringHelper.Normalize(model.Code);
             string normalizedName = StringHelper.Normalize(model.Name);
 
-            var classroom = await _dbContext.Set<Classroom>()
-                .FindAsync(model.ClassroomId);
-            
+            if (await ContainsByCode(space, model.Code))
+            {
+                throw new UsedValueException("CourseCodeUsed");
+            }
+
+            if (await ContainsByName(space, model.Name))
+            {
+                throw new UsedValueException("CourseNameUsed");
+            }
+
+            var publisher = await _publisherService.AddAsync();
             Course course = new ()
             {
                 Name = model.Name,
@@ -40,7 +60,8 @@ namespace ExamBook.Services
                 NormalizedCode = normalizedCode,
                 Description = model.Description,
                 Coefficient = model.Coefficient,
-                Classroom = classroom
+                Space = space,
+                PublisherId = publisher.Id
             };
             await _dbContext.AddAsync(course);
 
@@ -52,61 +73,97 @@ namespace ExamBook.Services
 
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("New course");
-            return course;
+
+            var publisherIds = new List<string> {
+                publisher.Id, 
+                space.PublisherId
+            };
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_ADD", course);
+            return new ActionResultModel<Course>(course, @event);
         }
 
-        public async Task ChangeCourseCode(Course course, string code)
+        public async Task<Event> ChangeCourseCodeAsync(Course course, string code, User user)
         {
             Asserts.NotNull(course, nameof(course));
-            var space = await _dbContext
-                .Set<Space>()
-                .FindAsync(course.Classroom!.SpaceId);
+            Asserts.NotNull(course.Space, nameof(course.Space));
 
-            if (await ContainsByCode(space!, code))
+            if (await ContainsByCode(course.Space!, code))
             {
-                CourseHelper.ThrowDuplicateCode(code);
+                throw new UsedValueException("CourseCodeUsed");
             }
+
+            var eventData = new ChangeValueData<string>(course.Code, code);
 
             course.Code = code;
+            course.NormalizedCode = StringHelper.Normalize(code);
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> {
+                course.PublisherId, 
+                course.Space!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_CODE", eventData);
         }
 
-        public async Task ChangeCourseName(Course course, string name)
+        public async Task<Event> ChangeCourseNameAsync(Course course, string name, User user)
         {
             Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(course.Space, nameof(course.Space));
 
-            var classroom = await _dbContext.Set<Classroom>().FindAsync(course.ClassroomId);
-            
-            Asserts.NotNull(classroom, nameof(classroom));
-            
-            if (await ContainsByName(classroom!, name))
+            if (await ContainsByName(course.Space!, name))
             {
-                CourseHelper.ThrowDuplicateCode(name);
+                throw new UsedValueException("CourseNameUsed");
             }
 
+            var eventData = new ChangeValueData<string>(course.Name, name);
+
             course.Name = name;
+            course.NormalizedName = StringHelper.Normalize(name);
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> {
+                course.PublisherId, 
+                course.Space!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_NAME", eventData);
         }
         
         
-        public async Task ChangeCourseCoefficient(Course course, uint coefficient)
+        public async Task<Event> ChangeCourseCoefficientAsync(Course course, uint coefficient, User user)
         {
             Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(course.Space, nameof(course.Space));
+            var eventData = new ChangeValueData<uint>(course.Coefficient, coefficient);
 
             course.Coefficient = coefficient;
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> {
+                course.PublisherId, 
+                course.Space!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_COEFFICIENT", eventData);
         }
         
-        public async Task ChangeCourseDescription(Course course, string description)
+        public async Task<Event> ChangeCourseDescriptionAsync(Course course, string description, User user)
         {
             Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(course.Space, nameof(course.Space));
+
+            var eventData = new ChangeValueData<string>(course.Description, description);
 
             course.Description = description;
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> {
+                course.PublisherId, 
+                course.Space!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_DESCRIPTION", eventData);
         }
 
 
@@ -195,12 +252,12 @@ namespace ExamBook.Services
         {
             Asserts.NotNull(course, nameof(course));
             Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(course.Classroom, nameof(course.Classroom));
+            Asserts.NotNull(course.Space, nameof(course.Space));
 
-            if (course.ClassroomId != classroomSpeciality.ClassroomId)
-            {
-                throw new IncompatibleEntityException(course, classroomSpeciality);
-            }
+            // if (course.ClassroomId != classroomSpeciality.ClassroomId)
+            // {
+            //     throw new IncompatibleEntityException(course, classroomSpeciality);
+            // }
 
             if (await CourseSpecialityExists(course, classroomSpeciality))
             {
@@ -217,15 +274,41 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<Course?> FindByCode(Space space, string code)
+        public async Task<Course> FindCourseByCodeAsync(Space space, string code)
         {
             Asserts.NotNull(space, nameof(space));
             Asserts.NotNullOrWhiteSpace(code, nameof(code));
             
             string normalizedCode = StringHelper.Normalize(code);
-            return await _dbContext.Set<Course>()
+            var course = await _dbContext.Set<Course>()
                 .Where(c => c.NormalizedCode == normalizedCode)
                 .FirstOrDefaultAsync();
+
+            if (course == null)
+            {
+                throw new ElementNotFoundException("CourseNotFoundByCode");
+            }
+
+            return course;
+        }
+        
+        
+        public async Task<Course> FindCourseByNameAsync(Space space, string name)
+        {
+            Asserts.NotNull(space, nameof(space));
+            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            
+            string normalizedName = StringHelper.Normalize(name);
+            var course = await _dbContext.Set<Course>()
+                .Where(c => c.NormalizedName == normalizedName)
+                .FirstOrDefaultAsync();
+
+            if (course == null)
+            {
+                throw new ElementNotFoundException("CourseNotFoundByName");
+            }
+
+            return course;
         }
         
         public async Task<bool> ContainsByCode(Space space, string code)
@@ -235,18 +318,18 @@ namespace ExamBook.Services
             string normalizedCode = StringHelper.Normalize(code);
             return await _dbContext.Set<Course>()
                 .Where(c => c.NormalizedCode == normalizedCode)
-                .Where(c => c.Classroom!.SpaceId == space.Id)
+                .Where(c => c.SpaceId == space.Id)
                 .AnyAsync();
         }
         
-        public async Task<bool> ContainsByName(Classroom classroom, string name)
+        public async Task<bool> ContainsByName(Space space, string name)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
+            Asserts.NotNull(space, nameof(space));
             
             string normalizedName = StringHelper.Normalize(name);
             return await _dbContext.Set<Course>()
                 .Where(c => c.NormalizedName == normalizedName)
-                .Where(c => c.ClassroomId == classroom.Id)
+                .Where(c => c.SpaceId == space.Id)
                 .AnyAsync();
         }
 
@@ -308,10 +391,30 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
         }
 
-
-        public async Task Delete(Course course)
+        
+        public async Task<Event> DeleteAsync(Course course, User user)
         {
             Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(user, nameof(user));
+
+            course.Name = "";
+            course.NormalizedName = "";
+            course.Code = "";
+            course.NormalizedCode = "";
+            course.Description = "";
+            course.Coefficient = 0;
+            course.DeletedAt = DateTime.UtcNow;
+            _dbContext.Update(course);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { course.Space!.PublisherId, course.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_DELETE", course);
+        }
+
+        public async Task<Event> DestroyAsync(Course course, User user)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(user, nameof(user));
 
             var courseSpecialities = await _dbContext.Set<CourseSpeciality>()
                 .Where(cs => cs.CourseId == course.Id)
@@ -325,6 +428,9 @@ namespace ExamBook.Services
             _dbContext.RemoveRange(courseTeachers);
             _dbContext.Remove(course);
             await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { course.Space!.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_DESTROY", course);
         }
 
     }

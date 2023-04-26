@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
@@ -12,12 +13,9 @@ namespace ExamBook.Entities
         public Room? Room { get; set; }
         public ulong? RoomId { get; set; }
 
-        public HashSet<Student> Students { get; set; } = new();
-        public HashSet<Course> Courses { get; set; } = new();
-        public List<ClassroomSpeciality> ClassroomSpecialities { get; set; } = new();
-        
-        public string PublisherId { get; set; } = "";
-
+        [JsonIgnore] public HashSet<Student> Students { get; set; } = new();
+        //[JsonIgnore] public HashSet<Course> Courses { get; set; } = new();
+        [JsonIgnore] public List<ClassroomSpeciality> ClassroomSpecialities { get; set; } = new();
     }
 
 
@@ -39,5 +37,7 @@ namespace ExamBook.Entities
 
         public Speciality? Speciality { get; set; }
         public ulong SpecialityId { get; set; }
+
+        
     }
 }

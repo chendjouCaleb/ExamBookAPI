@@ -242,7 +242,7 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task GetNonExistingRoom_ShouldThrow()
+        public void GetNonExistingRoom_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
@@ -263,7 +263,7 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task GetNonExistingRoomByName_ShouldThrow()
+        public void GetNonExistingRoomByName_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
