@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
@@ -23,9 +24,9 @@ namespace ExamBook.Entities
         public Space? Space { get; set; }
         public ulong SpaceId { get; set; }
 
-        public List<CourseSpeciality> CourseSpecialities { get; set; } = new();
-        public List<CourseSession> CourseSessions { get; set; } = new();
-        public List<CourseHour> CourseHours { get; set; } = new();
-        public List<CourseTeacher> CourseTeachers { get; set; } = new();
+        [JsonIgnore] public List<CourseSpeciality> CourseSpecialities { get; set; } = new();
+        [JsonIgnore] public List<CourseSession> CourseSessions { get; set; } = new();
+        [JsonIgnore] public List<CourseHour> CourseHours { get; set; } = new();
+        [JsonIgnore] public List<CourseTeacher> CourseTeachers { get; set; } = new();
     }
 }

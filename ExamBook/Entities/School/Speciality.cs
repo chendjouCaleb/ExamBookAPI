@@ -1,4 +1,7 @@
-﻿namespace ExamBook.Entities
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
+
+namespace ExamBook.Entities
 {
     public class Speciality:Entity
     {
@@ -8,6 +11,6 @@
         public string Name { get; set; } = "";
         public string NormalizedName { get; set; } = "";
 
-        public string PublisherId { get; set; } = "";
+        [JsonIgnore] public List<CourseSpeciality> CourseSpecialities { get; set; } = new List<CourseSpeciality>();
     }
 }

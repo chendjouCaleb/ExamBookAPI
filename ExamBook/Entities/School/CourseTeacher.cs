@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
@@ -12,8 +13,8 @@ namespace ExamBook.Entities
 
         public bool IsPrincipal { get; set; }
 
-        public List<CourseHour> CourseHours { get; set; } = new();
-        public List<CourseSession> CourseSessions { get; set; } = new();
+       [JsonIgnore] public List<CourseHour> CourseHours { get; set; } = new();
+       [JsonIgnore] public List<CourseSession> CourseSessions { get; set; } = new();
 
 
     }

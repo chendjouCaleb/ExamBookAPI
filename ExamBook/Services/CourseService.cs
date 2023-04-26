@@ -32,8 +32,88 @@ namespace ExamBook.Services
             _publisherService = publisherService;
             _eventService = eventService;
         }
+        
+        
+        /// <summary>
+        /// Get course by id.
+        /// </summary>
+        /// <param name="id">The id of course.</param>
+        /// <returns>Course corresponding to the provided id.</returns>
+        /// <exception cref="ElementNotFoundException">If course not found.</exception>
+        public async Task<Course> GetCourseAsync(ulong id)
+        {
+            var course = await _dbContext.Set<Course>()
+                .Where(c => c.Id == id)
+                .Include(c => c.Space)
+                .FirstOrDefaultAsync();
 
+            if (course == null)
+            {
+                throw new ElementNotFoundException("CourseNotFoundById");
+            }
 
+            return course;
+        }
+
+        public async Task<Course> GetCourseByCodeAsync(Space space, string code)
+        {
+            Asserts.NotNull(space, nameof(space));
+            Asserts.NotNullOrWhiteSpace(code, nameof(code));
+            
+            string normalizedCode = StringHelper.Normalize(code);
+            var course = await _dbContext.Set<Course>()
+                .Where(c => c.NormalizedCode == normalizedCode)
+                .FirstOrDefaultAsync();
+
+            if (course == null)
+            {
+                throw new ElementNotFoundException("CourseNotFoundByCode");
+            }
+
+            return course;
+        }
+        
+        
+        public async Task<Course> GetCourseByNameAsync(Space space, string name)
+        {
+            Asserts.NotNull(space, nameof(space));
+            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            
+            string normalizedName = StringHelper.Normalize(name);
+            var course = await _dbContext.Set<Course>()
+                .Where(c => c.NormalizedName == normalizedName)
+                .FirstOrDefaultAsync();
+
+            if (course == null)
+            {
+                throw new ElementNotFoundException("CourseNotFoundByName");
+            }
+
+            return course;
+        }
+        
+        public async Task<bool> ContainsByCode(Space space, string code)
+        {
+            Asserts.NotNull(space, nameof(space));
+            
+            string normalizedCode = StringHelper.Normalize(code);
+            return await _dbContext.Set<Course>()
+                .Where(c => c.NormalizedCode == normalizedCode)
+                .Where(c => c.SpaceId == space.Id)
+                .AnyAsync();
+        }
+        
+        public async Task<bool> ContainsByName(Space space, string name)
+        {
+            Asserts.NotNull(space, nameof(space));
+            
+            string normalizedName = StringHelper.Normalize(name);
+            return await _dbContext.Set<Course>()
+                .Where(c => c.NormalizedName == normalizedName)
+                .Where(c => c.SpaceId == space.Id)
+                .AnyAsync();
+        }
+        
         public async Task<ActionResultModel<Course>> AddCourseAsync(Space space, CourseAddModel model, User user)
         {
             Asserts.NotNull(model, nameof(model));
@@ -65,7 +145,11 @@ namespace ExamBook.Services
             };
             await _dbContext.AddAsync(course);
 
-            var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, model.SpecialityIds);
+            var specialities = await _dbContext.Set<Speciality>()
+                .Where(s => model.SpecialityIds.Contains(s.Id))
+                .ToListAsync();
+            
+            var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
             await _dbContext.AddRangeAsync(courseSpecialities);
 
             var courseTeachers = await _CreateCourseTeachersCourseAsync(course, model.CourseTeacherAddModels);
@@ -105,6 +189,7 @@ namespace ExamBook.Services
             };
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_CODE", eventData);
         }
+        
 
         public async Task<Event> ChangeCourseNameAsync(Course course, string name, User user)
         {
@@ -167,6 +252,145 @@ namespace ExamBook.Services
         }
 
 
+        public async Task<bool> CourseSpecialityExists(Course course, Speciality speciality)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(speciality, nameof(speciality));
+
+            return await _dbContext.Set<CourseSpeciality>()
+                .Where(cs => cs.CourseId == course.Id)
+                .Where(cs => cs.SpecialityId == speciality.Id)
+                .Where(cs => cs.DeletedAt == null)
+                .AnyAsync();
+        }
+
+        public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(Course course, 
+            Speciality speciality, User user)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(course.Space, nameof(course.Space));
+            Asserts.NotNull(speciality, nameof(speciality));
+            Asserts.NotNull(user, nameof(user));
+
+            CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
+            await _dbContext.AddAsync(courseSpeciality);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId, speciality.PublisherId};
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_ADD", courseSpeciality);
+
+            return new ActionResultModel<CourseSpeciality>(courseSpeciality, @event);
+        }
+        
+        
+        public async Task<ActionResultModel<ICollection<CourseSpeciality>>> AddCourseSpecialitiesAsync(Course course, 
+            ICollection<Speciality> specialities, User user)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(course.Space, nameof(course.Space));
+            Asserts.NotNull(specialities, nameof(specialities));
+            Asserts.NotNull(user, nameof(user));
+
+            var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
+            await _dbContext.AddRangeAsync(courseSpecialities);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId};
+            publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITIES_ADD", courseSpecialities);
+
+            return new ActionResultModel<ICollection<CourseSpeciality>>(courseSpecialities, @event);
+        }
+
+        public async Task<List<CourseSpeciality>> _CreateCourseSpecialitiesAsync(Course course, 
+            ICollection<Speciality> specialities)
+        {
+            var courseSpecialities = new List<CourseSpeciality>();
+            foreach (var speciality in specialities)
+            {
+                if (!await CourseSpecialityExists(course, speciality))
+                {
+                    var courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
+                    courseSpecialities.Add(courseSpeciality);
+                }
+            }
+
+            return courseSpecialities;
+        }
+
+        public async Task<CourseSpeciality> _CreateCourseSpecialityAsync(Course course, Speciality speciality)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(speciality, nameof(speciality));
+            Asserts.NotNull(course.Space, nameof(course.Space));
+
+            if (course.SpaceId != speciality.SpaceId)
+            {
+                throw new IncompatibleEntityException(course, speciality);
+            }
+
+            if (await CourseSpecialityExists(course, speciality))
+            {
+                throw new IllegalOperationException("CourseSpecialityAlreadyExists");
+            }
+
+
+            CourseSpeciality courseSpeciality = new()
+            {
+                Course = course,
+                Speciality = speciality
+            };
+            return courseSpeciality;
+        }
+
+        public async Task<Event> DeleteCourseSpecialityAsync(CourseSpeciality courseSpeciality, User user)
+        {
+            Asserts.NotNull(courseSpeciality, nameof(courseSpeciality));
+            Asserts.NotNull(user, nameof(user));
+            var course = await _dbContext.Set<Course>().FindAsync(courseSpeciality.CourseId);
+            var speciality = await _dbContext.Set<Speciality>().FindAsync(courseSpeciality.SpecialityId);
+            var space = await _dbContext.Set<Space>().FindAsync(course!.SpaceId);
+            
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(speciality, nameof(speciality));
+            Asserts.NotNull(space, nameof(space));
+
+            courseSpeciality.DeletedAt = DateTime.UtcNow;
+            _dbContext.Update(courseSpeciality);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> {space!.PublisherId, speciality!.PublisherId, course.PublisherId};
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_DELETE", courseSpeciality);
+        }
+
+       
+
+        public async Task<bool> CourseTeacherExistsAsync(Course course, Member member)
+        {
+            Asserts.NotNull(course, nameof(course));
+            Asserts.NotNull(member, nameof(member));
+
+            return await _dbContext.Set<CourseTeacher>()
+                .Where(ct => ct.CourseId == course.Id)
+                .Where(ct => ct.MemberId == member.Id)
+                .Where(ct => ct.DeletedAt == null)
+                .AnyAsync();
+        }
+
+        public async Task<bool> CourseTeacherExists(Course course, ulong memberId)
+        {
+            var member = await _dbContext.Set<Member>().FindAsync(memberId);
+            if (member == null)
+            {
+                throw new InvalidOperationException($"Member with id={memberId} not found.");
+            }
+            return await CourseTeacherExistsAsync(course, member);
+        }
+        
+        
+       
+
+
         public async Task<CourseTeacher> AddCourseTeachers(Course course, Member member)
         {
             Asserts.NotNull(member, nameof(member));
@@ -223,160 +447,7 @@ namespace ExamBook.Services
 
             return courseTeacher;
         }
-
-
-        public async Task<List<CourseSpeciality>> _CreateCourseSpecialitiesAsync(Course course, 
-            IEnumerable<ulong> classroomSpecialityIds)
-        {
-            var courseSpecialities = new List<CourseSpeciality>();
-            foreach (var classroomSpecialityId in classroomSpecialityIds)
-            {
-                var classroomSpeciality = await _dbContext.Set<ClassroomSpeciality>().FindAsync(classroomSpecialityId);
-                if (classroomSpeciality == null)
-                {
-                    throw new InvalidOperationException($"Classroom speciality with id={classroomSpecialityId} not found.");
-                }
-
-                if (!await CourseSpecialityExists(course, classroomSpeciality))
-                {
-                    var courseSpeciality = await _CreateCourseSpecialityAsync(course, classroomSpeciality);
-                    courseSpecialities.Add(courseSpeciality);
-                }
-            }
-
-            return courseSpecialities;
-        }
-
-        public async Task<CourseSpeciality> _CreateCourseSpecialityAsync(Course course, 
-            ClassroomSpeciality classroomSpeciality)
-        {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-
-            // if (course.ClassroomId != classroomSpeciality.ClassroomId)
-            // {
-            //     throw new IncompatibleEntityException(course, classroomSpeciality);
-            // }
-
-            if (await CourseSpecialityExists(course, classroomSpeciality))
-            {
-                CourseHelper.ThrowDuplicateCourseSpeciality(course, classroomSpeciality);
-            }
-
-
-            CourseSpeciality courseSpeciality = new()
-            {
-                Course = course,
-                ClassroomSpeciality = classroomSpeciality
-            };
-            return courseSpeciality;
-        }
-
-
-        public async Task<Course> FindCourseByCodeAsync(Space space, string code)
-        {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(code, nameof(code));
-            
-            string normalizedCode = StringHelper.Normalize(code);
-            var course = await _dbContext.Set<Course>()
-                .Where(c => c.NormalizedCode == normalizedCode)
-                .FirstOrDefaultAsync();
-
-            if (course == null)
-            {
-                throw new ElementNotFoundException("CourseNotFoundByCode");
-            }
-
-            return course;
-        }
         
-        
-        public async Task<Course> FindCourseByNameAsync(Space space, string name)
-        {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
-            
-            string normalizedName = StringHelper.Normalize(name);
-            var course = await _dbContext.Set<Course>()
-                .Where(c => c.NormalizedName == normalizedName)
-                .FirstOrDefaultAsync();
-
-            if (course == null)
-            {
-                throw new ElementNotFoundException("CourseNotFoundByName");
-            }
-
-            return course;
-        }
-        
-        public async Task<bool> ContainsByCode(Space space, string code)
-        {
-            Asserts.NotNull(space, nameof(space));
-            
-            string normalizedCode = StringHelper.Normalize(code);
-            return await _dbContext.Set<Course>()
-                .Where(c => c.NormalizedCode == normalizedCode)
-                .Where(c => c.SpaceId == space.Id)
-                .AnyAsync();
-        }
-        
-        public async Task<bool> ContainsByName(Space space, string name)
-        {
-            Asserts.NotNull(space, nameof(space));
-            
-            string normalizedName = StringHelper.Normalize(name);
-            return await _dbContext.Set<Course>()
-                .Where(c => c.NormalizedName == normalizedName)
-                .Where(c => c.SpaceId == space.Id)
-                .AnyAsync();
-        }
-
-        public async Task<bool> CourseTeacherExistsAsync(Course course, Member member)
-        {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(member, nameof(member));
-
-            return await _dbContext.Set<CourseTeacher>()
-                .Where(ct => ct.CourseId == course.Id)
-                .Where(ct => ct.MemberId == member.Id)
-                .AnyAsync();
-        }
-
-        public async Task<bool> CourseTeacherExists(Course course, ulong memberId)
-        {
-            var member = await _dbContext.Set<Member>().FindAsync(memberId);
-            if (member == null)
-            {
-                throw new InvalidOperationException($"Member with id={memberId} not found.");
-            }
-            return await CourseTeacherExistsAsync(course, member);
-        }
-
-        public async Task<bool> CourseSpecialityExists(Course course, Speciality speciality)
-        {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(speciality, nameof(speciality));
-
-            return await _dbContext.Set<CourseSpeciality>()
-                .Where(cs => cs.CourseId == course.Id)
-                .Where(cs => cs.ClassroomSpeciality!.SpecialityId == speciality.Id)
-                .AnyAsync();
-        }
-        
-        public async Task<bool> CourseSpecialityExists(Course course, ClassroomSpeciality classroomSpeciality)
-        {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-
-            return await _dbContext.Set<CourseSpeciality>()
-                .Where(cs => cs.CourseId == course.Id)
-                .Where(cs => cs.ClassroomSpecialityId == classroomSpeciality.Id)
-                .AnyAsync();
-        }
-
-
         public async Task DeleteCourseTeacher(CourseTeacher courseTeacher)
         {
             Asserts.NotNull(courseTeacher, nameof(courseTeacher));
@@ -384,12 +455,7 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task RemoveCourseSpeciality(CourseSpeciality courseSpeciality)
-        {
-            Asserts.NotNull(courseSpeciality, nameof(courseSpeciality));
-            _dbContext.Remove(courseSpeciality);
-            await _dbContext.SaveChangesAsync();
-        }
+        
 
         
         public async Task<Event> DeleteAsync(Course course, User user)
