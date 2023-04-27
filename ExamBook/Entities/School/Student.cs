@@ -20,28 +20,25 @@ namespace ExamBook.Entities
         [JsonIgnore]
         public Space Space { get; set; } = null!;
         public ulong? SpaceId { get; set; }
-        
-        [JsonIgnore]
-        public Classroom Classroom { get; set; } = null!;
-        public ulong? ClassroomId { get; set; }
 
         [JsonIgnore] public HashSet<Participant> Participants { get; set; } = new();
+        [JsonIgnore] public List<StudentSpeciality> Specialities { get; set; } = new();
     }
 
 
     public class StudentSpeciality : Entity
     {
         public StudentSpeciality() {}
-        public StudentSpeciality(Student? student, ClassroomSpeciality? classroomSpeciality)
+        public StudentSpeciality(Student? student, Speciality? Speciality)
         {
             Student = student;
-            ClassroomSpeciality = classroomSpeciality;
+            Speciality = Speciality;
         }
 
         public Student? Student { get; set; }
         public ulong? StudentId { get; set; }
 
-        public ClassroomSpeciality? ClassroomSpeciality { get; set; }
-        public ulong ClassroomSpecialityId { get; set; }
+        public Speciality? Speciality { get; set; }
+        public ulong SpecialityId { get; set; }
     }
 }

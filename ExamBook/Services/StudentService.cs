@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Helpers;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
+using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Vx.Models;
@@ -19,28 +19,37 @@ namespace ExamBook.Services
         private readonly DbContext _dbContext;
         private readonly EventService _eventService;
         private readonly PublisherService _publisherService;
+        private readonly StudentSpecialityService _studentSpecialityService;
 
-        public StudentService(DbContext dbContext, EventService eventService, PublisherService publisherService)
+        public StudentService(DbContext dbContext, 
+            EventService eventService, 
+            PublisherService publisherService, 
+            StudentSpecialityService studentSpecialityService)
         {
             _dbContext = dbContext;
             _eventService = eventService;
             _publisherService = publisherService;
+            _studentSpecialityService = studentSpecialityService;
         }
 
 
-        public async Task<ActionResultModel<Student>> AddAsync(Classroom classroom, StudentAddModel model, User user)
+        public async Task<ActionResultModel<Student>> AddAsync(Space space, StudentAddModel model, User user)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
-            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
+            Asserts.NotNull(space, nameof(space));
             Asserts.NotNull(model, nameof(model));
             Asserts.NotNull(user, nameof(user));
 
-            var space = classroom.Space!;
+            
             if (await ContainsAsync(space, model.RId))
             {
-                StudentHelper.ThrowDuplicateRId(classroom, model.RId);
+                throw new UsedValueException("StudentCodeUsed");
             }
+            
             string normalizedRid = model.RId.Normalize().ToUpper();
+            var specialities = _dbContext.Set<Speciality>()
+                .Where(e => model.SpecialityIds.Contains(e.Id))
+                .ToList();
+            
             var publisher = await _publisherService.AddAsync();
             
             Student student = new()
@@ -51,14 +60,17 @@ namespace ExamBook.Services
                 Sex = model.Sex,
                 NormalizedRId = normalizedRid,
                 RId = model.RId,
-                Classroom = classroom,
                 Space = space,
                 PublisherId = publisher.Id
             };
+            student.Specialities = (await _studentSpecialityService.CreateSpecialitiesAsync(student, specialities)).ToList();
+            
             await _dbContext.AddAsync(student);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {publisher.Id, space.PublisherId, classroom.PublisherId};
+            var publisherIds = new List<string> {publisher.Id, space.PublisherId};
+            publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_ADD", student);
             
             return new ActionResultModel<Student>(student, @event);
@@ -66,27 +78,33 @@ namespace ExamBook.Services
 
         
 
-        public async Task ChangeRId(Student student, StudentChangeRIdModel model)
+        public async Task<Event> ChangeRId(Student student, string rId, User user)
         {
+            Asserts.NotNull(user, nameof(user));
             Asserts.NotNull(student, nameof(student));
             Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(model, nameof(model));
-            if (await ContainsAsync(student.Space, model.RId))
+            
+            if (await ContainsAsync(student.Space, rId))
             {
-                StudentHelper.ThrowDuplicateRId(student.Classroom, model.RId);
+                throw new UsedValueException("StudentRIdUsed");
             }
-            string normalizedRid = model.RId.Normalize().ToUpper();
-            student.RId = model.RId;
+
+            var data = new ChangeValueData<string>(student.RId, rId);
+            string normalizedRid = rId.Normalize().ToUpper();
+            student.RId = rId;
             student.NormalizedRId = normalizedRid;
             _dbContext.Update(student);
             await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { student.PublisherId, student.Space.PublisherId };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_CHANGE_RID", data);
         }
 
 
         public async Task ChangeInfo(Student student, StudentChangeInfoModel model)
         {
             Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Classroom, nameof(student.Classroom));
+            Asserts.NotNull(student.Space, nameof(student.Space));
             Asserts.NotNull(model, nameof(model));
 
             student.Sex = model.Sex;
@@ -107,7 +125,7 @@ namespace ExamBook.Services
 
             string normalized = rId.Normalize().ToUpper();
             return await _dbContext.Set<Student>()
-                .AnyAsync(s => space.Id == s.SpaceId && s.RId == normalized);
+                .AnyAsync(s => space.Id == s.SpaceId && s.RId == normalized && s.DeletedAt == null);
         }
         
         
@@ -154,7 +172,6 @@ namespace ExamBook.Services
         {
             Asserts.NotNull(student, nameof(student));
             Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(student.Classroom, nameof(student.Classroom));
             Asserts.NotNull(user, nameof(user));
            // var studentSpecialities = await _dbContext.Set<StudentSpeciality>()
            //      .Where(p => student.Equals(p.StudentId))
@@ -174,11 +191,6 @@ namespace ExamBook.Services
                student.Space.PublisherId
            };
 
-           if (student.ClassroomId != 0)
-           {
-               publisherIds.Add(student.Classroom.PublisherId);
-           }
-           
            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_DELETE", student);
         }
     }

@@ -391,19 +391,7 @@ namespace ExamBook.Services
        
 
 
-        public async Task<CourseTeacher> AddCourseTeachers(Course course, Member member)
-        {
-            Asserts.NotNull(member, nameof(member));
-            Asserts.NotNull(course, nameof(course));
-            CourseTeacherAddModel model = new()
-            {
-                MemberId = member.Id
-            };
-            var courseTeacher = await _CreateCourseTeacherAsync(course, model);
-            await _dbContext.AddAsync(courseTeacher);
-            await _dbContext.SaveChangesAsync();
-            return courseTeacher;
-        }
+        
 
         public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(Course course, List<CourseTeacherAddModel> models)
         {

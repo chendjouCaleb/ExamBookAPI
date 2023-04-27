@@ -11,7 +11,6 @@ using ExamBook.Models.Data;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using Social.Helpers;
 using Vx.Asserts;
 using Vx.Models;

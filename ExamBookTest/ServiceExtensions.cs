@@ -28,13 +28,23 @@ namespace ExamBookTest
             Password = "Password09@"
         };
         
+        public static UserAddModel UserAddModel1 = new ()
+        {
+            FirstName = "first name1",
+            LastName = "last name2",
+            Sex = 'M',
+            BirthDate = new DateTime(1995,1,1),
+            UserName = "userName12",
+            Password = "Password09@"
+        };
+        
         public static UserAddModel UserAddModel2 = new ()
         {
             FirstName = "first name1",
             LastName = "last name2",
             Sex = 'M',
             BirthDate = new DateTime(1995,1,1),
-            UserName = "userName1",
+            UserName = "userName2",
             Password = "Password09@"
         };
         
@@ -102,6 +112,7 @@ namespace ExamBookTest
             services.AddTransient<StudentService>();
             services.AddTransient<StudentSpecialityService>();
             services.AddTransient<CourseService>();
+            services.AddTransient<CourseTeacherService>();
 
             services.AddTransient<UserService>();
             services.AddIdentity<User, Role>()

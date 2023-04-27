@@ -22,7 +22,7 @@ namespace ExamBook.Models
         [Required]
         public char Sex { get; set; }
 
-        public HashSet<ulong> ClassroomSpecialityIds { get; set; } = new();
+        public HashSet<ulong> SpecialityIds { get; set; } = new();
     }
 
     public class StudentChangeRIdModel

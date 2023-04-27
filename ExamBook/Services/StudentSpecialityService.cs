@@ -29,21 +29,14 @@ namespace ExamBook.Services
         }
 
         public async Task<ActionResultModel<StudentSpeciality>> AddSpecialityAsync(Student student,
-            ClassroomSpeciality classroomSpeciality, User user)
+            Speciality speciality, User user)
         {
             Asserts.NotNull(student, nameof(student));
             Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(classroomSpeciality.Classroom, nameof(classroomSpeciality.Classroom));
-            Asserts.NotNull(classroomSpeciality.Speciality, nameof(classroomSpeciality.Speciality));
+            Asserts.NotNull(speciality, nameof(speciality));
             Asserts.NotNull(user, nameof(user));
 
-            if (student.ClassroomId == null)
-            {
-                throw new IllegalStateException("StudentHasNoClassroom");
-            }
-            
-            var studentSpeciality = await _AddSpecialityAsync(student, classroomSpeciality);
+            var studentSpeciality = await CreateSpecialityAsync(student, speciality);
             await _dbContext.AddAsync(studentSpeciality);
             await _dbContext.SaveChangesAsync();
 
@@ -51,27 +44,25 @@ namespace ExamBook.Services
             {
                 student.PublisherId,
                 student.Space.PublisherId,
-                classroomSpeciality.PublisherId,
-                classroomSpeciality.Classroom!.PublisherId,
-                classroomSpeciality.Speciality!.PublisherId
+                speciality.PublisherId
             };
 
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_SPECIALITY_ADD", classroomSpeciality);
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_SPECIALITY_ADD", studentSpeciality);
                 
             return new ActionResultModel<StudentSpeciality>(studentSpeciality, @event);
         }
 
         public async Task<ICollection<StudentSpeciality>> AddSpecialitiesAsync(Student student,
-            HashSet<ulong> classroomSpecialityIds)
+            HashSet<ulong> specialityIds)
         {
-            var classroomSpecialities = _dbContext.Set<ClassroomSpeciality>()
-                .Where(e => classroomSpecialityIds.Contains(e.Id))
+            var specialities = _dbContext.Set<Speciality>()
+                .Where(e => specialityIds.Contains(e.Id))
                 .ToList();
 
             var studentSpecialities = new List<StudentSpeciality>();
-            foreach (var classroomSpeciality in classroomSpecialities)
+            foreach (var speciality in specialities)
             {
-                var studentSpeciality = await _AddSpecialityAsync(student, classroomSpeciality);
+                var studentSpeciality = await CreateSpecialityAsync(student, speciality);
                 await _dbContext.AddAsync(studentSpeciality);
                 studentSpecialities.Add(studentSpeciality);
             }
@@ -79,57 +70,71 @@ namespace ExamBook.Services
             return studentSpecialities;
         }
 
+        
+        public async Task<ICollection<StudentSpeciality>> CreateSpecialitiesAsync(Student student,
+            ICollection<Speciality> specialities)
+        {
+            var studentSpecialities = new List<StudentSpeciality>();
+            foreach (var speciality in specialities)
+            {
+                var studentSpeciality = await CreateSpecialityAsync(student, speciality);
+                studentSpecialities.Add(studentSpeciality);
+            }
 
-        private async Task<StudentSpeciality> _AddSpecialityAsync(
-            Student student,
-            ClassroomSpeciality classroomSpeciality)
+            return studentSpecialities;
+        }
+
+        private async Task<StudentSpeciality> CreateSpecialityAsync(Student student, Speciality speciality)
         {
             Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(classroomSpeciality.Classroom, nameof(classroomSpeciality.Classroom));
+            Asserts.NotNull(speciality, nameof(speciality));
 
-            if (classroomSpeciality.ClassroomId != student.ClassroomId)
+            if (speciality.SpaceId != student.SpaceId)
             {
                 throw new InvalidOperationException("Incompatible entities.");
             }
 
-            if (await SpecialityContainsAsync(classroomSpeciality, student))
+            if (await SpecialityContainsAsync(speciality, student))
             {
-                StudentHelper.ThrowDuplicateStudentSpeciality(classroomSpeciality, student);
+                throw new IllegalOperationException("StudentSpecialityAlreadyExists");
             }
 
             StudentSpeciality studentSpeciality = new()
             {
                 Student = student,
-                ClassroomSpeciality = classroomSpeciality
+                Speciality = speciality
             };
             return studentSpeciality;
         }
         
-        public async Task<bool> ContainsAsync(ClassroomSpeciality classroomSpeciality, string rId)
+        public async Task<bool> ContainsAsync(Speciality speciality, string rId)
         {
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
+            Asserts.NotNull(speciality, nameof(speciality));
             Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = StringHelper.Normalize(rId);
             return await _dbContext.Set<StudentSpeciality>()
-                .AnyAsync(p => classroomSpeciality.Equals(p.ClassroomSpeciality) 
+                .AnyAsync(p => speciality.Equals(p.Speciality) 
                                && p.Student!.RId == normalized && p.Student.DeletedAt == null);
         }
         
-        public async Task<bool> SpecialityContainsAsync(ClassroomSpeciality classroomSpeciality, Student student)
+        public async Task<bool> SpecialityContainsAsync(Speciality speciality, Student student)
         {
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
+            Asserts.NotNull(speciality, nameof(speciality));
             Asserts.NotNull(student, nameof(student));
             
             return await _dbContext.Set<StudentSpeciality>()
-                .AnyAsync(p => classroomSpeciality.Equals(p.ClassroomSpeciality) 
-                               && student.Equals(p.StudentId));
+                .AnyAsync(p => speciality.Id  == p.SpecialityId 
+                               && student.Id == p.StudentId 
+                               && p.DeletedAt == null);
         }
         
         public async Task<Event> DeleteSpeciality(StudentSpeciality studentSpeciality, User user)
         {
             Asserts.NotNull(studentSpeciality, nameof(studentSpeciality));
+            Asserts.NotNull(studentSpeciality.Speciality, nameof(studentSpeciality.Speciality));
+            Asserts.NotNull(studentSpeciality.Student, nameof(studentSpeciality.Student));
+            Asserts.NotNull(studentSpeciality.Student!.Space, nameof(studentSpeciality.Student.Space));
             _dbContext.Remove(studentSpeciality);
             await _dbContext.SaveChangesAsync();
             
@@ -137,9 +142,7 @@ namespace ExamBook.Services
             {
                 studentSpeciality.Student!.PublisherId,
                 studentSpeciality.Student.Space.PublisherId,
-                studentSpeciality.ClassroomSpeciality!.PublisherId,
-                studentSpeciality.ClassroomSpeciality.Classroom!.PublisherId,
-                studentSpeciality.ClassroomSpeciality.Speciality!.PublisherId
+                studentSpeciality.Speciality!.PublisherId
             };
 
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_SPECIALITY_DELETE", studentSpeciality);
