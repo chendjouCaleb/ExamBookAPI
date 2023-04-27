@@ -19,7 +19,7 @@ namespace ExamBook.Helpers
         
         public static void ThrowDuplicateStudentSpeciality(ClassroomSpeciality speciality, Student student)
         {
-            var m = $"The Student: {student.RId} is already found in speciality: {speciality.Speciality!.Name} in" +
+            var m = $"The Student: {student.Code} is already found in speciality: {speciality.Speciality!.Name} in" +
                     $" classroom: {speciality.Classroom!.Name}.";
             throw new InvalidOperationException(m);
         }

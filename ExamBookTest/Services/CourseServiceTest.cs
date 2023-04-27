@@ -164,6 +164,18 @@ namespace ExamBookTest.Services
 
 
         [Test]
+        public async Task TryChangeCourseCode_WithUsedCode_ShouldThrow()
+        {
+            var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+
+            var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+            {
+                await _service.ChangeCourseCodeAsync(course, course.Code, _adminUser);
+            });
+            Assert.AreEqual("CourseCodeUsed", ex!.Message);
+        }
+        
+        [Test]
         public async Task ChangeCourseName()
         {
             var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;

@@ -52,12 +52,24 @@ namespace ExamBook.Services
             return new ActionResultModel<StudentSpeciality>(studentSpeciality, @event);
         }
 
-        public async Task<ICollection<StudentSpeciality>> AddSpecialitiesAsync(Student student,
-            HashSet<ulong> specialityIds)
+        public async Task<ActionResultModel<ICollection<StudentSpeciality>>> AddSpecialitiesAsync(
+            Student student, HashSet<ulong> specialityIds, User user)
         {
             var specialities = _dbContext.Set<Speciality>()
                 .Where(e => specialityIds.Contains(e.Id))
                 .ToList();
+
+            return await AddSpecialitiesAsync(student, specialities, user);
+        }
+
+        public async Task<ActionResultModel<ICollection<StudentSpeciality>>> AddSpecialitiesAsync(
+            Student student, ICollection<Speciality> specialities, User user)
+        {
+            Asserts.NotNull(student, nameof(student));
+            Asserts.NotNull(student.Space, nameof(student.Space));
+            Asserts.NotNull(specialities, nameof(specialities));
+            Asserts.NotNull(user, nameof(user));
+
 
             var studentSpecialities = new List<StudentSpeciality>();
             foreach (var speciality in specialities)
@@ -67,7 +79,11 @@ namespace ExamBook.Services
                 studentSpecialities.Add(studentSpeciality);
             }
 
-            return studentSpecialities;
+            var publisherIds = new List<string> {student.Space.PublisherId, student.PublisherId};
+            publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_SPECIALITIES_ADD", studentSpecialities);
+
+            return new ActionResultModel<ICollection<StudentSpeciality>>(studentSpecialities, @event);
         }
 
         
@@ -94,7 +110,7 @@ namespace ExamBook.Services
                 throw new InvalidOperationException("Incompatible entities.");
             }
 
-            if (await SpecialityContainsAsync(speciality, student))
+            if (await ContainsAsync(student, speciality))
             {
                 throw new IllegalOperationException("StudentSpecialityAlreadyExists");
             }
@@ -115,10 +131,10 @@ namespace ExamBook.Services
             string normalized = StringHelper.Normalize(rId);
             return await _dbContext.Set<StudentSpeciality>()
                 .AnyAsync(p => speciality.Equals(p.Speciality) 
-                               && p.Student!.RId == normalized && p.Student.DeletedAt == null);
+                               && p.Student!.Code == normalized && p.Student.DeletedAt == null);
         }
         
-        public async Task<bool> SpecialityContainsAsync(Speciality speciality, Student student)
+        public async Task<bool> ContainsAsync(Student student, Speciality speciality)
         {
             Asserts.NotNull(speciality, nameof(speciality));
             Asserts.NotNull(student, nameof(student));
@@ -135,7 +151,9 @@ namespace ExamBook.Services
             Asserts.NotNull(studentSpeciality.Speciality, nameof(studentSpeciality.Speciality));
             Asserts.NotNull(studentSpeciality.Student, nameof(studentSpeciality.Student));
             Asserts.NotNull(studentSpeciality.Student!.Space, nameof(studentSpeciality.Student.Space));
-            _dbContext.Remove(studentSpeciality);
+            
+            studentSpeciality.DeletedAt = DateTime.UtcNow;
+            _dbContext.Update(studentSpeciality);
             await _dbContext.SaveChangesAsync();
             
             var publisherIds = new List<string>

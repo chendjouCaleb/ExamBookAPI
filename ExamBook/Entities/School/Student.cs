@@ -6,8 +6,8 @@ namespace ExamBook.Entities
 {
     public class Student:Entity
     {
-        public string RId { get; set; } = "";
-        public string NormalizedRId { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string NormalizedCode { get; set; } = "";
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
 

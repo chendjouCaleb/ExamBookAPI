@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
+using ExamBook.Helpers;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -58,9 +59,10 @@ namespace ExamBook.Services
                 LastName = model.LastName,
                 BirthDate = model.BirthDate,
                 Sex = model.Sex,
-                NormalizedRId = normalizedRid,
-                RId = model.RId,
+                NormalizedCode = normalizedRid,
+                Code = model.RId,
                 Space = space,
+                SpaceId = space.Id,
                 PublisherId = publisher.Id
             };
             student.Specialities = (await _studentSpecialityService.CreateSpecialitiesAsync(student, specialities)).ToList();
@@ -78,7 +80,7 @@ namespace ExamBook.Services
 
         
 
-        public async Task<Event> ChangeRId(Student student, string rId, User user)
+        public async Task<Event> ChangeCodeAsync(Student student, string rId, User user)
         {
             Asserts.NotNull(user, nameof(user));
             Asserts.NotNull(student, nameof(student));
@@ -86,18 +88,18 @@ namespace ExamBook.Services
             
             if (await ContainsAsync(student.Space, rId))
             {
-                throw new UsedValueException("StudentRIdUsed");
+                throw new UsedValueException("StudentCodeUsed");
             }
 
-            var data = new ChangeValueData<string>(student.RId, rId);
+            var data = new ChangeValueData<string>(student.Code, rId);
             string normalizedRid = rId.Normalize().ToUpper();
-            student.RId = rId;
-            student.NormalizedRId = normalizedRid;
+            student.Code = rId;
+            student.NormalizedCode = normalizedRid;
             _dbContext.Update(student);
             await _dbContext.SaveChangesAsync();
 
             var publisherIds = new List<string> { student.PublisherId, student.Space.PublisherId };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_CHANGE_RID", data);
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_CHANGE_CODE", data);
         }
 
 
@@ -123,9 +125,9 @@ namespace ExamBook.Services
             Asserts.NotNull(space, nameof(space));
             Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
 
-            string normalized = rId.Normalize().ToUpper();
+            string normalized = StringHelper.Normalize(rId);
             return await _dbContext.Set<Student>()
-                .AnyAsync(s => space.Id == s.SpaceId && s.RId == normalized && s.DeletedAt == null);
+                .AnyAsync(s => space.Id == s.SpaceId && s.NormalizedCode == normalized && s.DeletedAt == null);
         }
         
         
@@ -140,7 +142,7 @@ namespace ExamBook.Services
 
             string normalized = rId.Normalize().ToUpper();
             var student = await _dbContext.Set<Student>()
-                .FirstOrDefaultAsync(s => space.Id == s.SpaceId && s.RId == normalized);
+                .FirstOrDefaultAsync(s => space.Id == s.SpaceId && s.Code == normalized);
 
             if (student == null)
             {
@@ -161,8 +163,8 @@ namespace ExamBook.Services
             student.BirthDate = DateTime.MinValue;
             student.FirstName = "";
             student.LastName = "";
-            student.RId = "";
-            student.NormalizedRId = "";
+            student.Code = "";
+            student.NormalizedCode = "";
             student.DeletedAt = DateTime.Now;
             _dbContext.Update(student);
             await _dbContext.SaveChangesAsync();
@@ -181,7 +183,9 @@ namespace ExamBook.Services
            student.LastName = "";
            student.Sex = '0';
            student.BirthDate = DateTime.MinValue;
-           student.RId = "";
+           student.Code = "";
+           student.NormalizedCode = "";
+           student.DeletedAt = DateTime.Now;
 
            _dbContext.Update(student);
            await _dbContext.SaveChangesAsync();
