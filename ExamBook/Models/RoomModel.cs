@@ -4,6 +4,14 @@ namespace ExamBook.Models
 {
     public class RoomAddModel
     {
+        public RoomAddModel() {}
+
+        public RoomAddModel(string name, uint capacity)
+        {
+            Name = name;
+            Capacity = capacity;
+        }
+
         [Required]
         public string Name { get; set; } = "";
         public uint Capacity { get; set; }

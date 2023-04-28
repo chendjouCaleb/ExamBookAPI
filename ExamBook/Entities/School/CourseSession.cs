@@ -5,8 +5,8 @@ namespace ExamBook.Entities
 {
     public class CourseSession:Entity
     {
-        public Classroom? Classroom { get; set; }
-        public ulong ClassroomId { get; set; }
+        public Space Space{ get; set; }
+        public ulong SpaceId { get; set; }
         
         public CourseHour? CourseHour { get; set; }
         public ulong? CourseHourId { get; set; }

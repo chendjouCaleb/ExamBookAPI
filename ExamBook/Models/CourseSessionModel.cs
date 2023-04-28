@@ -1,4 +1,5 @@
 ﻿using System;
+using ExamBook.Entities;
 
 namespace ExamBook.Models
 {
@@ -14,9 +15,23 @@ namespace ExamBook.Models
         public ulong? CourseHourId { get; set; }
     }
     
-    public class CourseSessionDateTimeModel
+    public class CourseSessionDateModel
     {
+        public CourseSessionDateModel() {}
+
+        public CourseSessionDateModel(CourseSession courseSession)
+        {
+            ExpectedEndDateTime = courseSession.ExpectedEndDateTime;
+            ExpectedStartDateTime = courseSession.ExpectedStartDateTime;
+        }
         public DateTime? ExpectedStartDateTime { get; set; }
         public DateTime? ExpectedEndDateTime { get; set; }
+    }
+    
+    public class CourseSessionReportModel
+    {
+        public string Report { get; set; } = "";
+        public DateTime StartDateTime { get; set; }
+        public DateTime EndDateTime { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using ExamBook.Entities;
 
 namespace ExamBook.Models
 {
@@ -9,25 +10,33 @@ namespace ExamBook.Models
         public DayOfWeek DayOfWeek { get; set; }
         
         [Required]
-        public TimeSpan StartHour { get; set; }
+        public TimeOnly StartHour { get; set; }
         
         [Required]
-        public TimeSpan EndHour { get; set; }
+        public TimeOnly EndHour { get; set; }
 
         public ulong RoomId { get; set; }
         public ulong CourseTeacherId { get; set; }
-        public ulong CourseId { get; set; }
     }
 
-    public class CourseHourChangeHourModel
+    public class CourseHourHourModel
     {
+        public CourseHourHourModel() {}
+
+        public CourseHourHourModel(CourseHour courseHour)
+        {
+            DayOfWeek = courseHour.DayOfWeek;
+            StartHour = courseHour.StartHour;
+            EndHour = courseHour.EndHour;
+        }
+        
         [Required]
         public DayOfWeek DayOfWeek { get; set; }
         
         [Required]
-        public TimeSpan StartHour { get; set; }
+        public TimeOnly StartHour { get; set; }
         
         [Required]
-        public TimeSpan EndHour { get; set; }
+        public TimeOnly EndHour { get; set; }
     }
 }
