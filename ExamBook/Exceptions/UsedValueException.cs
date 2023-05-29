@@ -2,7 +2,7 @@
 {
     public class UsedValueException:BaseException
     {
-        public UsedValueException(string? message) : base(message)
+        public UsedValueException(string code, params object[] parameters) : base(code, parameters)
         {
         }
     }

@@ -1,21 +1,31 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
     public class ParticipantService
     {
         private readonly DbContext _dbContext;
+        private readonly PublisherService _publisherService;
+        private readonly EventService _eventService;
+        private readonly ILogger<ParticipantService> _logger;
 
-        public ParticipantService(DbContext dbContext)
+        public ParticipantService(DbContext dbContext, PublisherService publisherService, EventService eventService, ILogger<ParticipantService> logger)
         {
             _dbContext = dbContext;
+            _publisherService = publisherService;
+            _eventService = eventService;
+            _logger = logger;
         }
 
 
@@ -53,6 +63,57 @@ namespace ExamBook.Services
             
             await _dbContext.SaveChangesAsync();
             return participant;
+        }
+
+        public async Task<ICollection<Participant>> AddParticipants(Examination examination,
+            ICollection<Student> students)
+        {
+            Asserts.NotNull(examination, nameof(examination));
+            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            Asserts.NotNull(students, nameof(students));
+            
+            students = students.DistinctBy(s => s.Id).ToList();
+            var studentIds = students.Select(s => s.Id ).ToList();
+            var contains = await _dbContext.Set<Participant>()
+                .Where(p => p.StudentId != null && studentIds.Contains(p.StudentId ?? 0) && p.ExaminationId == examination.Id)
+                .AnyAsync();
+
+            if (contains)
+            {
+                throw new IllegalOperationException("StudentExaminationsExists");
+            }
+            
+            
+            
+        }
+        public async Task<Participant> CreateParticipant(Examination examination, Student student)
+        {
+            Asserts.NotNull(examination, nameof(examination));
+            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            Asserts.NotNull(student, nameof(student));
+            Asserts.NotNull(student.Space, nameof(student.Space));
+
+            if (await ContainsStudentAsync(examination, student))
+            {
+                throw new IllegalOperationException("ExaminationStudentExists{0}", student.Id);
+            }
+
+            return new Participant
+            {
+                Examination = examination,
+                Student = student
+            };
+        }
+
+
+        public async Task<bool> ContainsStudentAsync(Examination examination, Student student)
+        {
+            Asserts.NotNull(examination, nameof(examination));
+            Asserts.NotNull(student.Space, nameof(student.Space));
+
+            return await _dbContext.Set<Participant>()
+                .Where(p => p.ExaminationId == examination.Id && p.StudentId == student.Id)
+                .AnyAsync();
         }
 
         public async Task<ParticipantSpeciality> AddSpecialityAsync(Participant participant,

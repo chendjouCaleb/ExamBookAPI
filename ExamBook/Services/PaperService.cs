@@ -1,21 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Helpers;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Vx.Services;
 
 namespace ExamBook.Services
 {
     public class PaperService
     {
         private readonly DbContext _dbContext;
+        private readonly PublisherService _publisherService;
+        private readonly EventService _eventService;
 
-        public PaperService(DbContext dbContext)
+        public PaperService(DbContext dbContext, EventService eventService, PublisherService publisherService)
         {
             _dbContext = dbContext;
+            _eventService = eventService;
+            _publisherService = publisherService;
         }
 
 

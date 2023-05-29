@@ -13,5 +13,6 @@ namespace ExamBook.Entities
 
         [JsonIgnore] public List<CourseSpeciality> CourseSpecialities { get; set; } = new ();
         [JsonIgnore] public List<StudentSpeciality> StudentSpecialities { get; set; } = new ();
+        [JsonIgnore] public List<ExaminationSpeciality> ExaminationSpecialities { get; set; } = new ();
     }
 }

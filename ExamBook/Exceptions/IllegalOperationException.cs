@@ -2,7 +2,7 @@
 {
     public class IllegalOperationException:BaseException
     {
-        public IllegalOperationException(string message) : base(message)
+        public IllegalOperationException(string message, params object[] parameters) : base(message, parameters)
         {
         }
     }

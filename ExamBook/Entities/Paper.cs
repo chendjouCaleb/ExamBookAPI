@@ -16,6 +16,9 @@ namespace ExamBook.Entities
         public Participant? Participant { get; set; }
         public ulong? ParticipantId { get; set; }
 
+        public Student? Student { get; set; }
+        public ulong? StudentId { get; set; }
+
         public Test? Test { get; set; }
         public ulong TestId { get; set; }
 

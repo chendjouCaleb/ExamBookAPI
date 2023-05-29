@@ -4,14 +4,23 @@ namespace ExamBook.Entities
 {
     public class Test:Entity
     {
-        public Examination Examination { get; set; } = null!;
-        public ulong ExaminationId { get; set; }
+        public Space Space { get; set; } = null!;
+        public ulong SpaceId { get; set; }
+        
+        public Examination? Examination { get; set; }
+        public ulong? ExaminationId { get; set; }
+        
+        public Course? Course { get; set; } 
+        public ulong? CourseId { get; set; }
 
-        public Room? Room { get; set; } = null!;
+        public Room? Room { get; set; }
         public ulong? RoomId { get; set; }
         
         public string Name { get; set; } = "";
         public string NormalizedName { get; set; } = "";
+        
+        public string Code { get; set; } = "";
+        public string NormalizedCode { get; set; } = "";
         
         public DateTime StartAt { get; set; }
 

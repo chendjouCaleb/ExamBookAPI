@@ -115,6 +115,7 @@ namespace ExamBookTest
             services.AddTransient<CourseTeacherService>();
             services.AddTransient<CourseHourService>();
             services.AddTransient<CourseSessionService>();
+            services.AddTransient<ExaminationService>();
 
             services.AddTransient<UserService>();
             services.AddIdentity<User, Role>()
@@ -125,7 +126,7 @@ namespace ExamBookTest
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.test.json")
                 .Build();
-            services.AddSingleton<IConfiguration>(configuration);
+            services.AddSingleton(configuration);
 
             var _provider = services.BuildServiceProvider();
             var identityDbContext = _provider.GetRequiredService<ApplicationIdentityDbContext>();

@@ -7,6 +7,8 @@ namespace ExamBook.Entities
     public class Examination:Entity
     {
         public string Name { get; set; } = "";
+        public string NormalizedName { get; set; } = "";
+        
         public DateTime StartAt { get; set; }
         public bool IsLock { get; set; }
 
@@ -23,5 +25,6 @@ namespace ExamBook.Entities
 
         [JsonIgnore] public List<Test> Tests { get; set; } = new();
         [JsonIgnore] public List<Participant> Participants { get; set; } = new ();
+        [JsonIgnore] public List<ExaminationSpeciality> ExaminationSpecialities { get; set; } = new();
     }
 }

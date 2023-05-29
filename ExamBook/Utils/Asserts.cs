@@ -4,6 +4,23 @@ namespace ExamBook.Utils
 {
     public static class Asserts
     {
+        public static void IsTrue(bool state, string message)
+        {
+            if (state)
+            {
+                throw new ArgumentException(message);
+            }
+        }
+        
+        
+        public static void IsFalse(bool state, string message)
+        {
+            if (state)
+            {
+                throw new ArgumentException(message);
+            }
+        }
+        
         public static void NotNull(object? value, string nameOf)
         {
             if (value == null)

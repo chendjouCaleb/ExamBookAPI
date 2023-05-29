@@ -13,6 +13,9 @@ namespace ExamBook.Entities
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }
 
+        public Speciality Speciality { get; set; } = null!;
+        public ulong? SpecialityId { get; set; }
+
 
         [JsonIgnore] public List<ParticipantSpeciality> ParticipantSpecialities { get; set; } = new();
 
