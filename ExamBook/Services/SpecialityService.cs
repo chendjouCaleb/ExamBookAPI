@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -50,9 +51,9 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Speciality>> AddSpecialityAsync(Space space, SpecialityAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(space));
+            AssertHelper.NotNull(user, nameof(user));
 
             if (await ContainsAsync(space, model.Name))
             {
@@ -80,9 +81,9 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeNameAsync(Speciality speciality, string name, User user)
         {
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(speciality.Space, nameof(speciality.Space));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(speciality.Space, nameof(speciality.Space));
             
             if (await ContainsAsync(speciality.Space!, name))
             {
@@ -102,8 +103,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsAsync(Space space, string name)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(name, nameof(name));
             var normalized = name.Normalize().ToUpper();
             return await  _dbContext.Set<Speciality>()
                 .AnyAsync(s => space.Equals(s.Space) && s.NormalizedName == normalized);
@@ -127,9 +128,9 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(Speciality speciality, User user)
         {
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(speciality.Space, nameof(speciality.Space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(speciality.Space, nameof(speciality.Space));
+            AssertHelper.NotNull(user, nameof(user));
 
             speciality.Name = "";
             speciality.NormalizedName = "";
@@ -145,7 +146,7 @@ namespace ExamBook.Services
 
         public async Task DestroyAsync(Speciality speciality)
         {
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(speciality, nameof(speciality));
             var classroomSpecialities = _dbContext.Set<ClassroomSpeciality>()
                 .Where(cs => speciality.Equals(cs.Speciality));
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -70,9 +71,9 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Examination>> AddAsync(Space space, ExaminationAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
             
             if (await ContainsAsync(space, model.Name))
             {
@@ -122,9 +123,9 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeNameAsync(Examination examination, string name, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNullOrWhiteSpace(name, nameof(name));
             
             if (await ContainsAsync(examination.Space, name))
             {
@@ -144,8 +145,8 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeStartAtAsync(Examination examination, DateTime startAt, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
             
             if (startAt > DateTime.Now)
             {
@@ -165,8 +166,8 @@ namespace ExamBook.Services
         
         public async Task<Event> LockAsync(Examination examination, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
             
             if (examination.IsLock)
             {
@@ -184,8 +185,8 @@ namespace ExamBook.Services
         
         public async Task<Event> UnLockAsync(Examination examination, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
             
             if (!examination.IsLock)
             {
@@ -204,7 +205,7 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<ExaminationSpeciality>> AddSpeciality(Examination examination, 
             Speciality speciality, User user)
         {
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(user, nameof(user));
 
             var examinationSpeciality = await CreateSpeciality(examination, speciality);
 
@@ -229,8 +230,8 @@ namespace ExamBook.Services
             ICollection<Speciality> specialities, User user)
         {
             
-            Asserts.NotNull(specialities, nameof(specialities));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(specialities, nameof(specialities));
+            AssertHelper.NotNull(user, nameof(user));
             var examinationSpecialities = await CreateSpecialities(examination, specialities);
 
             await _dbContext.AddRangeAsync(examinationSpecialities);
@@ -250,7 +251,7 @@ namespace ExamBook.Services
             ICollection<Speciality> specialities)
         {
             
-            Asserts.NotNull(specialities, nameof(specialities));
+            AssertHelper.NotNull(specialities, nameof(specialities));
             var examinationSpecialities = new List<ExaminationSpeciality>();
             
             foreach (var speciality in specialities)
@@ -264,9 +265,9 @@ namespace ExamBook.Services
         
         public async Task<ExaminationSpeciality> CreateSpeciality(Examination examination, Speciality speciality)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(speciality, nameof(speciality));
 
             if (examination.SpaceId != speciality.SpaceId)
             {
@@ -290,8 +291,8 @@ namespace ExamBook.Services
         
         public async Task<Examination> GetSpecialityAsync(Examination examination, Speciality speciality)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(speciality, nameof(speciality));
           
             var examinationSpeciality = await _dbContext.Set<ExaminationSpeciality>()
                 .FirstOrDefaultAsync(e => e.ExaminationId == examination.Id 
@@ -308,8 +309,8 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsSpecialityAsync(Examination examination, Speciality speciality)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(speciality, nameof(speciality));
             
             return await _dbContext.Set<ExaminationSpeciality>()
                 .AnyAsync(e => e.ExaminationId == examination.Id 
@@ -318,16 +319,16 @@ namespace ExamBook.Services
         
         public async Task DeleteSpecialityAsync(ExaminationSpeciality examinationSpeciality)
         {
-            Asserts.NotNull(examinationSpeciality, nameof(examinationSpeciality));
+            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
             _dbContext.Remove(examinationSpeciality);
             await _dbContext.SaveChangesAsync();
         }
 
         public async Task<Event> DeleteAsync(Examination examination, User user)
         {
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
             
             var specialities = _dbContext.Set<ExaminationSpeciality>()
                 .Where(e => e.ExaminationId == examination.Id);

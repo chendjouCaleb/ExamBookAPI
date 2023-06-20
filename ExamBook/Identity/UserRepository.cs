@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using Microsoft.AspNetCore.Identity;
 

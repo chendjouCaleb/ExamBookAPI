@@ -2,7 +2,7 @@
 
 namespace ExamBook.Utils
 {
-    public static class Asserts
+    public static class AssertHelper
     {
         public static void IsTrue(bool state, string message)
         {

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -46,8 +47,8 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Room>> AddRoomAsync(Space space, RoomAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
 
             string normalizedName = StringHelper.Normalize(model.Name);
             
@@ -84,7 +85,7 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeNameAsync(Room room, RoomChangeNameModel model, User user)
         {
-            Asserts.NotNull(room.Space, nameof(room.Space));
+            AssertHelper.NotNull(room.Space, nameof(room.Space));
             
             if (await ContainsAsync(room.Space, model.Name))
             {
@@ -104,8 +105,8 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeCapacityAsync(Room room, RoomChangeCapacityModel model, User user)
         {
-            Asserts.NotNull(room.Space, nameof(room.Space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(room.Space, nameof(room.Space));
+            AssertHelper.NotNull(model, nameof(model));
             
             if (model.Capacity < 5)
             {
@@ -147,8 +148,8 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(Room room, User user)
         {
-            Asserts.NotNull(room, nameof(room));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(room, nameof(room));
+            AssertHelper.NotNull(user, nameof(user));
             room.Capacity = 0;
             room.Name = "";
             room.NormalizedName = "";

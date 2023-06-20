@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 using Vx.Repositories;
 using Vx.Services;
 
+#pragma warning disable NUnit2005
 namespace VxTest
 {
     public class PublisherServiceTests
@@ -27,7 +29,7 @@ namespace VxTest
         public async Task GetPublisher()
         {
             var publisherId = (await _publisherService.AddAsync()).Id;
-            var publisher = (await _publisherService.GetByIdAsync(publisherId))!;
+            var publisher = (await _publisherService.GetByIdAsync(publisherId));
             
             Assert.NotNull(publisher);
             Assert.NotNull(publisher.Id);
@@ -36,7 +38,7 @@ namespace VxTest
 
 
         [Test]
-        public async Task GetNonExistentPublisherShouldThrow()
+        public void GetNonExistentPublisherShouldThrow()
         {
             var publisherId = Guid.NewGuid().ToString();
             var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>

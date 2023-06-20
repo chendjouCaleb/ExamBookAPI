@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -37,13 +40,29 @@ namespace ExamBook.Services
             _actorService = actorService;
         }
 
+        public async Task<Member> GetByIdAsync(ulong memberId)
+        {
+            var member = await _dbContext.Set<Member>()
+                .Include(m => m.Space)
+                .Where(m => m.Id == memberId && !m.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (member == null)
+            {
+                throw new ElementNotFoundException("MemberNotFoundById", memberId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(member.UserId))
+            {
+                member.User = await _userService.GetByIdAsync(member.UserId);
+            }
+
+            return member;
+        }
+
         public async Task<ActionResultModel<Member>> AddMemberAsync(Space space, MemberAddModel model, User user)
         {
-            var memberUser = await _userService.FindByIdAsync(model.UserId);
-            if (memberUser == null)
-            {
-                throw new InvalidOperationException($"User with id={model.UserId} not found.");
-            }
+            var memberUser = await _userService.GetByIdAsync(model.UserId);
             
             if (await IsSpaceMember(space, model.UserId))
             {
@@ -54,23 +73,73 @@ namespace ExamBook.Services
             
             Member member = new ()
             {
-                UserId = model.UserId,
+                UserId = memberUser.Id,
                 Space = space,
                 IsAdmin = model.IsAdmin,
+                IsTeacher = model.IsTeacher,
                 PublisherId = publisher.Id
             };
             await _dbContext.AddAsync(member);
             await _dbContext.SaveChangesAsync();
 
             var actor = await _actorService.GetByIdAsync(user.ActorId);
-            var spacePublisher = await _publisherService.GetByIdAsync(space.PublisherId);
-            var publishers = new [] { publisher, spacePublisher };
-
+            var publishers = await _publisherService.GetByIdAsync(space.PublisherId, memberUser.PublisherId);
+            publishers = publishers.Add(publisher);
+            
             var @event = await _eventService.EmitAsync(publishers, actor, "MEMBER_ADD", member);
             _logger.LogInformation("New member");
 
             return new ActionResultModel<Member>(member, @event);
         }
+        
+        
+        public async Task<ActionResultModel<Member>> ToggleAdminAsync(Member member, User user)
+        {
+            AssertHelper.NotNull(member, nameof(member));
+
+            string eventName = member.IsAdmin ? "MEMBER_UNSET_ADMIN" : "MEMBER_SET_ADMIN";
+            member.IsAdmin = !member.IsAdmin;
+            
+            _dbContext.Update(member);
+            await _dbContext.SaveChangesAsync();
+
+            var actor = await _actorService.GetByIdAsync(user.ActorId);
+            var publishers = await _publisherService.GetByIdAsync(
+                member.PublisherId, 
+                member.Space!.PublisherId, 
+                member.User.PublisherId);
+
+            var @event = await _eventService.EmitAsync(publishers, actor, eventName, new {} );
+            _logger.LogInformation("Member set admin");
+
+            return new ActionResultModel<Member>(member, @event);
+        }
+        
+        public async Task<ActionResultModel<Member>> ToggleTeacherAsync(Member member, User user)
+        {
+            AssertHelper.NotNull(member, nameof(member));
+
+            string eventName = member.IsTeacher ? "MEMBER_UNSET_TEACHER" : "MEMBER_SET_TEACHER";
+            member.IsTeacher = !member.IsTeacher;
+            
+            _dbContext.Update(member);
+            await _dbContext.SaveChangesAsync();
+
+            var actor = await _actorService.GetByIdAsync(user.ActorId);
+            var publishers = await _publisherService.GetByIdAsync(
+                member.PublisherId, 
+                member.Space!.PublisherId, 
+                member.User.PublisherId);
+
+            var @event = await _eventService.EmitAsync(publishers, actor, eventName, new {} );
+            _logger.LogInformation("Member set as teacher");
+
+            return new ActionResultModel<Member>(member, @event);
+        }
+        
+        
+        
+        
 
         public Member NewMember(Space space, MemberAddModel model)
         {
@@ -104,9 +173,9 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(Member member, User user)
         {
-            Asserts.NotNull(member, nameof(member));
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(member.Space, nameof(member.Space));
+            AssertHelper.NotNull(member, nameof(member));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(member.Space, nameof(member.Space));
 
             var publishersIds = new [] {member.PublisherId, member.Space!.PublisherId};
 

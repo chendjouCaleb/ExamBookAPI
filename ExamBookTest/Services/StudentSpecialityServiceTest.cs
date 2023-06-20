@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Services;
@@ -77,7 +79,7 @@ namespace ExamBookTest.Services
             {
                 FirstName = "first name",
                 LastName = "last name",
-                RId = "652",
+                Code = "652",
                 BirthDate = new DateTime(1990, 1, 1)
             };
         }

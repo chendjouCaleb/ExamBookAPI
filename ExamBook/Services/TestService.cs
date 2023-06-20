@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -38,9 +39,9 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
             var test = await CreateTest(space, model);
             var publisher = await _publisherService.AddAsync();
             test.PublisherId = publisher.Id;
@@ -55,10 +56,10 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Test>> Add(Course course, TestAddModel model, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
             var space = course.Space!;
             var test = await CreateTest(space!, model);
             test.Course = course;
@@ -75,10 +76,10 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Test>> Add(Examination examination, TestAddModel model, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
        
             var space = examination.Space;
             var test = await CreateTest(space, model);
@@ -96,12 +97,12 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Test>> Add(Examination examination, Course course, TestAddModel model, User user)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
-            Asserts.IsTrue(examination.SpaceId == course.SpaceId, "Incompatible entity");
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.IsTrue(examination.SpaceId == course.SpaceId, "Incompatible entity");
             
             var space = examination.Space;
             var test = await CreateTest(space, model);
@@ -126,8 +127,8 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Test>> Add(Space space, Course? course, Examination? examination, TestAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
 
             var room = await _roomService.GetRoomAsync(model.RoomId);
             if (room.SpaceId != space.Id)
@@ -172,8 +173,8 @@ namespace ExamBook.Services
 
         public async Task<Test> CreateTest(Space space, TestAddModel model)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
             var room = await _roomService.GetRoomAsync(model.RoomId);
             if (room.SpaceId != space.Id)
             {
@@ -210,7 +211,7 @@ namespace ExamBook.Services
 
         private async Task _SetRoomAsync(Test test, ulong roomId)
         {
-            Asserts.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test, nameof(test));
             
             var room = await _dbContext.Set<Room>().FindAsync(roomId);
             if (room == null)
@@ -229,7 +230,7 @@ namespace ExamBook.Services
         
         private async Task _SetCourseAsync(Test test, ulong courseId)
         {
-            Asserts.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test, nameof(test));
             
             var course = await _dbContext.Set<Course>().FindAsync(courseId);
             if (course == null)
@@ -247,8 +248,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsAsync(Examination examination, string name)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNullOrWhiteSpace(name, nameof(name));
 
             string normalized = name.Normalize().ToUpper();
             return await _dbContext.Set<Test>()

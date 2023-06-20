@@ -1,6 +1,7 @@
 ﻿using System;
+using ExamBook.Identity.Models;
 
-namespace ExamBook.Identity.Models
+namespace ExamBook.Identity.Entities
 {
     public class Session
     {
@@ -13,6 +14,7 @@ namespace ExamBook.Identity.Models
         public bool IsClose => EndAt != null;
 
 
+        public User User { get; set; } = null!;
         public string UserId { get; set; } = default!;
     }
 }

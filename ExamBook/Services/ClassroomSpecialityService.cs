@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -36,8 +37,8 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<ClassroomSpeciality>> AddSpeciality(Classroom classroom, 
             Speciality speciality, User user)
         {
-            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(classroom.Space, nameof(classroom.Space));
+            AssertHelper.NotNull(user, nameof(user));
             var classroomSpeciality = await CreateSpecialityAsync(classroom, speciality);
             var publisher = await _publisherService.AddAsync();
             classroomSpeciality.PublisherId = publisher.Id;
@@ -74,11 +75,11 @@ namespace ExamBook.Services
         
         public async Task<Event> DeleteSpecialityAsync(ClassroomSpeciality classroomSpeciality, User user)
         {
-            Asserts.NotNull(classroomSpeciality, nameof(classroomSpeciality));
-            Asserts.NotNull(classroomSpeciality.Classroom, nameof(classroomSpeciality.Classroom));
-            Asserts.NotNull(classroomSpeciality.Speciality, nameof(classroomSpeciality.Speciality));
-            Asserts.NotNull(classroomSpeciality.Classroom!.Space, nameof(classroomSpeciality.Classroom.Space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(classroomSpeciality, nameof(classroomSpeciality));
+            AssertHelper.NotNull(classroomSpeciality.Classroom, nameof(classroomSpeciality.Classroom));
+            AssertHelper.NotNull(classroomSpeciality.Speciality, nameof(classroomSpeciality.Speciality));
+            AssertHelper.NotNull(classroomSpeciality.Classroom!.Space, nameof(classroomSpeciality.Classroom.Space));
+            AssertHelper.NotNull(user, nameof(user));
 
             classroomSpeciality.DeletedAt = DateTime.UtcNow;
             _dbContext.Update(classroomSpeciality);
@@ -99,8 +100,8 @@ namespace ExamBook.Services
         public async Task<List<ClassroomSpeciality>> CreateClassroomSpecialitiesAsync(Classroom classroom,
             List<ulong> specialityIds)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
-            Asserts.NotNull(specialityIds, nameof(specialityIds));
+            AssertHelper.NotNull(classroom, nameof(classroom));
+            AssertHelper.NotNull(specialityIds, nameof(specialityIds));
 
             var specialities = await _dbContext.Set<Speciality>()
                 .Where(s => specialityIds.Contains(s.Id))
@@ -119,9 +120,9 @@ namespace ExamBook.Services
 
         public async Task<ClassroomSpeciality> CreateSpecialityAsync(Classroom classroom, Speciality speciality)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
+            AssertHelper.NotNull(classroom, nameof(classroom));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(classroom.Space, nameof(classroom.Space));
 
             if (!classroom.Space!.Equals(speciality.Space))
             {
@@ -144,8 +145,8 @@ namespace ExamBook.Services
 
         public async Task<bool> HasSpecialityAsync(Classroom classroom, Speciality speciality)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(classroom, nameof(classroom));
+            AssertHelper.NotNull(speciality, nameof(speciality));
             return await _dbContext.Set<ClassroomSpeciality>()
                 .Where(cs => classroom.Id == cs.ClassroomId && speciality.Id == cs.SpecialityId && cs.DeletedAt == null)
                 .AnyAsync();

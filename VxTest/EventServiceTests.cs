@@ -3,11 +3,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using Vx.Repositories;
 using Vx.Services;
 
+#pragma warning disable NUnit2005
 namespace VxTest
 {
+    
+    
     public class EventServiceTests
     {
         private IServiceProvider _provider = null!;

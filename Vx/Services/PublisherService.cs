@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Vx.Models;
@@ -39,9 +40,26 @@ namespace Vx.Services
 
             return publisher;
         }
+        
+        public async Task<ImmutableList<Publisher>> GetByIdAsync(params string[] publisherIds)
+        {
+            var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
+
+            var publisherIdNotFounds = publisherIds.Where(publisherId => 
+                    publishers.All(p => p.Id != publisherId))
+                .ToList();
+
+            if (publisherIdNotFounds.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Publishers with id=[{string.Join(',', publisherIdNotFounds)}] not found.");
+            }
+
+            return publishers.ToImmutableList();
+        }
 
 
-        public async Task<IList<Publisher>> GetByIdAsync(ICollection<string> publisherIds)
+        public async Task<IList<Publisher>> GetByIdAsync( ICollection<string> publisherIds)
         {
             var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
 

@@ -8,7 +8,9 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -67,7 +69,21 @@ namespace ExamBook.Services
 
             if (space == null)
             {
-                throw new NullReferenceException();
+                throw new ElementNotFoundException("SpaceNotFoundByIdentifier", identifier);
+            }
+
+            return space;
+        }
+        
+        
+        public async Task<Space> GetByIdAsync(ulong id)
+        {
+            var space = await _dbContext.Set<Space>()
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (space == null)
+            {
+                throw new ElementNotFoundException("SpaceNotFoundById", id);
             }
 
             return space;
@@ -101,6 +117,7 @@ namespace ExamBook.Services
                 Identifier = model.Identifier,
                 NormalizedIdentifier = StringHelper.Normalize(model.Identifier),
                 Name = model.Name,
+                Description = model.Description,
                 Twitter = model.Twitter,
                 Facebook = model.Facebook,
                 Youtube = model.Youtube,
@@ -122,6 +139,7 @@ namespace ExamBook.Services
             await _dbContext.AddAsync(admin);
             await _dbContext.SaveChangesAsync();
 
+            await _dbContext.Entry(space).ReloadAsync();
             return new ActionResultModel<Space>(space, @event);
         }
 
@@ -158,11 +176,24 @@ namespace ExamBook.Services
             
             return await _eventService.EmitAsync(new[] {publisher}, actor, "SPACE_CHANGE_NAME", data);
         }
+        
+        public async Task<Event> ChangeDescription(Space space, string description, User user)
+        {
+            var publisher = await GetPublisherAsync(space);
+            var actor = await _userService.GetActor(user);
+            var data = new ChangeValueData<string>(space.Description, description);
+            
+            space.Description = description;
+            _dbContext.Update(space);
+            await _dbContext.SaveChangesAsync();
+            
+            return await _eventService.EmitAsync(new[] {publisher}, actor, "SPACE_CHANGE_DESCRIPTION", data);
+        }
 
 
         public async Task<Event> SetAsPublic(Space space, User user)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             if (space.IsPublic)
             {
                 throw new IllegalOperationException("SpaceIsNotPrivate");
@@ -179,7 +210,7 @@ namespace ExamBook.Services
 
         public async Task<Event> SetAsPrivate(Space space, User user)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             if (space.IsPrivate)
             {
                 throw new IllegalOperationException("SpaceIsNotPublic");
@@ -198,7 +229,7 @@ namespace ExamBook.Services
 
         public async Task SetAsCertified(Space space)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             if (space.IsCertified)
             {
                 throw new IllegalOperationException($"The space @{space.Identifier} is already certified.");
@@ -211,7 +242,7 @@ namespace ExamBook.Services
 
         public async Task SetAsNonCertified(Space space)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             if (!space.IsCertified)
             {
                 throw new IllegalOperationException($"The space @{space.Identifier} is already non certified.");
@@ -225,8 +256,8 @@ namespace ExamBook.Services
 
         public async Task ChangeInfo(Space space, SpaceChangeInfoModel model)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
 
             space.Name = model.Name;
             _dbContext.Update(space);
@@ -256,7 +287,7 @@ namespace ExamBook.Services
 
         public async Task ChangeTwitterAsync(Space space, string twitter)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             space.Twitter = twitter;
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();

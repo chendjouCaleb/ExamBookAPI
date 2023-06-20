@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -35,16 +36,16 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<CourseHour>> AddAsync(Course course, CourseHourAddModel model, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
 
             var room = await _dbContext.Set<Room>().FindAsync(model.RoomId);
             var courseTeacher = await _dbContext.Set<CourseTeacher>().FindAsync(model.RoomId);
 
-            Asserts.NotNull(room, nameof(room));
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(room, nameof(room));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
 
             var publisher = await _publisherService.AddAsync();
             CourseHour courseHour = new()
@@ -76,11 +77,11 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeHourAsync(CourseHour courseHour, CourseHourHourModel model, User user)
         {
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(courseHour, nameof(courseHour));
-            Asserts.NotNull(courseHour.Course, nameof(courseHour.Course));
-            Asserts.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseHour, nameof(courseHour));
+            AssertHelper.NotNull(courseHour.Course, nameof(courseHour.Course));
+            AssertHelper.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
+            AssertHelper.NotNull(model, nameof(model));
             var course = courseHour.Course;
 
             var eventData = new ChangeValueData<CourseHourHourModel>(new CourseHourHourModel(courseHour), model);
@@ -99,11 +100,11 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeTeacherAsync(CourseHour courseHour, CourseTeacher courseTeacher, User user)
         {
-            Asserts.NotNull(courseHour, nameof(courseHour));
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(courseHour.Course, nameof(courseHour.Course));
-            Asserts.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
+            AssertHelper.NotNull(courseHour, nameof(courseHour));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseHour.Course, nameof(courseHour.Course));
+            AssertHelper.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
             var course = courseHour.Course;
 
             if (courseTeacher.CourseId != course.Id)
@@ -128,11 +129,11 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeRoomAsync(CourseHour courseHour, Room room, User user)
         {
-            Asserts.NotNull(courseHour, nameof(courseHour));
-            Asserts.NotNull(room, nameof(room));
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
-            Asserts.NotNull(courseHour.CourseTeacher!.Member, nameof(courseHour.CourseTeacher.Member));
+            AssertHelper.NotNull(courseHour, nameof(courseHour));
+            AssertHelper.NotNull(room, nameof(room));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
+            AssertHelper.NotNull(courseHour.CourseTeacher!.Member, nameof(courseHour.CourseTeacher.Member));
             var course = courseHour.Course;
 
             if (room.SpaceId != courseHour.Course.SpaceId)
@@ -157,10 +158,10 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(CourseHour courseHour, bool courseSession, User user)
         {
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(courseHour, nameof(courseHour));
-            Asserts.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
-            Asserts.NotNull(courseHour.CourseTeacher!.Member, nameof(courseHour.CourseTeacher.Member));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseHour, nameof(courseHour));
+            AssertHelper.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
+            AssertHelper.NotNull(courseHour.CourseTeacher!.Member, nameof(courseHour.CourseTeacher.Member));
             var course = courseHour.Course;
             
             var courseSessions = await  _dbContext.Set<CourseSession>()

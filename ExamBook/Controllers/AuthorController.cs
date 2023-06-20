@@ -66,8 +66,8 @@ namespace ExamBook.Controllers
         [HttpPost("subscribe")]
         public async Task<AuthorSubscription> Subscribe([FromQuery] string selfAuthorId, [FromQuery] string toAuthorId)
         {
-            Asserts.NotNullOrWhiteSpace(selfAuthorId, nameof(selfAuthorId));
-            Asserts.NotNullOrWhiteSpace(toAuthorId, nameof(toAuthorId));
+            AssertHelper.NotNullOrWhiteSpace(selfAuthorId, nameof(selfAuthorId));
+            AssertHelper.NotNullOrWhiteSpace(toAuthorId, nameof(toAuthorId));
             
             var selfAuthor = await _authorService.GetByIdAsync(selfAuthorId);
             var toAuthor = await _authorService.GetByIdAsync(toAuthorId);

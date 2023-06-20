@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -51,8 +52,8 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Classroom>> AddAsync(Space space, ClassroomAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
 
             if (await ContainsAsync(space, model.Name))
             {
@@ -97,7 +98,7 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeNameAsync(Classroom classroom, string name, User user)
         {
-            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
+            AssertHelper.NotNull(classroom.Space, nameof(classroom.Space));
             
             if (await ContainsAsync(classroom.Space!, name))
             {
@@ -119,8 +120,8 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeRoomAsync(Classroom classroom, Room room, User user)
         {
-            Asserts.NotNull(classroom.Space, nameof(classroom.Space));
-            Asserts.NotNull(room.Space, nameof(room.Space));
+            AssertHelper.NotNull(classroom.Space, nameof(classroom.Space));
+            AssertHelper.NotNull(room.Space, nameof(room.Space));
 
             if (classroom.SpaceId != room.SpaceId)
             {
@@ -162,8 +163,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsAsync(Space space, string name)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(name, nameof(name));
             var normalizedName = StringHelper.Normalize(name);
             return await _dbContext.Set<Classroom>()
                 .AnyAsync(c => space.Equals(c.Space) && c.NormalizedName == normalizedName);
@@ -188,9 +189,9 @@ namespace ExamBook.Services
         
         public async Task<Event> DeleteAsync(Classroom classroom, User user)
         {
-            Asserts.NotNull(classroom, nameof(classroom));
-            Asserts.NotNull(classroom, nameof(classroom.Space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(classroom, nameof(classroom));
+            AssertHelper.NotNull(classroom, nameof(classroom.Space));
+            AssertHelper.NotNull(user, nameof(user));
             // var classroomSpecialities = await _dbContext.Set<ClassroomSpeciality>()
             //     .Where(cs => classroom.Equals(cs.Classroom))
             //     .ToListAsync();

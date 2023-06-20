@@ -11,6 +11,8 @@ namespace ExamBook.Models
 
         [Required]
         public string Identifier { get; set; } = "";
+
+        public string Description { get; set; } = "";
         
         /// <summary>
         /// Tells if anyone can see public information of this space.

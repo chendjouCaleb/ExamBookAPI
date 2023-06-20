@@ -1,4 +1,5 @@
 ﻿using System;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 
 namespace ExamBook.Identity

@@ -5,6 +5,11 @@ namespace ExamBook.Identity
 {
     public class UserAddModel
     {
+        [Required]
+        public string Email { get; set; } = "";
+
+        [Required] public string Code { get; set; } = "";
+        
         [Required] public string FirstName { get; set; } = "";
 
         [Required] public string LastName { get; set; } = "";

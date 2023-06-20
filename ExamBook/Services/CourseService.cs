@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -57,8 +58,8 @@ namespace ExamBook.Services
 
         public async Task<Course> GetCourseByCodeAsync(Space space, string code)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(code, nameof(code));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(code, nameof(code));
             
             string normalizedCode = StringHelper.Normalize(code);
             var course = await _dbContext.Set<Course>()
@@ -76,8 +77,8 @@ namespace ExamBook.Services
         
         public async Task<Course> GetCourseByNameAsync(Space space, string name)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(name, nameof(name));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(name, nameof(name));
             
             string normalizedName = StringHelper.Normalize(name);
             var course = await _dbContext.Set<Course>()
@@ -94,7 +95,7 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsByCode(Space space, string code)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             
             string normalizedCode = StringHelper.Normalize(code);
             return await _dbContext.Set<Course>()
@@ -105,7 +106,7 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsByName(Space space, string name)
         {
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(space, nameof(space));
             
             string normalizedName = StringHelper.Normalize(name);
             return await _dbContext.Set<Course>()
@@ -116,8 +117,8 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Course>> AddCourseAsync(Space space, CourseAddModel model, User user)
         {
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
             string normalizedCode = StringHelper.Normalize(model.Code);
             string normalizedName = StringHelper.Normalize(model.Name);
 
@@ -168,8 +169,8 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeCourseCodeAsync(Course course, string code, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
 
             if (await ContainsByCode(course.Space!, code))
             {
@@ -193,8 +194,8 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeCourseNameAsync(Course course, string name, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
 
             if (await ContainsByName(course.Space!, name))
             {
@@ -218,8 +219,8 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeCourseCoefficientAsync(Course course, uint coefficient, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
             var eventData = new ChangeValueData<uint>(course.Coefficient, coefficient);
 
             course.Coefficient = coefficient;
@@ -235,8 +236,8 @@ namespace ExamBook.Services
         
         public async Task<Event> ChangeCourseDescriptionAsync(Course course, string description, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
 
             var eventData = new ChangeValueData<string>(course.Description, description);
 
@@ -254,8 +255,8 @@ namespace ExamBook.Services
 
         public async Task<bool> CourseSpecialityExists(Course course, Speciality speciality)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(speciality, nameof(speciality));
 
             return await _dbContext.Set<CourseSpeciality>()
                 .Where(cs => cs.CourseId == course.Id)
@@ -267,10 +268,10 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(Course course, 
             Speciality speciality, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(user, nameof(user));
 
             CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
             await _dbContext.AddAsync(courseSpeciality);
@@ -286,10 +287,10 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<ICollection<CourseSpeciality>>> AddCourseSpecialitiesAsync(Course course, 
             ICollection<Speciality> specialities, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-            Asserts.NotNull(specialities, nameof(specialities));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(specialities, nameof(specialities));
+            AssertHelper.NotNull(user, nameof(user));
 
             var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
             await _dbContext.AddRangeAsync(courseSpecialities);
@@ -320,9 +321,9 @@ namespace ExamBook.Services
 
         public async Task<CourseSpeciality> _CreateCourseSpecialityAsync(Course course, Speciality speciality)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
 
             if (course.SpaceId != speciality.SpaceId)
             {
@@ -345,15 +346,15 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteCourseSpecialityAsync(CourseSpeciality courseSpeciality, User user)
         {
-            Asserts.NotNull(courseSpeciality, nameof(courseSpeciality));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseSpeciality, nameof(courseSpeciality));
+            AssertHelper.NotNull(user, nameof(user));
             var course = await _dbContext.Set<Course>().FindAsync(courseSpeciality.CourseId);
             var speciality = await _dbContext.Set<Speciality>().FindAsync(courseSpeciality.SpecialityId);
             var space = await _dbContext.Set<Space>().FindAsync(course!.SpaceId);
             
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(space, nameof(space));
 
             courseSpeciality.DeletedAt = DateTime.UtcNow;
             _dbContext.Update(courseSpeciality);
@@ -367,8 +368,8 @@ namespace ExamBook.Services
 
         public async Task<bool> CourseTeacherExistsAsync(Course course, Member member)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(member, nameof(member));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(member, nameof(member));
 
             return await _dbContext.Set<CourseTeacher>()
                 .Where(ct => ct.CourseId == course.Id)
@@ -411,8 +412,8 @@ namespace ExamBook.Services
 
         public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, CourseTeacherAddModel model)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(model, nameof(model));
 
             var member = await _dbContext.Set<Member>().FindAsync(model.MemberId);
 
@@ -438,7 +439,7 @@ namespace ExamBook.Services
         
         public async Task DeleteCourseTeacher(CourseTeacher courseTeacher)
         {
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
             _dbContext.Remove(courseTeacher);
             await _dbContext.SaveChangesAsync();
         }
@@ -448,8 +449,8 @@ namespace ExamBook.Services
         
         public async Task<Event> DeleteAsync(Course course, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(user, nameof(user));
 
             course.Name = "";
             course.NormalizedName = "";
@@ -467,8 +468,8 @@ namespace ExamBook.Services
 
         public async Task<Event> DestroyAsync(Course course, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(user, nameof(user));
 
             var courseSpecialities = await _dbContext.Set<CourseSpeciality>()
                 .Where(cs => cs.CourseId == course.Id)

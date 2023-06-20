@@ -10,11 +10,11 @@ namespace Vx.Repositories
         Task SaveAsync(Event @event, IEnumerable<PublisherEvent> publisherEvents);
         Task DeleteAsync(Event @event);
 
-        Task<IEnumerable<Event>> GetAllAsync(IEnumerable<string> subscriptionIds, long firstId = 0);
+        Task<ICollection<Event>> GetAllAsync(IEnumerable<string> subscriptionIds, long firstId = 0);
         
         Task<Event?> GetByIdAsync(long id);
 
-        Task<IEnumerable<PublisherEvent>> GetEventPublishers(Event action);
+        Task<ICollection<PublisherEvent>> GetEventPublishers(Event action);
 
         Task SavePublisherEventsAsync(IEnumerable<PublisherEvent> publisherEvents);
 

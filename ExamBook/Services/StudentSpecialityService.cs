@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -31,10 +32,10 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<StudentSpeciality>> AddSpecialityAsync(Student student,
             Speciality speciality, User user)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(user, nameof(user));
 
             var studentSpeciality = await CreateSpecialityAsync(student, speciality);
             await _dbContext.AddAsync(studentSpeciality);
@@ -65,10 +66,10 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<ICollection<StudentSpeciality>>> AddSpecialitiesAsync(
             Student student, ICollection<Speciality> specialities, User user)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(specialities, nameof(specialities));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(specialities, nameof(specialities));
+            AssertHelper.NotNull(user, nameof(user));
 
 
             var studentSpecialities = new List<StudentSpeciality>();
@@ -102,8 +103,8 @@ namespace ExamBook.Services
 
         private async Task<StudentSpeciality> CreateSpecialityAsync(Student student, Speciality speciality)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(speciality, nameof(speciality));
 
             if (speciality.SpaceId != student.SpaceId)
             {
@@ -125,8 +126,8 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsAsync(Speciality speciality, string rId)
         {
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = StringHelper.Normalize(rId);
             return await _dbContext.Set<StudentSpeciality>()
@@ -136,8 +137,8 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsAsync(Student student, Speciality speciality)
         {
-            Asserts.NotNull(speciality, nameof(speciality));
-            Asserts.NotNull(student, nameof(student));
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(student, nameof(student));
             
             return await _dbContext.Set<StudentSpeciality>()
                 .AnyAsync(p => speciality.Id  == p.SpecialityId 
@@ -147,10 +148,10 @@ namespace ExamBook.Services
         
         public async Task<Event> DeleteSpeciality(StudentSpeciality studentSpeciality, User user)
         {
-            Asserts.NotNull(studentSpeciality, nameof(studentSpeciality));
-            Asserts.NotNull(studentSpeciality.Speciality, nameof(studentSpeciality.Speciality));
-            Asserts.NotNull(studentSpeciality.Student, nameof(studentSpeciality.Student));
-            Asserts.NotNull(studentSpeciality.Student!.Space, nameof(studentSpeciality.Student.Space));
+            AssertHelper.NotNull(studentSpeciality, nameof(studentSpeciality));
+            AssertHelper.NotNull(studentSpeciality.Speciality, nameof(studentSpeciality.Speciality));
+            AssertHelper.NotNull(studentSpeciality.Student, nameof(studentSpeciality.Student));
+            AssertHelper.NotNull(studentSpeciality.Student!.Space, nameof(studentSpeciality.Student.Space));
             
             studentSpeciality.DeletedAt = DateTime.UtcNow;
             _dbContext.Update(studentSpeciality);

@@ -2,7 +2,9 @@
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;

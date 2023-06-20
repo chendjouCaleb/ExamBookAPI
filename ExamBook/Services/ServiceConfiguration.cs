@@ -19,6 +19,7 @@ namespace ExamBook.Services
             collection.AddTransient<SpaceService>();
             collection.AddTransient<SpecialityService>();
             collection.AddTransient<StudentService>();
+            collection.AddTransient<StudentSpecialityService>();
             collection.AddTransient<TestGroupService>();
             collection.AddTransient<TestService>();
         }

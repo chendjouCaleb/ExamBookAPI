@@ -1,17 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
 
-namespace ExamBook.Identity.Models
+namespace ExamBook.Identity.Entities
 {
     public class User:IdentityUser
     {
         //public string Id { get; set; } = Guid.NewGuid().ToString();
-        public DateTime CreatedAt { get; set; }
-        // public string UserName { get; set; } = "";
-        // public string NormalizedUserName { get; set; } = "";
-        //
-        // public string Email { get; set; } = "";
-        // public string NormalizedEmail { get; set; } = "";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
@@ -26,6 +22,8 @@ namespace ExamBook.Identity.Models
 
         public DateTime? DeletedAt { get; set; }
         public bool Deleted { get; set; }
+
+        public List<Session> Sessions { get; set; } = new ();
     }
 
     public class Role:IdentityRole

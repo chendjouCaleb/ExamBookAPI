@@ -1,5 +1,7 @@
 ﻿using System;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -14,6 +16,7 @@ namespace ExamBook.Identity
         {
             services
                 .AddTransient<UserService>()
+                .AddTransient<UserCodeService>()
                 .AddTransient<AuthenticationService>()
             .AddIdentity<User, Role>(options =>
                 {

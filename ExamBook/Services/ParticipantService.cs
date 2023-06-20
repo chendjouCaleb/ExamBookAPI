@@ -31,8 +31,8 @@ namespace ExamBook.Services
 
         public async Task<Participant> Add(Examination examination, ParticipantAddModel model)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(model, nameof(model));
 
             if (await ContainsAsync(examination, model.RId))
             {
@@ -68,9 +68,9 @@ namespace ExamBook.Services
         public async Task<ICollection<Participant>> AddParticipants(Examination examination,
             ICollection<Student> students)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNull(students, nameof(students));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(students, nameof(students));
             
             students = students.DistinctBy(s => s.Id).ToList();
             var studentIds = students.Select(s => s.Id ).ToList();
@@ -82,16 +82,16 @@ namespace ExamBook.Services
             {
                 throw new IllegalOperationException("StudentExaminationsExists");
             }
-            
-            
-            
+
+
+            throw new NotImplementedException("Method not terminated");
         }
         public async Task<Participant> CreateParticipant(Examination examination, Student student)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(examination.Space, nameof(examination.Space));
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
 
             if (await ContainsStudentAsync(examination, student))
             {
@@ -108,8 +108,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsStudentAsync(Examination examination, Student student)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
 
             return await _dbContext.Set<Participant>()
                 .Where(p => p.ExaminationId == examination.Id && p.StudentId == student.Id)
@@ -127,9 +127,9 @@ namespace ExamBook.Services
 
         public async Task ChangeRId(Participant participant, ParticipantChangeRIdModel model)
         {
-            Asserts.NotNull(participant, nameof(participant));
-            Asserts.NotNull(participant.Examination, nameof(participant.Examination));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(participant.Examination, nameof(participant.Examination));
+            AssertHelper.NotNull(model, nameof(model));
             if (await ContainsAsync(participant.Examination, model.RId))
             {
                 ParticipantHelper.ThrowDuplicateRId(participant.Examination, model.RId);
@@ -144,9 +144,9 @@ namespace ExamBook.Services
 
         public async Task ChangeInfo(Participant participant, ParticipantChangeInfoModel model)
         {
-            Asserts.NotNull(participant, nameof(participant));
-            Asserts.NotNull(participant.Examination, nameof(participant.Examination));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(participant.Examination, nameof(participant.Examination));
+            AssertHelper.NotNull(model, nameof(model));
 
             participant.Sex = model.Sex;
             participant.BirthDate = model.BirthDate;
@@ -160,9 +160,9 @@ namespace ExamBook.Services
             Participant participant,
             ExaminationSpeciality examinationSpeciality)
         {
-            Asserts.NotNull(participant, nameof(participant));
-            Asserts.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            Asserts.NotNull(examinationSpeciality.Examination, nameof(examinationSpeciality.Examination));
+            AssertHelper.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
+            AssertHelper.NotNull(examinationSpeciality.Examination, nameof(examinationSpeciality.Examination));
 
             if (examinationSpeciality.ExaminationId != participant.ExaminationId)
             {
@@ -185,8 +185,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsAsync(Examination examination, string rId)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             return await _dbContext.Set<Participant>()
@@ -196,8 +196,8 @@ namespace ExamBook.Services
         
         public async Task<bool> SpecialityContainsAsync(ExaminationSpeciality examinationSpeciality, string rId)
         {
-            Asserts.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             return await _dbContext.Set<ParticipantSpeciality>()
@@ -207,8 +207,8 @@ namespace ExamBook.Services
         
         public async Task<bool> SpecialityContainsAsync(ExaminationSpeciality examinationSpeciality, Participant participant)
         {
-            Asserts.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            Asserts.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
+            AssertHelper.NotNull(participant, nameof(participant));
             
             return await _dbContext.Set<ParticipantSpeciality>()
                 .AnyAsync(p => examinationSpeciality.Equals(p.ExaminationSpeciality) 
@@ -217,8 +217,8 @@ namespace ExamBook.Services
 
         public async Task<Participant?> FindAsync(Examination examination, string rId)
         {
-            Asserts.NotNull(examination, nameof(examination));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             var participant = await _dbContext.Set<Participant>()
@@ -235,7 +235,7 @@ namespace ExamBook.Services
         
         public async Task DeleteSpeciality(ParticipantSpeciality participantSpeciality)
         {
-            Asserts.NotNull(participantSpeciality, nameof(participantSpeciality));
+            AssertHelper.NotNull(participantSpeciality, nameof(participantSpeciality));
             _dbContext.Remove(participantSpeciality);
             await _dbContext.SaveChangesAsync();
         }
@@ -243,7 +243,7 @@ namespace ExamBook.Services
 
         public async Task MarkAsDeleted(Participant participant)
         {
-            Asserts.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(participant, nameof(participant));
             participant.Sex = '0';
             participant.BirthDate = DateTime.MinValue;
             participant.FirstName = "";

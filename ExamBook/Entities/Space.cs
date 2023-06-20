@@ -8,6 +8,7 @@ namespace ExamBook.Entities
     public class Space:Entity
     {
         public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
         public string Identifier { get; set; } = "";
         public string NormalizedIdentifier { get; set; } = "";
 

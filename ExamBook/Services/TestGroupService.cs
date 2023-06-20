@@ -23,8 +23,8 @@ namespace ExamBook.Services
 
         public async Task<TestGroup> Add(Test test, Room room)
         {
-            Asserts.NotNull(test, nameof(test));
-            Asserts.NotNull(room, nameof(room));
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(room, nameof(room));
             
             if (await ContainsRoom(test, room))
             {
@@ -54,14 +54,14 @@ namespace ExamBook.Services
 
         public async Task<uint> CountAsync(Test test)
         {
-            Asserts.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test, nameof(test));
             return (uint)await _dbContext.Set<TestGroup>().Where(g => test.Equals(g.Test)).CountAsync();
         }
 
         public async Task<bool> ContainsRoom(Test test, Room room)
         {
-            Asserts.NotNull(test, nameof(test));
-            Asserts.NotNull(room, nameof(room));
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(room, nameof(room));
 
             return await _dbContext.Set<TestGroup>()
                 .AnyAsync(g => test.Equals(g.Test) && room.Equals(g.Room));
@@ -69,7 +69,7 @@ namespace ExamBook.Services
 
         public async Task DeleteAsync(TestGroup testGroup)
         {
-            Asserts.NotNull(testGroup, nameof(testGroup));
+            AssertHelper.NotNull(testGroup, nameof(testGroup));
             _dbContext.Remove(testGroup);
             await _dbContext.SaveChangesAsync();
         }

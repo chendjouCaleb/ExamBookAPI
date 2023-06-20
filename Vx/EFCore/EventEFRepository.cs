@@ -22,7 +22,7 @@ namespace Vx.EFCore
             return await _dbContext.Events.Where(e => e.Id == id).FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<PublisherEvent>> GetEventPublishers(Event action)
+        public async Task<ICollection<PublisherEvent>> GetEventPublishers(Event action)
         {
             return await _dbContext.PublisherEvents
                 .Include(pe => pe.Event)
@@ -30,7 +30,7 @@ namespace Vx.EFCore
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Event>> GetAllAsync(IEnumerable<string> subscriptionIds, long firstId = 0)
+        public async Task<ICollection<Event>> GetAllAsync(IEnumerable<string> subscriptionIds, long firstId = 0)
         {
             var subscriptions = await _dbContext.Set<Subscription>()
                 .Where(s => subscriptionIds.Contains(s.Id))

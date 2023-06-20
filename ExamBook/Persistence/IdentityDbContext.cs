@@ -1,4 +1,5 @@
-﻿using ExamBook.Identity.Models;
+﻿using ExamBook.Identity.Entities;
+using ExamBook.Identity.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,5 +14,6 @@ namespace ExamBook.Persistence
         
         
         public DbSet<Session> Sessions => Set<Session>();
+        public DbSet<UserCode> UserCodes => Set<UserCode>();
     }
 }

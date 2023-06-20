@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -56,13 +57,13 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<CourseTeacher>> AddAsync(Course course, Member member, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(member, nameof(member));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(member, nameof(member));
+            AssertHelper.NotNull(user, nameof(user));
             var space = await _dbContext.Set<Space>().FindAsync(course.SpaceId);
 
-            Asserts.NotNull(member, nameof(member));
-            Asserts.NotNull(space, nameof(space));
+            AssertHelper.NotNull(member, nameof(member));
+            AssertHelper.NotNull(space, nameof(space));
 
             CourseTeacher courseTeacher = await _CreateCourseTeacherAsync(course, member);
             await _dbContext.AddAsync(courseTeacher);
@@ -78,10 +79,10 @@ namespace ExamBook.Services
         public async Task<ActionResultModel<ICollection<CourseTeacher>>> AddCourseTeachersAsync(Course course,
             ICollection<Member> members, User user)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(course.Space, nameof(course.Space));
-            Asserts.NotNull(members, nameof(members));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(members, nameof(members));
+            AssertHelper.NotNull(user, nameof(user));
 
             var courseTeachers = await _CreateCourseTeachersAsync(course, members);
             await _dbContext.AddRangeAsync(courseTeachers);
@@ -99,9 +100,9 @@ namespace ExamBook.Services
 
         public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, Member member)
         {
-            Asserts.NotNull(course, nameof(course));
-            Asserts.NotNull(member, nameof(member));
-            Asserts.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(member, nameof(member));
+            AssertHelper.NotNull(course.Space, nameof(course.Space));
 
             if (course.SpaceId != member.SpaceId)
             {
@@ -137,8 +138,8 @@ namespace ExamBook.Services
 
         public async Task<Event> SetAsPrincipalAsync(CourseTeacher courseTeacher, User user)
         {
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(user, nameof(user));
 
             if (!courseTeacher.IsPrincipal)
             {
@@ -160,8 +161,8 @@ namespace ExamBook.Services
 
         public async Task<Event> UnSetAsPrincipalAsync(CourseTeacher courseTeacher, User user)
         {
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(user, nameof(user));
 
             if (courseTeacher.IsPrincipal)
             {
@@ -183,8 +184,8 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(CourseTeacher courseTeacher, User user)
         {
-            Asserts.NotNull(courseTeacher, nameof(courseTeacher));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
+            AssertHelper.NotNull(user, nameof(user));
 
             var course = await _dbContext.Set<Course>()
                 .Include(c => c.Space)

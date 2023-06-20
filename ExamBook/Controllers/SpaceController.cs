@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -18,25 +19,37 @@ namespace ExamBook.Controllers
     public class SpaceController:ControllerBase
     {
         private readonly SpaceService _spaceService;
+        private readonly UserService _userService;
         private readonly DbContext _dbContext;
 
-        public SpaceController(SpaceService spaceService, DbContext dbContext)
+        public SpaceController(SpaceService spaceService, DbContext dbContext, UserService userService)
         {
             _spaceService = spaceService;
             _dbContext = dbContext;
+            _userService = userService;
         }
 
 
         [HttpGet("{id}")]
-        public async Task<Space> FindAsync(string id)
+        public async Task<Space> FindAsync(ulong id)
         {
-            Space space = await _spaceService.GetAsync(id);
+            Space space = await _spaceService.GetByIdAsync(id);
             return space;
+        }
+
+        
+        [HttpGet("get")]
+        public async Task<Space> GetAsync([FromQuery] ulong id, [FromQuery] string identifier)
+        {
+            if (!string.IsNullOrWhiteSpace(identifier))
+            {
+                return await _spaceService.GetAsync(identifier);
+            }
+            return await _spaceService.GetByIdAsync(id);
         }
 
 
         [HttpGet]
-        [Authorize]
         public async Task<IEnumerable<Space>> List([FromQuery] string userId)
         {
             if (!string.IsNullOrEmpty(userId))
@@ -76,7 +89,7 @@ namespace ExamBook.Controllers
         [HttpPost]
         [Authorize]
         public async Task<CreatedAtActionResult> AddSpace(
-            [FromBody] SpaceAddModel model)
+            [FromForm] SpaceAddModel model)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _spaceService.AddAsync(userId, model);
@@ -88,17 +101,44 @@ namespace ExamBook.Controllers
 
         [HttpPut("{spaceId}/identifier")]
         [Authorize]
-        public Task<StatusCodeResult> ChangeIdentifier(ulong spaceId)
+        public async Task<OkObjectResult> ChangeIdentifier(ulong spaceId, [FromBody] IDictionary<string, string> body)
         {
-            throw new NotImplementedException();
+            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var user = await _userService.GetByIdAsync(userId);
+            
+            string identifier = body["identifier"];
+            var space = await _spaceService.GetByIdAsync(spaceId);
+            var result = await _spaceService.ChangeIdentifier(space, identifier, user);
+            return Ok(result);
         }
 
         
         [HttpPut("{spaceId}/name")]
         [Authorize]
-        public Task<StatusCodeResult> ChangeName(ulong spaceId)
+        public async Task<OkObjectResult> ChangeName(ulong spaceId, [FromBody] IDictionary<string, string> body)
         {
-            throw new NotImplementedException();
+            string name = body["name"];
+            
+            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var user = await _userService.GetByIdAsync(userId);
+            
+            var space = await _spaceService.GetByIdAsync(spaceId);
+            var result = await _spaceService.ChangeName(space, name, user);
+            return Ok(result);
+        }
+        
+        [HttpPut("{spaceId}/description")]
+        [Authorize]
+        public async Task<OkObjectResult> ChangeDescription(ulong spaceId, [FromBody] IDictionary<string, string> body)
+        {
+            var description = body["description"];
+        
+            var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            var user = await _userService.GetByIdAsync(userId);
+            
+            var space = await _spaceService.GetByIdAsync(spaceId);
+            var result = await _spaceService.ChangeDescription(space, description, user);
+            return Ok(result);
         }
 
 

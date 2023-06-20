@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Services;
@@ -59,7 +61,7 @@ namespace ExamBookTest.Services
             {
                 FirstName = "first name",
                 LastName = "last name",
-                RId = "8say6g3",
+                Code = "8say6g3",
                 BirthDate = new DateTime(1990, 1, 1),
                 Sex = 'm'
             };
@@ -78,8 +80,8 @@ namespace ExamBookTest.Services
             Assert.AreEqual(_model.FirstName, student.FirstName);
             Assert.AreEqual(_model.LastName, student.LastName);
             Assert.AreEqual(_model.Sex, student.Sex);
-            Assert.AreEqual(_model.RId, student.Code);
-            Assert.AreEqual(StringHelper.Normalize(_model.RId), student.NormalizedCode);
+            Assert.AreEqual(_model.Code, student.Code);
+            Assert.AreEqual(StringHelper.Normalize(_model.Code), student.NormalizedCode);
             Assert.IsNotEmpty(student.PublisherId);
 
             var publisher = await _publisherService.GetByIdAsync(student.PublisherId);

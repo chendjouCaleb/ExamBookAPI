@@ -38,7 +38,15 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("PictureId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("PublisherId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ThumbnailId")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -90,6 +98,9 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<long?>("ParentPostId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("PublisherId")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -100,6 +111,8 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("ParentPostId");
 
                     b.ToTable("Posts");
                 });
@@ -173,6 +186,35 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                     b.ToTable("Reactions");
                 });
 
+            modelBuilder.Entity("Social.Entities.Repost", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("AuthorId")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long?>("ChildPostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<long?>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("ChildPostId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("Reposts");
+                });
+
             modelBuilder.Entity("Social.Entities.AuthorSubscription", b =>
                 {
                     b.HasOne("Social.Entities.Author", "Author")
@@ -190,7 +232,13 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                         .WithMany()
                         .HasForeignKey("AuthorId");
 
+                    b.HasOne("Social.Entities.Post", "ParentPost")
+                        .WithMany()
+                        .HasForeignKey("ParentPostId");
+
                     b.Navigation("Author");
+
+                    b.Navigation("ParentPost");
                 });
 
             modelBuilder.Entity("Social.Entities.PostFile", b =>
@@ -219,6 +267,27 @@ namespace ExamBook.Migrations.ApplicationSocialDb
                         .IsRequired();
 
                     b.Navigation("Author");
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("Social.Entities.Repost", b =>
+                {
+                    b.HasOne("Social.Entities.Author", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId");
+
+                    b.HasOne("Social.Entities.Post", "ChildPost")
+                        .WithMany()
+                        .HasForeignKey("ChildPostId");
+
+                    b.HasOne("Social.Entities.Post", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("ChildPost");
 
                     b.Navigation("Post");
                 });

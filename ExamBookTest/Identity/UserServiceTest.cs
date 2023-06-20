@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using ExamBook.Exceptions;
+using ExamBook.Helpers;
 using ExamBook.Identity;
+using ExamBook.Identity.Services;
 using ExamBook.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,7 @@ namespace ExamBookTest.Identity
         private ApplicationIdentityDbContext _identityDbContext = null!;
         private UserAddModel _model = new ()
         {
+            Email = "user@gmail.com",
             FirstName = "first name",
             LastName = "last name",
             Sex = 'M',
@@ -54,6 +58,8 @@ namespace ExamBookTest.Identity
             var _user = await _userService.AddUserAsync(_model);
             await _identityDbContext.Entry(_user).ReloadAsync();
             
+            Assert.AreEqual(_model.Email, _user.Email);
+            Assert.AreEqual(StringHelper.Normalize(_model.Email), _user.NormalizedEmail);
             Assert.AreEqual(_model.FirstName, _user.FirstName);
             Assert.AreEqual(_model.LastName, _user.LastName);
             Assert.AreEqual(_model.BirthDate, _user.BirthDate);
@@ -63,7 +69,40 @@ namespace ExamBookTest.Identity
             var author = await _authorService.GetByIdAsync(_user.AuthorId);
             var actor = await _actorService.GetByIdAsync(_user.ActorId);
             var publisher = await _publisherService.GetByIdAsync(_user.PublisherId);
-            Assert.NotNull(author);
+            Assert.AreEqual(actor.Id, _user.ActorId);
+            Assert.AreEqual(publisher.Id, _user.PublisherId);
+            Assert.AreEqual(author.Id, _user.AuthorId);
+        }
+
+        [Test]
+        public async Task TryAddUser_WithUsedEmail_ShouldThrow()
+        {
+            var model = new UserAddModel {UserName = "username", Email = _model.Email};
+            await _userService.AddUserAsync(_model);
+
+            var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+            {
+                await _userService.AddUserAsync(model);
+            });
+            
+            Assert.AreEqual("UserEmailUsed", ex!.Code);
+            Assert.AreEqual(model.Email, ex.Params[0]);
+        }
+        
+        
+        [Test]
+        public async Task TryAddUser_WithUsedUserName_ShouldThrow()
+        {
+            var model = new UserAddModel {UserName = _model.UserName, Email = "otherEmail@gmail.com"};
+            await _userService.AddUserAsync(_model);
+
+            var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+            {
+                await _userService.AddUserAsync(model);
+            });
+            
+            Assert.AreEqual("UserNameUsed", ex!.Code);
+            Assert.AreEqual(model.UserName, ex.Params[0]);
         }
 
         [Test]

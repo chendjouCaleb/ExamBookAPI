@@ -33,7 +33,7 @@ namespace ExamBook.Services
 
         public async Task<List<Paper>> CreateTestPapers(Test test)
         {
-            Asserts.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test, nameof(test));
             
             var participants = _dbContext.Set<Participant>()
                 .Where(p => test.Examination.Equals(p.Examination));
@@ -63,8 +63,8 @@ namespace ExamBook.Services
         
         public async Task<Paper> CreatePaperAsync(Test test, Participant participant)
         {
-            Asserts.NotNull(test, nameof(test));
-            Asserts.NotNull(participant, nameof(participant));
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(participant, nameof(participant));
 
             if (await ContainsAsync(test, participant))
             {
@@ -120,8 +120,8 @@ namespace ExamBook.Services
         public async Task<PaperSpeciality> CreatePaperSpecialityAsync(Paper paper,
             ParticipantSpeciality participantSpeciality)
         {
-            Asserts.NotNull(paper, nameof(paper));
-            Asserts.NotNull(participantSpeciality, nameof(participantSpeciality));
+            AssertHelper.NotNull(paper, nameof(paper));
+            AssertHelper.NotNull(participantSpeciality, nameof(participantSpeciality));
 
             if (await ContainsPaperSpeciality(paper, participantSpeciality))
             {
@@ -146,7 +146,7 @@ namespace ExamBook.Services
 
         public async Task DeletePaper(Paper paper)
         {
-            Asserts.NotNull(paper, nameof(paper));
+            AssertHelper.NotNull(paper, nameof(paper));
             var paperSpecialities = _dbContext.Set<PaperSpeciality>()
                 .Where(p => paper.Equals(p.Paper));
             
@@ -157,7 +157,7 @@ namespace ExamBook.Services
 
         public async Task DeletePaperSpeciality(PaperSpeciality paperSpeciality)
         {
-            Asserts.NotNull(paperSpeciality, nameof(paperSpeciality));
+            AssertHelper.NotNull(paperSpeciality, nameof(paperSpeciality));
             _dbContext.Remove(paperSpeciality);
             await _dbContext.SaveChangesAsync();
         }

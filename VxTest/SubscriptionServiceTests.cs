@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
 using Vx.Repositories;
 using Vx.Services;
 
+#pragma warning disable NUnit2005
 namespace VxTest
 {
     public class SubscriptionServiceTests
@@ -39,7 +41,7 @@ namespace VxTest
 
 
         [Test]
-        public async Task GetNonExistentSubscriptionShouldThrow()
+        public void GetNonExistentSubscriptionShouldThrow()
         {
             var subscriptionId = Guid.NewGuid().ToString();
             var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>

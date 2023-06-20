@@ -3,7 +3,9 @@ using System.IO;
 using DriveIO;
 using ExamBook.Entities;
 using ExamBook.Identity;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
+using ExamBook.Identity.Services;
 using ExamBook.Persistence;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
@@ -118,6 +120,8 @@ namespace ExamBookTest
             services.AddTransient<ExaminationService>();
 
             services.AddTransient<UserService>();
+            services.AddTransient<AuthenticationService>();
+            services.AddTransient<UserCodeService>();
             services.AddIdentity<User, Role>()
                 .AddEntityFrameworkStores<ApplicationIdentityDbContext>();
             services.AddLogging();

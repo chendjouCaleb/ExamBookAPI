@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
-using ExamBook.Identity.Models;
+using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -36,17 +36,17 @@ namespace ExamBook.Services
 
         public async Task<ActionResultModel<Student>> AddAsync(Space space, StudentAddModel model, User user)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNull(model, nameof(model));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
 
             
-            if (await ContainsAsync(space, model.RId))
+            if (await ContainsAsync(space, model.Code))
             {
                 throw new UsedValueException("StudentCodeUsed");
             }
             
-            string normalizedRid = model.RId.Normalize().ToUpper();
+            string normalizedRid = model.Code.Normalize().ToUpper();
             var specialities = _dbContext.Set<Speciality>()
                 .Where(e => model.SpecialityIds.Contains(e.Id))
                 .ToList();
@@ -60,7 +60,7 @@ namespace ExamBook.Services
                 BirthDate = model.BirthDate,
                 Sex = model.Sex,
                 NormalizedCode = normalizedRid,
-                Code = model.RId,
+                Code = model.Code,
                 Space = space,
                 SpaceId = space.Id,
                 PublisherId = publisher.Id
@@ -82,9 +82,9 @@ namespace ExamBook.Services
 
         public async Task<Event> ChangeCodeAsync(Student student, string rId, User user)
         {
-            Asserts.NotNull(user, nameof(user));
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
             
             if (await ContainsAsync(student.Space, rId))
             {
@@ -105,9 +105,9 @@ namespace ExamBook.Services
 
         public async Task ChangeInfo(Student student, StudentChangeInfoModel model)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(model, nameof(model));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(model, nameof(model));
 
             student.Sex = model.Sex;
             student.BirthDate = model.BirthDate;
@@ -122,8 +122,8 @@ namespace ExamBook.Services
 
         public async Task<bool> ContainsAsync(Space space, string rId)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = StringHelper.Normalize(rId);
             return await _dbContext.Set<Student>()
@@ -137,8 +137,8 @@ namespace ExamBook.Services
 
         public async Task<Student?> FindAsync(Space space, string rId)
         {
-            Asserts.NotNull(space, nameof(space));
-            Asserts.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
 
             string normalized = rId.Normalize().ToUpper();
             var student = await _dbContext.Set<Student>()
@@ -158,7 +158,7 @@ namespace ExamBook.Services
 
         public async Task MarkAsDeleted(Student student)
         {
-            Asserts.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student, nameof(student));
             student.Sex = '0';
             student.BirthDate = DateTime.MinValue;
             student.FirstName = "";
@@ -172,9 +172,9 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(Student student, User user)
         {
-            Asserts.NotNull(student, nameof(student));
-            Asserts.NotNull(student.Space, nameof(student.Space));
-            Asserts.NotNull(user, nameof(user));
+            AssertHelper.NotNull(student, nameof(student));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.NotNull(user, nameof(user));
            // var studentSpecialities = await _dbContext.Set<StudentSpeciality>()
            //      .Where(p => student.Equals(p.StudentId))
            //      .ToListAsync();
