@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,7 +6,6 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +18,6 @@ namespace ExamBook.Services
     {
         private readonly DbContext _dbContext;
         private readonly EventService _eventService;
-        
 
 
         public StudentSpecialityService(DbContext dbContext, EventService eventService)

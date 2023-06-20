@@ -15,11 +15,11 @@ namespace ExamBook.Entities
         public DateTime BirthDate { get; set; }
 
 
-        public string UserId { get; set; } = "";
-        
-        [JsonIgnore]
         public Space Space { get; set; } = null!;
         public ulong? SpaceId { get; set; }
+
+        public Member? Member { get; set; }
+        public ulong? MemberId { get; set; }
 
         [JsonIgnore] public HashSet<Participant> Participants { get; set; } = new();
         [JsonIgnore] public List<StudentSpeciality> Specialities { get; set; } = new();

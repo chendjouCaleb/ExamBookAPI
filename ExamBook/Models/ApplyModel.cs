@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ExamBook.Models
 {
-    public class StudentAddModel
+    public class ApplyAddModel
     {
         
         [Required]
@@ -27,12 +27,13 @@ namespace ExamBook.Models
         public HashSet<ulong> SpecialityIds { get; set; } = new();
     }
 
-    public class StudentChangeRIdModel
+    public class ApplyAcceptModel
     {
-        public string RId { get; set; } = "";
+        public string Code { get; set; } = "";
     }
     
-    public class StudentChangeInfoModel
+    
+    public class ApplyChangeInfoModel
     {
         [Required]
         public string FirstName { get; set; } = "";
@@ -45,5 +46,10 @@ namespace ExamBook.Models
         
         [Required]
         public char Sex { get; set; }
+        
+        [Required]
+        public string Code { get; set; } = "";
+        
+        
     }
 }

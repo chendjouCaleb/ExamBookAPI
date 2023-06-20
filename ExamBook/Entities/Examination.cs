@@ -17,12 +17,6 @@ namespace ExamBook.Entities
         public ulong SpaceId { get; set; }
 
 
-        [JsonIgnore]
-        public Classroom? Classroom { get; set; }
-
-        public ulong? ClassroomId { get; set; }
-        
-
         [JsonIgnore] public List<Test> Tests { get; set; } = new();
         [JsonIgnore] public List<Participant> Participants { get; set; } = new ();
         [JsonIgnore] public List<ExaminationSpeciality> ExaminationSpecialities { get; set; } = new();

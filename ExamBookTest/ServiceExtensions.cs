@@ -108,8 +108,6 @@ namespace ExamBookTest
             services.AddTransient<MemberService>();
             services.AddTransient<RoomService>();
             services.AddTransient<SpecialityService>();
-            services.AddTransient<ClassroomService>();
-            services.AddTransient<ClassroomSpecialityService>();
 
             services.AddTransient<StudentService>();
             services.AddTransient<StudentSpecialityService>();

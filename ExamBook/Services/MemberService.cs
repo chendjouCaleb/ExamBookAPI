@@ -60,6 +60,21 @@ namespace ExamBook.Services
             return member;
         }
 
+        public async Task<Member> GetOrAddAsync(Space space, string userId, User actor)
+        {
+            var memberId = await IsSpaceMemberId(space, userId);
+            if (memberId != null)
+            {
+                return await GetByIdAsync(memberId.Value);
+            }
+
+            var model = new MemberAddModel { UserId = userId, IsAdmin = false, IsTeacher = false };
+            return (await AddMemberAsync(space, model, actor)).Item;
+        }
+
+
+        
+
         public async Task<ActionResultModel<Member>> AddMemberAsync(Space space, MemberAddModel model, User user)
         {
             var memberUser = await _userService.GetByIdAsync(model.UserId);
@@ -157,8 +172,15 @@ namespace ExamBook.Services
 
         public async Task<bool> IsSpaceMember(Space space, string userId)
         {
+            return await IsSpaceMemberId(space, userId) != null;
+        }
+        
+        public async Task<ulong?> IsSpaceMemberId(Space space, string userId)
+        {
             return await _dbContext.Set<Member>()
-                .AnyAsync(m => m.SpaceId == space.Id && m.UserId == userId && m.DeletedAt == null);
+                .Where(m => m.SpaceId == space.Id && m.UserId == userId && m.DeletedAt == null)
+                .Select(m => m.Id)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Publisher> GetPublisherAsync(Member member)

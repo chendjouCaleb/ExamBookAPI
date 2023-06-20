@@ -147,10 +147,6 @@ namespace ExamBook.Services
         public async Task DestroyAsync(Speciality speciality)
         {
             AssertHelper.NotNull(speciality, nameof(speciality));
-            var classroomSpecialities = _dbContext.Set<ClassroomSpeciality>()
-                .Where(cs => speciality.Equals(cs.Speciality));
-
-            _dbContext.RemoveRange(classroomSpecialities);
             _dbContext.Remove(speciality);
             await _dbContext.SaveChangesAsync();
         }

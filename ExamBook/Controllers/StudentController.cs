@@ -28,7 +28,7 @@ namespace ExamBook.Controllers
 		[HttpGet("{studentId}")]
 		public async Task<Student> GetAsync(ulong studentId)
 		{
-			return await _studentService.
+			return await _studentService.GetByIdAsync(studentId);
 		}
 	}
 }

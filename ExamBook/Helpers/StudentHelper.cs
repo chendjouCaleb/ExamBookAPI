@@ -5,22 +5,22 @@ namespace ExamBook.Helpers
 {
     public class StudentHelper
     {
-        public static void ThrowStudentNotFound(Classroom classroom, string rId)
+        public static void ThrowStudentNotFound(Space space, string rId)
         {
-            var m = $"Student with rId: {rId} not found in classroom: {classroom.Name}.";
+            var m = $"Student with rId: {rId} not found in space: {space.Name}.";
             throw new InvalidOperationException(m);
         }
         
-        public static void ThrowDuplicateRId(Classroom classroom, string rId)
+        public static void ThrowDuplicateRId(Space space, string rId)
         {
-            var m = $"The rId: {rId} is already used  in classroom: {classroom.Name}.";
+            var m = $"The rId: {rId} is already used  in space: {space.Name}.";
             throw new InvalidOperationException(m);
         }
         
-        public static void ThrowDuplicateStudentSpeciality(ClassroomSpeciality speciality, Student student)
+        public static void ThrowDuplicateStudentSpeciality(Speciality speciality, Student student)
         {
-            var m = $"The Student: {student.Code} is already found in speciality: {speciality.Speciality!.Name} in" +
-                    $" classroom: {speciality.Classroom!.Name}.";
+            var m = $"The Student: {student.Code} is already found in speciality: {speciality!.Name} in" +
+                    $" space: {speciality.Space!.Name}.";
             throw new InvalidOperationException(m);
         }
     }

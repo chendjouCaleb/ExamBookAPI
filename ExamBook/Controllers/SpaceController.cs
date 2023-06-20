@@ -69,14 +69,8 @@ namespace ExamBook.Controllers
                 .Include(m => m.Space)
                 .Where(m => m.UserId == userId)
                 .ToListAsync();
-            
-            var students = await _dbContext.Set<Student>()
-                .Include(s => s.Space)
-                .Where(m => m.UserId == userId)
-                .ToListAsync();
 
             var spaces = members.Select(m => m.Space)
-                .Concat(students.Select(s => s.Space))
                 .Where(s => s != null)
                 .Select(s => s!)
                 .DistinctBy(s => s.Id);

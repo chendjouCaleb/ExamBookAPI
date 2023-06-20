@@ -42,7 +42,6 @@ namespace ExamBook.Entities
         
         
         [JsonIgnore] public HashSet<Course> Courses { get; set; } = new();
-        [JsonIgnore] public HashSet<Classroom> Classrooms { get; set; } = new();
         [JsonIgnore] public HashSet<Examination> Examinations { get; set; } = new();
         [JsonIgnore] public HashSet<Room> Rooms { get; set; } = new();
         [JsonIgnore] public HashSet<Member> Members { get; set; } = new();

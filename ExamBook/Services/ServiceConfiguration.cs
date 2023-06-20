@@ -7,7 +7,6 @@ namespace ExamBook.Services
     {
         public static void AddApplicationServices(this IServiceCollection collection)
         {
-            collection.AddTransient<ClassroomService>();
             collection.AddTransient<CourseHourService>();
             collection.AddTransient<CourseSession>();
             collection.AddTransient<CourseSessionService>();

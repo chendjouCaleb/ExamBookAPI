@@ -8,11 +8,6 @@ namespace ExamBook.Helpers
         {
             
         }
-        
-        public static void ThrowDuplicateCourseSpeciality(Course course, ClassroomSpeciality classroomSpeciality)
-        {
-            
-        }
 
         public static void ThrowMultipleCoursePrincipal()
         {

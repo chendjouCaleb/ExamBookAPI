@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -19,18 +21,43 @@ namespace ExamBook.Services
     {
         private readonly DbContext _dbContext;
         private readonly EventService _eventService;
+        private readonly UserService _userService;
+        private readonly MemberService _memberService;
         private readonly PublisherService _publisherService;
         private readonly StudentSpecialityService _studentSpecialityService;
 
         public StudentService(DbContext dbContext, 
             EventService eventService, 
             PublisherService publisherService, 
-            StudentSpecialityService studentSpecialityService)
+            StudentSpecialityService studentSpecialityService, UserService userService, MemberService memberService)
         {
             _dbContext = dbContext;
             _eventService = eventService;
             _publisherService = publisherService;
             _studentSpecialityService = studentSpecialityService;
+            _userService = userService;
+            _memberService = memberService;
+        }
+
+        public async Task<Student> GetByIdAsync(ulong studentId)
+        {
+            var student = await _dbContext.Set<Student>()
+                .Include(s => s.Space)
+                .Include(m => m.Member)
+                .Where(s => s.Id == studentId)
+                .FirstOrDefaultAsync();
+
+            if (student == null)
+            {
+                throw new ElementNotFoundException("StudentNotFoundById", studentId);
+            }
+
+            if (student.Member != null)
+            {
+                student.Member.User = await _userService.GetByIdAsync(student.Member.UserId!);
+            }
+
+            return student;
         }
 
 
@@ -46,32 +73,47 @@ namespace ExamBook.Services
                 throw new UsedValueException("StudentCodeUsed");
             }
             
-            string normalizedRid = model.Code.Normalize().ToUpper();
+            string normalizedCode = model.Code.Normalize().ToUpper();
             var specialities = _dbContext.Set<Speciality>()
                 .Where(e => model.SpecialityIds.Contains(e.Id))
                 .ToList();
+
+            var publisherIds = new List<string> {space.PublisherId}.ToImmutableList();
             
             var publisher = await _publisherService.AddAsync();
-            
             Student student = new()
             {
                 FirstName = model.FirstName,
                 LastName = model.LastName,
                 BirthDate = model.BirthDate,
                 Sex = model.Sex,
-                NormalizedCode = normalizedRid,
+                NormalizedCode = normalizedCode,
                 Code = model.Code,
                 Space = space,
                 SpaceId = space.Id,
                 PublisherId = publisher.Id
             };
+            
+            if (!string.IsNullOrEmpty(model.UserId))
+            {
+                var member = await _memberService.GetOrAddAsync(space, model.UserId, user);
+
+                if (await ContainsAsync(space, member))
+                {
+                    throw new UsedValueException("MemberHasStudent");
+                }
+                
+                publisherIds = publisherIds.Add(member.PublisherId).Add(member.User!.PublisherId);
+                student.Member = member;
+            }
+            
             student.Specialities = (await _studentSpecialityService.CreateSpecialitiesAsync(student, specialities)).ToList();
             
             await _dbContext.AddAsync(student);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {publisher.Id, space.PublisherId};
-            publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            
+            publisherIds = publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_ADD", student);
             
@@ -79,22 +121,81 @@ namespace ExamBook.Services
         }
 
         
+        
+        public async Task<Event> AttachAsync(Student student, Member member, User user)
+        {
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(member.Space, nameof(member.Space));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            
+            if (await ContainsAsync(student.Space, member))
+            {
+                throw new UsedValueException("MemberHasStudent");
+            }
 
-        public async Task<Event> ChangeCodeAsync(Student student, string rId, User user)
+            if (student.MemberId != null && student.MemberId != 0)
+            {
+                throw new IllegalOperationException("StudentHasMember");
+            }
+
+
+            student.Member = member;
+            _dbContext.Update(student);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { 
+                student.PublisherId,
+                student.Space.PublisherId,
+                member.PublisherId,
+                member.User!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_ATTACH_MEMBER", new {member.Id});
+            
+        }
+        
+        
+        public async Task<Event> DetachAsync(Student student, User user)
+        {
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(student.Space, nameof(student.Space));
+            
+            if (student.MemberId == null && student.MemberId == 0)
+            {
+                throw new IllegalOperationException("StudentHasNotMember");
+            }
+
+            var member = student.Member!;
+
+            student.Member = null;
+            student.MemberId = null;
+            _dbContext.Update(student);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = new List<string> { 
+                student.PublisherId,
+                student.Space.PublisherId,
+                member.PublisherId,
+                member.User!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_DETACH_MEMBER", new {member.Id});
+            
+        }
+
+        public async Task<Event> ChangeCodeAsync(Student student, string code, User user)
         {
             AssertHelper.NotNull(user, nameof(user));
             AssertHelper.NotNull(student, nameof(student));
             AssertHelper.NotNull(student.Space, nameof(student.Space));
             
-            if (await ContainsAsync(student.Space, rId))
+            if (await ContainsAsync(student.Space, code))
             {
                 throw new UsedValueException("StudentCodeUsed");
             }
 
-            var data = new ChangeValueData<string>(student.Code, rId);
-            string normalizedRid = rId.Normalize().ToUpper();
-            student.Code = rId;
-            student.NormalizedCode = normalizedRid;
+            var data = new ChangeValueData<string>(student.Code, code);
+            string normalizedCode = StringHelper.Normalize(code);
+            student.Code = code;
+            student.NormalizedCode = normalizedCode;
             _dbContext.Update(student);
             await _dbContext.SaveChangesAsync();
 
@@ -130,23 +231,31 @@ namespace ExamBook.Services
                 .AnyAsync(s => space.Id == s.SpaceId && s.NormalizedCode == normalized && s.DeletedAt == null);
         }
         
-        
-        
-        
-        
-
-        public async Task<Student?> FindAsync(Space space, string rId)
+        public async Task<bool> ContainsAsync(Space space, Member member)
         {
             AssertHelper.NotNull(space, nameof(space));
-            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNull(member, nameof(member));
 
-            string normalized = rId.Normalize().ToUpper();
+            return await _dbContext.Set<Student>()
+                .AnyAsync(s => space.Id == s.SpaceId && s.MemberId == member.Id && s.DeletedAt == null);
+        }
+        
+        
+        
+        
+
+        public async Task<Student?> FindByCodeAsync(Space space, string code)
+        {
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNullOrWhiteSpace(code, nameof(code));
+
+            string normalized = code.Normalize().ToUpper();
             var student = await _dbContext.Set<Student>()
                 .FirstOrDefaultAsync(s => space.Id == s.SpaceId && s.Code == normalized);
 
             if (student == null)
             {
-                throw new ElementNotFoundException("StudentNotFoundByRId");
+                throw new ElementNotFoundException("StudentNotFoundByCode");
             }
 
             return student;

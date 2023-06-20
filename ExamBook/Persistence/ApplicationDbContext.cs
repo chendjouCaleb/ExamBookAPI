@@ -9,8 +9,7 @@ namespace ExamBook.Persistence
         {
             
         }
-
-        public DbSet<Classroom> Classrooms { get; set; }
+        
         public DbSet<Course> Courses { get; set; }
         public DbSet<CourseHour> CourseHours { get; set; }
         public DbSet<CourseSession> CourseSessions { get; set; }
