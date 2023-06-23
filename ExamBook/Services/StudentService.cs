@@ -70,7 +70,7 @@ namespace ExamBook.Services
             
             if (await ContainsAsync(space, model.Code))
             {
-                throw new UsedValueException("StudentCodeUsed");
+                throw new UsedValueException("StudentCodeUsed", model.Code);
             }
             
             string normalizedCode = model.Code.Normalize().ToUpper();
@@ -93,6 +93,7 @@ namespace ExamBook.Services
                 SpaceId = space.Id,
                 PublisherId = publisher.Id
             };
+            publisherIds = publisherIds.Add(publisher.Id);
             
             if (!string.IsNullOrEmpty(model.UserId))
             {
@@ -106,6 +107,7 @@ namespace ExamBook.Services
                 publisherIds = publisherIds.Add(member.PublisherId).Add(member.User!.PublisherId);
                 student.Member = member;
             }
+            
             
             student.Specialities = (await _studentSpecialityService.CreateSpecialitiesAsync(student, specialities)).ToList();
             
@@ -127,6 +129,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(user, nameof(user));
             AssertHelper.NotNull(member.Space, nameof(member.Space));
             AssertHelper.NotNull(student.Space, nameof(student.Space));
+            AssertHelper.IsTrue(student.SpaceId == member.SpaceId);
             
             if (await ContainsAsync(student.Space, member))
             {
@@ -149,7 +152,8 @@ namespace ExamBook.Services
                 member.PublisherId,
                 member.User!.PublisherId
             };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_ATTACH_MEMBER", new {member.Id});
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, 
+                "STUDENT_ATTACH_MEMBER", new {MemberId = member.Id});
             
         }
         
@@ -189,7 +193,7 @@ namespace ExamBook.Services
             
             if (await ContainsAsync(student.Space, code))
             {
-                throw new UsedValueException("StudentCodeUsed");
+                throw new UsedValueException("StudentCodeUsed", code);
             }
 
             var data = new ChangeValueData<string>(student.Code, code);
@@ -204,11 +208,12 @@ namespace ExamBook.Services
         }
 
 
-        public async Task ChangeInfo(Student student, StudentChangeInfoModel model)
+        public async Task<Event> ChangeInfoAsync(Student student, StudentChangeInfoModel model, User user)
         {
             AssertHelper.NotNull(student, nameof(student));
             AssertHelper.NotNull(student.Space, nameof(student.Space));
             AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
 
             student.Sex = model.Sex;
             student.BirthDate = model.BirthDate;
@@ -216,17 +221,21 @@ namespace ExamBook.Services
             student.LastName = model.LastName;
             _dbContext.Update(student);
             await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> { student.PublisherId, student.Space.PublisherId };
+      
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "STUDENT_CHANGE_INFO", new {});
         }
         
         
 
 
-        public async Task<bool> ContainsAsync(Space space, string rId)
+        public async Task<bool> ContainsAsync(Space space, string code)
         {
             AssertHelper.NotNull(space, nameof(space));
-            AssertHelper.NotNullOrWhiteSpace(rId, nameof(rId));
+            AssertHelper.NotNullOrWhiteSpace(code, nameof(code));
 
-            string normalized = StringHelper.Normalize(rId);
+            string normalized = StringHelper.Normalize(code);
             return await _dbContext.Set<Student>()
                 .AnyAsync(s => space.Id == s.SpaceId && s.NormalizedCode == normalized && s.DeletedAt == null);
         }

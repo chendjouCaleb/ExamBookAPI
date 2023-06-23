@@ -2,9 +2,7 @@
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -23,12 +21,14 @@ namespace ExamBookTest.Services
     {
         private IServiceProvider _provider = null!;
         private StudentService _service = null!;
+        private MemberService _memberService = null!;
         private SpaceService _spaceService = null!;
         private PublisherService _publisherService = null!;
         private EventAssertionsBuilder _eventAssertionsBuilder = null!;
         
         private DbContext _dbContext = null!;
         private User _adminUser = null!;
+        private User _user = null!;
         private Actor _actor = null!;
 
         private Space _space = null!;
@@ -47,8 +47,10 @@ namespace ExamBookTest.Services
 
             var userService = _provider.GetRequiredService<UserService>();
             _spaceService = _provider.GetRequiredService<SpaceService>();
+            _memberService = _provider.GetRequiredService<MemberService>();
             _service = _provider.GetRequiredService<StudentService>();
             _adminUser = await userService.AddUserAsync(ServiceExtensions.UserAddModel);
+            _user = await userService.AddUserAsync(ServiceExtensions.UserAddModel2);
             _actor = await userService.GetActor(_adminUser);
 
             var result = await _spaceService.AddAsync(_adminUser.Id, new SpaceAddModel {
@@ -67,7 +69,47 @@ namespace ExamBookTest.Services
             };
         }
 
-     
+
+        [Test]
+        public async Task GetStudent()
+        {
+            var result = await _service.AddAsync(_space, _model, _adminUser);
+            var student = await _service.GetByIdAsync(result.Item.Id);
+            
+            Assert.AreEqual(result.Item.Id, student.Id);
+            Assert.NotNull(student.Space);
+        }
+
+        [Test]
+        public async Task GetStudentWithUser()
+        {
+            var model = new StudentAddModel
+            {
+                FirstName = "first name",
+                LastName = "last name",
+                Code = "8say6g3",
+                BirthDate = new DateTime(1990, 1, 1),
+                Sex = 'm',
+                UserId = _user.Id
+            };
+            var result = await _service.AddAsync(_space, model, _adminUser);
+            var student = await _service.GetByIdAsync(result.Item.Id);
+            Assert.NotNull(student.Member);
+            Assert.NotNull(student.Member!.User);
+        }
+
+        [Test]
+        public async Task GetNotFoundStudent_ShouldThrow()
+        {
+            var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
+            {
+                await _service.GetByIdAsync(ulong.MaxValue);
+            });
+            
+            Assert.AreEqual("StudentNotFoundById", ex!.Code);
+            Assert.AreEqual(ulong.MaxValue, ex.Params[0]);
+        }
+
 
         [Test]
         public async Task AddStudentAsync()
@@ -94,8 +136,114 @@ namespace ExamBookTest.Services
                 .HasPublisher(spacePublisher)
                 .HasData(student);
         }
+
+        
+
+        [Test]
+        public async Task AddStudentWithUser()
+        {
+            var model = new StudentAddModel
+            {
+                FirstName = "first name",
+                LastName = "last name",
+                Code = "8say6g3",
+                BirthDate = new DateTime(1990, 1, 1),
+                Sex = 'm',
+                UserId = _user.Id
+            };
+            
+            var result = await _service.AddAsync(_space, model, _adminUser);
+            var student = result.Item;
+            await _dbContext.Entry(student).ReloadAsync();
+            var member = await _dbContext.Set<Member>().FindAsync(student.MemberId);
+            
+            Assert.NotNull(member);
+            Assert.AreEqual(student.SpaceId, member!.SpaceId);
+
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId);
+            var memberPublisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var publisher = await _publisherService.GetByIdAsync(student.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            
+            _eventAssertionsBuilder.Build(result.Event)
+                .HasName("STUDENT_ADD")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasPublisher(memberPublisher)
+                .HasData(student);
+        }
+        
+        [Test]
+        public async Task AddStudent_WithUsedCode_ShouldThrow()
+        {
+            await _service.AddAsync(_space, _model, _adminUser);
+            var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+            {
+                await _service.AddAsync(_space, _model, _adminUser);
+            });
+            
+            Assert.AreEqual("StudentCodeUsed", ex!.Message);
+            Assert.AreEqual(_model.Code, ex.Params[0]);
+        }
+
+        [Test]
+        public async Task AttachStudentToUser()
+        {
+            
+            var student = (await _service.AddAsync(_space, _model, _adminUser)).Item;
+            await _dbContext.Entry(student).ReloadAsync();
+
+            var member = await _memberService.GetOrAddAsync(_space, _user.Id, _adminUser);
+            var result = await _service.AttachAsync(student, member, _adminUser);
+            
+            Assert.NotNull(member);
+            Assert.AreEqual(student.SpaceId, member!.SpaceId);
+
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId);
+            var memberPublisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var publisher = await _publisherService.GetByIdAsync(student.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            
+            _eventAssertionsBuilder.Build(result)
+                .HasName("STUDENT_ATTACH_MEMBER")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasPublisher(memberPublisher)
+                .HasData(new {MemberId = member.Id});
+        }
         
         
+        [Test]
+        public async Task AttachAttachedStudent_ShouldThrow()
+        {
+            var student = (await _service.AddAsync(_space, _model, _adminUser)).Item;
+            var member1 = await _memberService.GetOrAddAsync(_space, _user.Id, _adminUser);
+            var member2 = await _memberService.GetOrAddAsync(_space, _adminUser.Id, _adminUser);
+            await _service.AttachAsync(student, member1, _adminUser);
+
+            var ex = Assert.ThrowsAsync<IllegalOperationException>(async () =>
+            {
+                await _service.AttachAsync(student, member2, _adminUser);
+            });
+            Assert.AreEqual("StudentHasMember", ex!.Code);
+        }
+        
+        public async Task AttachStudentToAttachedMember_ShouldThrow()
+        {
+            var student = (await _service.AddAsync(_space, _model, _adminUser)).Item;
+            var member = await _memberService.GetOrAddAsync(_space, _user.Id, _adminUser);
+            await _service.AttachAsync(student, member, _adminUser);
+
+            var ex = Assert.ThrowsAsync<IllegalOperationException>(async () =>
+            {
+                await _service.AttachAsync(student, member, _adminUser);
+            });
+            Assert.AreEqual("MemberHasStudent", ex!.Code);
+        }
         
         
         [Test]

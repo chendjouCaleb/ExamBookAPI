@@ -10,7 +10,7 @@ namespace ExamBook.Models
         public string Description { get; set; } = "";
         public uint Coefficient { get; set; }
 
-        public List<CourseTeacherAddModel> CourseTeacherAddModels { get; set; } = new();
+        public HashSet<ulong> MemberIds { get; set; } = new();
         public HashSet<ulong> SpecialityIds { get; set; } = new();
     }
 

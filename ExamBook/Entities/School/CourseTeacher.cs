@@ -11,7 +11,7 @@ namespace ExamBook.Entities
         public Member? Member { get; set; }
         public ulong? MemberId { get; set; }
 
-        public bool IsPrincipal { get; set; }
+        public bool IsPrincipal { get; set; } = true;
 
        [JsonIgnore] public List<CourseHour> CourseHours { get; set; } = new();
        [JsonIgnore] public List<CourseSession> CourseSessions { get; set; } = new();

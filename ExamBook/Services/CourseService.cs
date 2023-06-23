@@ -6,7 +6,6 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -21,17 +20,19 @@ namespace ExamBook.Services
     {
         private readonly DbContext _dbContext;
         private readonly PublisherService _publisherService;
+        private readonly MemberService _memberService;
         private readonly EventService _eventService;
         private readonly ILogger<CourseService> _logger;
 
         public CourseService(DbContext dbContext, ILogger<CourseService> logger, 
             PublisherService publisherService, 
-            EventService eventService)
+            EventService eventService, MemberService memberService)
         {
             _dbContext = dbContext;
             _logger = logger;
             _publisherService = publisherService;
             _eventService = eventService;
+            _memberService = memberService;
         }
         
         
@@ -50,7 +51,7 @@ namespace ExamBook.Services
 
             if (course == null)
             {
-                throw new ElementNotFoundException("CourseNotFoundById");
+                throw new ElementNotFoundException("CourseNotFoundById", id);
             }
 
             return course;
@@ -63,12 +64,13 @@ namespace ExamBook.Services
             
             string normalizedCode = StringHelper.Normalize(code);
             var course = await _dbContext.Set<Course>()
+                .Include(c => c.Space)
                 .Where(c => c.NormalizedCode == normalizedCode)
                 .FirstOrDefaultAsync();
 
             if (course == null)
             {
-                throw new ElementNotFoundException("CourseNotFoundByCode");
+                throw new ElementNotFoundException("CourseNotFoundByCode", code);
             }
 
             return course;
@@ -82,12 +84,13 @@ namespace ExamBook.Services
             
             string normalizedName = StringHelper.Normalize(name);
             var course = await _dbContext.Set<Course>()
+                .Include(c => c.Space)
                 .Where(c => c.NormalizedName == normalizedName)
                 .FirstOrDefaultAsync();
 
             if (course == null)
             {
-                throw new ElementNotFoundException("CourseNotFoundByName");
+                throw new ElementNotFoundException("CourseNotFoundByName", name);
             }
 
             return course;
@@ -119,17 +122,28 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(user, nameof(user));
+            
+            var members = model.MemberIds
+                .Select(async memberId => await _memberService.GetByIdAsync(memberId))
+                .Select(t => t.Result)
+                .ToList();
+            
+            var specialities = await _dbContext.Set<Speciality>()
+                .Where(s => model.SpecialityIds.Contains(s.Id))
+                .ToListAsync();
+            
+            
             string normalizedCode = StringHelper.Normalize(model.Code);
             string normalizedName = StringHelper.Normalize(model.Name);
 
             if (await ContainsByCode(space, model.Code))
             {
-                throw new UsedValueException("CourseCodeUsed");
+                throw new UsedValueException("CourseCodeUsed", model.Code);
             }
 
             if (await ContainsByName(space, model.Name))
             {
-                throw new UsedValueException("CourseNameUsed");
+                throw new UsedValueException("CourseNameUsed", model.Name);
             }
 
             var publisher = await _publisherService.AddAsync();
@@ -146,14 +160,11 @@ namespace ExamBook.Services
             };
             await _dbContext.AddAsync(course);
 
-            var specialities = await _dbContext.Set<Speciality>()
-                .Where(s => model.SpecialityIds.Contains(s.Id))
-                .ToListAsync();
             
             var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
             await _dbContext.AddRangeAsync(courseSpecialities);
 
-            var courseTeachers = await _CreateCourseTeachersCourseAsync(course, model.CourseTeacherAddModels);
+            var courseTeachers = await _CreateCourseTeachersCourseAsync(course, members);
             await _dbContext.AddRangeAsync(courseTeachers);
 
             await _dbContext.SaveChangesAsync();
@@ -163,10 +174,14 @@ namespace ExamBook.Services
                 publisher.Id, 
                 space.PublisherId
             };
+            publisherIds.AddRange(members.Select(m => m.PublisherId));
+            publisherIds.AddRange(members.Select(m => m.User!.PublisherId));
+            publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_ADD", course);
             return new ActionResultModel<Course>(course, @event);
         }
 
+        
         public async Task<Event> ChangeCourseCodeAsync(Course course, string code, User user)
         {
             AssertHelper.NotNull(course, nameof(course));
@@ -174,7 +189,7 @@ namespace ExamBook.Services
 
             if (await ContainsByCode(course.Space!, code))
             {
-                throw new UsedValueException("CourseCodeUsed");
+                throw new UsedValueException("CourseCodeUsed", code);
             }
 
             var eventData = new ChangeValueData<string>(course.Code, code);
@@ -199,7 +214,7 @@ namespace ExamBook.Services
 
             if (await ContainsByName(course.Space!, name))
             {
-                throw new UsedValueException("CourseNameUsed");
+                throw new UsedValueException("CourseNameUsed", name);
             }
 
             var eventData = new ChangeValueData<string>(course.Name, name);
@@ -250,6 +265,24 @@ namespace ExamBook.Services
                 course.Space!.PublisherId
             };
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_CHANGE_DESCRIPTION", eventData);
+        }
+
+        
+        public async Task<CourseSpeciality> GetCourseSpecialityAsync(ulong courseSpecialityId)
+        {
+            var courseSpeciality = await _dbContext.Set<CourseSpeciality>()
+                .Include(cs => cs.Course)
+                .Include(cs => cs.Speciality)
+                .Where(cs => cs.Id == courseSpecialityId)
+                .FirstOrDefaultAsync();
+
+            if (courseSpeciality == null)
+            {
+                throw new ElementNotFoundException("CourseSpecialityNotFoundById", courseSpecialityId);
+            }
+
+
+            return courseSpeciality;
         }
 
 
@@ -387,22 +420,16 @@ namespace ExamBook.Services
             }
             return await CourseTeacherExistsAsync(course, member);
         }
-        
-        
-       
 
 
-        
-
-        public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(Course course, List<CourseTeacherAddModel> models)
+        public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(Course course, List<Member> members)
         {
             var courseTeachers = new List<CourseTeacher>();
-
-            foreach (var model in models)
+            foreach (var member in members)
             {
-                if (await CourseTeacherExists(course, model.MemberId))
+                if (!await CourseTeacherExistsAsync(course, member))
                 {
-                    var courseTeacher = await _CreateCourseTeacherAsync(course, model);
+                    var courseTeacher = await _CreateCourseTeacherAsync(course, member);
                     courseTeachers.Add(courseTeacher);
                 }
             }
@@ -410,26 +437,18 @@ namespace ExamBook.Services
             return courseTeachers;
         }
 
-        public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, CourseTeacherAddModel model)
+        public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, Member member)
         {
             AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(model, nameof(model));
-
-            var member = await _dbContext.Set<Member>().FindAsync(model.MemberId);
-
-            if (member == null)
-            {
-                throw new InvalidOperationException($"Member with id={model.MemberId} not found.");
-            }
+            AssertHelper.NotNull(member, nameof(member));
 
             if (!member.IsTeacher)
             {
-                
+                throw new IllegalStateException("MemberIsNotTeacher");
             }
 
             CourseTeacher courseTeacher = new()
             {
-                IsPrincipal = model.IsPrincipal,
                 Course = course,
                 Member = member
             };
@@ -437,7 +456,15 @@ namespace ExamBook.Services
             return courseTeacher;
         }
         
-        public async Task DeleteCourseTeacher(CourseTeacher courseTeacher)
+        public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, ulong memberId)
+        {
+            AssertHelper.NotNull(course, nameof(course));
+
+            var member = await _memberService.GetByIdAsync(memberId);
+            return await _CreateCourseTeacherAsync(course, member);
+        }
+        
+        public async Task DeleteCourseTeacherAsync(CourseTeacher courseTeacher)
         {
             AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
             _dbContext.Remove(courseTeacher);
@@ -445,7 +472,6 @@ namespace ExamBook.Services
         }
 
         
-
         
         public async Task<Event> DeleteAsync(Course course, User user)
         {

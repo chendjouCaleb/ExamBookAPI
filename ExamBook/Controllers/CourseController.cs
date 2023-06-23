@@ -1,0 +1,153 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using ExamBook.Entities;
+using ExamBook.Helpers;
+using ExamBook.Identity.Services;
+using ExamBook.Models;
+using ExamBook.Persistence;
+using ExamBook.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace ExamBook.Controllers
+{
+	
+	[Route("api/courses")]
+	public class CourseController:ControllerBase
+	{
+		private readonly CourseService _courseService;
+		private readonly SpecialityService _specialityService;
+		private readonly UserService _userService;
+		private readonly SpaceService _spaceService;
+		private readonly ApplicationDbContext _dbContext;
+
+		
+
+		[HttpGet("{courseId}")]
+		public async Task<Course> GetAsync(ulong courseId)
+		{
+			return await _courseService.GetCourseAsync(courseId);
+		}
+
+		
+		[HttpGet]
+		public async Task<ICollection<Course>> ListAsync([FromQuery] ulong? spaceId)
+		{
+			IQueryable<Course> query = _dbContext.Courses.Include(c => c.Space);
+
+			if (spaceId != null)
+			{
+				query = query.Where(c =>c.SpaceId == spaceId);
+			}
+
+
+			return await query.ToListAsync();
+		}
+
+
+		[HttpGet("contains")]
+		public async Task<bool> ContainsAsync([FromQuery] ulong spaceId, [FromQuery] string name, [FromQuery] string code)
+		{
+
+			if (!string.IsNullOrWhiteSpace(name))
+			{
+				var normalizedName = StringHelper.Normalize(name);
+				return await _dbContext.Courses
+					.Where(c => c.SpaceId == spaceId && c.NormalizedName == normalizedName)
+					.AnyAsync();
+			}
+			
+			if (!string.IsNullOrWhiteSpace(code))
+			{
+				var normalizedCode = StringHelper.Normalize(code);
+				return await _dbContext.Courses
+					.Where(c => c.SpaceId == spaceId && c.NormalizedCode == normalizedCode)
+					.AnyAsync();
+			}
+
+			return false;
+		}
+		
+		
+
+		[Authorize]
+		[HttpPost]
+		public async Task<CreatedAtActionResult> AddAsync([FromQuery] ulong spaceId,
+			[FromBody] CourseAddModel model)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var space = await _spaceService.GetByIdAsync(spaceId);
+
+			var course = (await _courseService.AddCourseAsync(space, model, user)).Item;
+
+			return CreatedAtAction("Get", new {courseId = course.Id}, course);
+		}
+
+
+		[Authorize]
+		[HttpPut("{courseId}/name")]
+		public async Task<OkObjectResult> ChangeNameAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var course = await _courseService.GetCourseAsync(courseId);
+            
+			string name = body["name"];
+			var result = await _courseService.ChangeCourseNameAsync(course, name, user);
+			return Ok(result);
+		}
+		
+		
+		[Authorize]
+		[HttpPut("{courseId}/code")]
+		public async Task<OkObjectResult> ChangeCodeAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var course = await _courseService.GetCourseAsync(courseId);
+            
+			string code = body["code"];
+			var result = await _courseService.ChangeCourseCodeAsync(course, code, user);
+			return Ok(result);
+		}
+		
+		
+			
+		[Authorize]
+		[HttpPut("{courseId}/coefficient")]
+		public async Task<OkObjectResult> ChangeCoefficientAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var course = await _courseService.GetCourseAsync(courseId);
+            
+			string value = body["coefficient"];
+			var coefficient = uint.Parse(value);
+			var result = await _courseService.ChangeCourseCoefficientAsync(course, coefficient, user);
+			return Ok(result);
+		}
+		
+
+		[Authorize]
+		[HttpPut("{courseId}/description")]
+		public async Task<OkObjectResult> ChangeDescriptionAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var course = await _courseService.GetCourseAsync(courseId);
+            
+			string description = body["description"];
+			var result = await _courseService.ChangeCourseDescriptionAsync(course, description, user);
+			return Ok(result);
+		}
+		
+		
+		
+		
+	}
+}

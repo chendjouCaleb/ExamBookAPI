@@ -82,8 +82,7 @@ namespace ExamBook.Controllers
 
         [HttpPost]
         [Authorize]
-        public async Task<CreatedAtActionResult> AddSpace(
-            [FromForm] SpaceAddModel model)
+        public async Task<CreatedAtActionResult> AddSpace([FromForm] SpaceAddModel model)
         {
             var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var result = await _spaceService.AddAsync(userId, model);

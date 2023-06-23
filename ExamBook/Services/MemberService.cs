@@ -3,9 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Utils;
@@ -44,7 +42,7 @@ namespace ExamBook.Services
         {
             var member = await _dbContext.Set<Member>()
                 .Include(m => m.Space)
-                .Where(m => m.Id == memberId && !m.IsDeleted)
+                .Where(m => m.Id == memberId && m.DeletedAt == null)
                 .FirstOrDefaultAsync();
 
             if (member == null)
@@ -58,6 +56,17 @@ namespace ExamBook.Services
             }
 
             return member;
+        }
+        
+        public async Task<Member?> GetAsync(Space space, string userId)
+        {
+            var memberId = await IsSpaceMemberId(space, userId);
+            if (memberId != null)
+            {
+                return await GetByIdAsync(memberId.Value);
+            }
+
+            return null;
         }
 
         public async Task<Member> GetOrAddAsync(Space space, string userId, User actor)
@@ -101,16 +110,29 @@ namespace ExamBook.Services
             var publishers = await _publisherService.GetByIdAsync(space.PublisherId, memberUser.PublisherId);
             publishers = publishers.Add(publisher);
             
+            member = await GetByIdAsync(member.Id);
             var @event = await _eventService.EmitAsync(publishers, actor, "MEMBER_ADD", member);
             _logger.LogInformation("New member");
 
+            
             return new ActionResultModel<Member>(member, @event);
         }
         
         
         public async Task<ActionResultModel<Member>> ToggleAdminAsync(Member member, User user)
         {
-            AssertHelper.NotNull(member, nameof(member));
+            AssertHelper.NotNull(member.Space, nameof(member.Space));
+            AssertHelper.NotNull(member.User, nameof(member.User));
+
+            var adminCount = await _dbContext.Set<Member>()
+                .Where(m => m.SpaceId == member.SpaceId && m.IsAdmin)
+                .CountAsync();
+
+            // Checks is space only one admin.
+            if (member.IsAdmin && adminCount < 2)
+            {
+                throw new IllegalOperationException("SpaceOnlyOneAdmin");
+            }
 
             string eventName = member.IsAdmin ? "MEMBER_UNSET_ADMIN" : "MEMBER_SET_ADMIN";
             member.IsAdmin = !member.IsAdmin;
@@ -122,7 +144,7 @@ namespace ExamBook.Services
             var publishers = await _publisherService.GetByIdAsync(
                 member.PublisherId, 
                 member.Space!.PublisherId, 
-                member.User.PublisherId);
+                member.User!.PublisherId);
 
             var @event = await _eventService.EmitAsync(publishers, actor, eventName, new {} );
             _logger.LogInformation("Member set admin");
@@ -177,10 +199,12 @@ namespace ExamBook.Services
         
         public async Task<ulong?> IsSpaceMemberId(Space space, string userId)
         {
-            return await _dbContext.Set<Member>()
+            AssertHelper.NotNull(space, nameof(space));
+            var id = await _dbContext.Set<Member>()
                 .Where(m => m.SpaceId == space.Id && m.UserId == userId && m.DeletedAt == null)
                 .Select(m => m.Id)
                 .FirstOrDefaultAsync();
+            return id == 0 ? null : id;
         }
 
         public async Task<Publisher> GetPublisherAsync(Member member)

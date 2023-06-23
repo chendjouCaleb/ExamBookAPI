@@ -6,7 +6,7 @@ namespace ExamBook.Utils
     {
         public static void IsTrue(bool state, string message)
         {
-            if (state)
+            if (!state)
             {
                 throw new ArgumentException(message);
             }
@@ -14,7 +14,7 @@ namespace ExamBook.Utils
         
         public static void IsTrue(bool state)
         {
-            if (state)
+            if (!state)
             {
                 throw new ArgumentException("Should be True, but is false.");
             }

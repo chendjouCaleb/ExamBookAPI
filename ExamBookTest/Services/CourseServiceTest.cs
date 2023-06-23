@@ -4,9 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -25,7 +23,9 @@ namespace ExamBookTest.Services
     {
         private IServiceProvider _provider = null!;
         private CourseService _service = null!;
+        private CourseTeacherService _courseTeacherService = null!;
         private SpaceService _spaceService = null!;
+        private MemberService _memberService = null!;
         private SpecialityService _specialityService = null!;
         private PublisherService _publisherService = null!;
         private EventAssertionsBuilder _eventAssertionsBuilder = null!;
@@ -34,9 +34,17 @@ namespace ExamBookTest.Services
         private User _adminUser = null!;
         private Actor _actor = null!;
 
+        private User _user1;
+        private User _user2;
+
+        private Member _member1;
+        private Member _member2;
+
         private Space _space = null!;
         private Speciality _speciality1 = null!;
         private Speciality _speciality2 = null!;
+        
+        
         private ICollection<Speciality> _specialities = null!;
         private CourseAddModel _model = null!;
 
@@ -54,10 +62,15 @@ namespace ExamBookTest.Services
             var userService = _provider.GetRequiredService<UserService>();
             _spaceService = _provider.GetRequiredService<SpaceService>();
             _specialityService = _provider.GetRequiredService<SpecialityService>();
+            _memberService = _provider.GetRequiredService<MemberService>();
+            _courseTeacherService = _provider.GetRequiredService<CourseTeacherService>();
             _service = _provider.GetRequiredService<CourseService>();
             _adminUser = await userService.AddUserAsync(ServiceExtensions.UserAddModel);
             _actor = await userService.GetActor(_adminUser);
-
+            
+            _user1 = await userService.AddUserAsync(ServiceExtensions.UserAddModel1);
+            _user2 = await userService.AddUserAsync(ServiceExtensions.UserAddModel2);
+            
             var result = await _spaceService.AddAsync(_adminUser.Id, new SpaceAddModel
             {
                 Name = "UY-1, PHILOSOPHY, L1",
@@ -71,6 +84,14 @@ namespace ExamBookTest.Services
             var specialityModel2 = new SpecialityAddModel {Name = "speciality name2"};
             _speciality2 = (await _specialityService.AddSpecialityAsync(_space, specialityModel2, _adminUser)).Item;
             _specialities = new List<Speciality>{_speciality1, _speciality2};
+            
+            var memberModel1 = new MemberAddModel {UserId = _user1.Id, IsTeacher = true};
+            _member1 = (await _memberService.AddMemberAsync(_space, memberModel1, _adminUser)).Item;
+
+            var memberModel2 = new MemberAddModel {UserId = _user2.Id, IsTeacher = true};
+            _member2 = (await _memberService.AddMemberAsync(_space, memberModel2, _adminUser)).Item;
+
+            
 
         _model = new CourseAddModel
             {
@@ -81,10 +102,32 @@ namespace ExamBookTest.Services
             };
         }
 
+        [Test]
+        public async Task GetById()
+        {
+            var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+            var getResult = await _service.GetCourseAsync(course.Id);
+            
+            Assert.AreEqual(course.Id, getResult.Id);
+        }
+        
+        [Test]
+        public void GetById_NotFound_ShouldThrow()
+        {
+            var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
+            {
+                await _service.GetCourseAsync(ulong.MaxValue);
+            });
+            
+            Assert.AreEqual("CourseNotFoundById", ex!.Code);
+            Assert.AreEqual(ulong.MaxValue, ex.Params[0]);
+        }
+
 
         [Test]
         public async Task AddCourseAsync()
         {
+            _model.MemberIds = new HashSet<ulong> {_member1.Id, _member2.Id};
             var result = await _service.AddCourseAsync(_space, _model, _adminUser);
             var course = result.Item;
             await _dbContext.Entry(course).ReloadAsync();
@@ -98,6 +141,9 @@ namespace ExamBookTest.Services
             Assert.NotZero(course.Coefficient);
             Assert.AreEqual(_model.Description, course.Description);
             Assert.IsNotEmpty(course.PublisherId);
+            
+            Assert.True(await _courseTeacherService.ContainsAsync(course, _member1));
+            Assert.True(await _courseTeacherService.ContainsAsync(course, _member2));
 
             var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
             var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
@@ -121,7 +167,8 @@ namespace ExamBookTest.Services
             {
                 await _service.AddCourseAsync(_space, _model, _adminUser);
             });
-            Assert.AreEqual("CourseCodeUsed", ex!.Message);
+            Assert.AreEqual("CourseCodeUsed", ex!.Code);
+            Assert.AreEqual(_model.Code, ex.Params[0]);
         }
 
         [Test]
@@ -134,7 +181,8 @@ namespace ExamBookTest.Services
             {
                 await _service.AddCourseAsync(_space, _model, _adminUser);
             });
-            Assert.AreEqual("CourseNameUsed", ex!.Message);
+            Assert.AreEqual("CourseNameUsed", ex!.Code);
+            Assert.AreEqual(_model.Name, ex.Params[0]);
         }
 
 
@@ -174,7 +222,8 @@ namespace ExamBookTest.Services
             {
                 await _service.ChangeCourseCodeAsync(course, course.Code, _adminUser);
             });
-            Assert.AreEqual("CourseCodeUsed", ex!.Message);
+            Assert.AreEqual("CourseCodeUsed", ex!.Code);
+            Assert.AreEqual(course.Code, ex.Params[0]);
         }
         
         [Test]
@@ -203,6 +252,20 @@ namespace ExamBookTest.Services
                 .HasData(eventData);
         }
 
+        
+        [Test]
+        public async Task TryChangeCourseName_WithUsedName_ShouldThrow()
+        {
+            var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+
+            var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+            {
+                await _service.ChangeCourseNameAsync(course, course.Name, _adminUser);
+            });
+            Assert.AreEqual("CourseNameUsed", ex!.Message);
+            Assert.AreEqual(course.Name, ex.Params[0]);
+        }
+        
         [Test]
         public async Task ChangeCourseDescription()
         {
@@ -295,11 +358,13 @@ namespace ExamBookTest.Services
         [Test]
         public void FindCourseByCode_NotFound_ShouldThrow()
         {
+            var code = Guid.NewGuid().ToString();
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
-                await _service.GetCourseByCodeAsync(_space, Guid.NewGuid().ToString());
+                await _service.GetCourseByCodeAsync(_space, code);
             });
             Assert.AreEqual("CourseNotFoundByCode", ex!.Message);
+            Assert.AreEqual(code, ex.Params[0]);
         }
 
 
@@ -315,11 +380,13 @@ namespace ExamBookTest.Services
         [Test]
         public void FindCourseByName_NotFound_ShouldThrow()
         {
+            var name = Guid.NewGuid().ToString();
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
-                await _service.GetCourseByNameAsync(_space, Guid.NewGuid().ToString());
+                await _service.GetCourseByNameAsync(_space, name);
             });
             Assert.AreEqual("CourseNotFoundByName", ex!.Message);
+            Assert.AreEqual(name, ex.Params[0]);
         }
 
 

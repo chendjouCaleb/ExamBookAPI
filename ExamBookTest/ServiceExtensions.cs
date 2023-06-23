@@ -27,7 +27,8 @@ namespace ExamBookTest
             Sex = 'M',
             BirthDate = new DateTime(1995,1,1),
             UserName = "userName",
-            Password = "Password09@"
+            Password = "Password09@",
+            Email = "user@gmail.com"
         };
         
         public static UserAddModel UserAddModel1 = new ()
@@ -37,7 +38,8 @@ namespace ExamBookTest
             Sex = 'M',
             BirthDate = new DateTime(1995,1,1),
             UserName = "userName12",
-            Password = "Password09@"
+            Password = "Password09@",
+            Email = "user1@gmail.com"
         };
         
         public static UserAddModel UserAddModel2 = new ()

@@ -62,11 +62,43 @@ namespace ExamBookTest.Services
 
             _model = new MemberAddModel
             {
-                IsAdmin = true,
+                IsAdmin = false,
+                IsTeacher = false,
                 UserId = _user.Id
             };
         }
 
+        [Test]
+        public async Task GetMemberById()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+
+            var result = await _memberService.GetByIdAsync(member.Id);
+            
+            Assert.AreEqual(member.Id, result.Id);
+            Assert.NotNull(result.User);
+            Assert.AreEqual(_user.Id, member.User!.Id);
+        }
+
+        [Test]
+        public async Task GetMemberId_ShouldBeNull()
+        {
+            var id = await _memberService.IsSpaceMemberId(_space, Guid.NewGuid().ToString());
+            Console.WriteLine("ID: " + id);
+            Assert.Null(id);
+        }
+
+
+        [Test]
+        public async Task GetNotFoundMember_ShouldThrow()
+        {
+            var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
+            {
+                await _memberService.GetByIdAsync(ulong.MaxValue);
+            });
+            Assert.AreEqual("MemberNotFoundById", ex!.Code);
+            Assert.AreEqual(ulong.MaxValue, ex.Params[0]);
+        }
 
         [Test]
         public async Task AddMember()
@@ -109,6 +141,152 @@ namespace ExamBookTest.Services
 
 
         [Test]
+        public async Task GetOrAdd_Add()
+        {
+            Assert.False(await _memberService.IsSpaceMember(_space, _user.Id));
+            var member = await _memberService.GetOrAddAsync(_space, _user.Id, _user);
+            Assert.NotNull(member);
+            Assert.AreEqual(member.UserId, _user.Id);
+            Assert.False(member.IsAdmin);
+            Assert.False(member.IsTeacher);
+        }
+        
+        
+        [Test]
+        public async Task GetOrAdd_Get()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+            var getMember = await _memberService.GetOrAddAsync(_space, _user.Id, _user);
+            Assert.AreEqual(member.Id, getMember.Id);
+        }
+
+       
+        
+       
+        [Test]
+        public async Task ToggleAdminToTrue()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var result = await _memberService.ToggleAdminAsync(member, _user);
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var publisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId); 
+          
+            var @event = result.Event;
+
+            Assert.True(member.IsAdmin);
+         
+            _eventAssertionsBuilder.Build(@event)
+                .HasName("MEMBER_SET_ADMIN")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasData(new {});
+        }
+        
+        
+        [Test]
+        public async Task ToggleAdminToFalse()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+            await _memberService.ToggleAdminAsync(member, _user);
+
+            var result = await _memberService.ToggleAdminAsync(member, _user);
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var publisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId); 
+          
+            var @event = result.Event;
+
+            Assert.False(member.IsAdmin);
+         
+            _eventAssertionsBuilder.Build(@event)
+                .HasName("MEMBER_UNSET_ADMIN")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasData(new {});
+        }
+        
+        
+        
+        [Test]
+        public async Task ToggleAdminToFalse_WithNoAdmin_ShouldThrow()
+        {
+            var member = await _memberService.GetAsync(_space, _adminUser.Id);
+            Assert.True(member!.IsAdmin);
+
+            var ex = Assert.ThrowsAsync<IllegalOperationException>(async () =>
+            {
+                await _memberService.ToggleAdminAsync(member, _user);
+            });
+            Assert.AreEqual("SpaceOnlyOneAdmin", ex!.Code);
+        }
+        
+        
+        
+        [Test]
+        public async Task ToggleTeacherToTrue()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var result = await _memberService.ToggleTeacherAsync(member, _user);
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var publisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId); 
+          
+            var @event = result.Event;
+
+            Assert.True(member.IsTeacher);
+         
+            _eventAssertionsBuilder.Build(@event)
+                .HasName("MEMBER_SET_TEACHER")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasData(new {});
+        }
+        
+        
+        [Test]
+        public async Task ToggleTeacherToFalse()
+        {
+            var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
+            await _memberService.ToggleTeacherAsync(member, _user);
+
+            var result = await _memberService.ToggleTeacherAsync(member, _user);
+            await _dbContext.Entry(member).ReloadAsync();
+
+            var publisher = await _publisherService.GetByIdAsync(member.PublisherId);
+            var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+            var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId); 
+          
+            var @event = result.Event;
+
+            Assert.False(member.IsTeacher);
+         
+            _eventAssertionsBuilder.Build(@event)
+                .HasName("MEMBER_UNSET_TEACHER")
+                .HasActor(_actor)
+                .HasPublisher(publisher)
+                .HasPublisher(spacePublisher)
+                .HasPublisher(userPublisher)
+                .HasData(new {});
+        }
+
+        [Test]
         public async Task DeleteMember()
         {
             var member = (await _memberService.AddMemberAsync(_space, _model, _user)).Item;
@@ -133,11 +311,10 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task IsSpaceMember()
+        public async Task IsSpaceMember_WithMember_ShouldBeTrue()
         {
-            await _memberService.AddMemberAsync(_space, _model, _adminUser);
-            var isMember = await _memberService.IsSpaceMember(_space, _user.Id);
-            Assert.True(isMember);
+            await _memberService.AddMemberAsync(_space, _model, _user);
+            Assert.True(await _memberService.IsSpaceMember(_space, _user.Id));
         }
 
 
