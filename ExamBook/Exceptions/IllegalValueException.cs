@@ -2,7 +2,7 @@
 {
     public class IllegalValueException:BaseException
     {
-        public IllegalValueException(string? message) : base(message)
+        public IllegalValueException(string message) : base(message)
         {
         }
     }

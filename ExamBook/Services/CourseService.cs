@@ -429,7 +429,7 @@ namespace ExamBook.Services
             {
                 if (!await CourseTeacherExistsAsync(course, member))
                 {
-                    var courseTeacher = await _CreateCourseTeacherAsync(course, member);
+                    var courseTeacher = _CreateCourseTeacherAsync(course, member);
                     courseTeachers.Add(courseTeacher);
                 }
             }
@@ -437,7 +437,7 @@ namespace ExamBook.Services
             return courseTeachers;
         }
 
-        public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, Member member)
+        public CourseTeacher _CreateCourseTeacherAsync(Course course, Member member)
         {
             AssertHelper.NotNull(course, nameof(course));
             AssertHelper.NotNull(member, nameof(member));
@@ -461,7 +461,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(course, nameof(course));
 
             var member = await _memberService.GetByIdAsync(memberId);
-            return await _CreateCourseTeacherAsync(course, member);
+            return _CreateCourseTeacherAsync(course, member);
         }
         
         public async Task DeleteCourseTeacherAsync(CourseTeacher courseTeacher)

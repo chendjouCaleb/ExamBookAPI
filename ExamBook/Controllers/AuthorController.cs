@@ -48,7 +48,10 @@ namespace ExamBook.Controllers
 
             Console.WriteLine("Subscriptions ids: " + authorSubscriptions.Count());
             var subscriptionIds = authorSubscriptions
-                .Select(s => s.SubscriptionId);
+                .Where(s => s.SubscriptionId != null)
+                .Select(s => s.SubscriptionId!)
+                
+                .ToList();
 
             var events = await _eventService.GetSubscriptionEvents(subscriptionIds);
 

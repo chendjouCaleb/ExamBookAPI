@@ -193,6 +193,28 @@ namespace ExamBook.Identity.Services
 			return user;
 		}
 
+		public async Task EnsureVx()
+		{
+			var users = await _dbContext.Users.ToListAsync();
+			foreach (var user in users)
+			{
+				if (string.IsNullOrWhiteSpace(user.PublisherId))
+				{
+					var publisher = await _publisherService.AddAsync();
+					user.PublisherId = publisher.Id;
+				}
+				
+				if (string.IsNullOrWhiteSpace(user.ActorId))
+				{
+					var actor = await _actorService.AddAsync();
+					user.ActorId = actor.Id;
+				}
+
+				_dbContext.Update(user);
+				await _dbContext.SaveChangesAsync();
+			}
+		}
+
 
 		public async Task ChangeUserNameAsync(string id, string userName)
 		{
@@ -227,11 +249,7 @@ namespace ExamBook.Identity.Services
 
 			return users;
 		}
-
-		public async Task<User> SelectById(string id)
-		{
-			throw new NotImplementedException();
-		}
+		
 
 		public async Task<User> FindByIdAsync(string id)
 		{

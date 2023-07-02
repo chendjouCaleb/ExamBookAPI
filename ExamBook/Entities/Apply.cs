@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using ExamBook.Identity.Entities;
-using Newtonsoft.Json;
 
 namespace ExamBook.Entities
 {
@@ -23,8 +22,8 @@ namespace ExamBook.Entities
 		public ulong? StudentId { get; set; }
 
 		public string UserId { get; set; } = "";
-		[NotMapped] 
-		public User User { get; set; }
+
+		[NotMapped] public User User { get; set; } = null!;
 
 		public DateTime? AcceptedAt { get; set; }
 		public bool IsAccepted => AcceptedAt != null;
@@ -32,7 +31,7 @@ namespace ExamBook.Entities
 		public DateTime? RejectedAt { get; set; }
 		public bool IsRejected => RejectedAt != null;
 
-		[JsonIgnore] public List<StudentSpeciality> Specialities { get; set; } = new();
+		public List<StudentSpeciality> Specialities { get; set; } = new();
 	}
 
 

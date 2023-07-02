@@ -29,10 +29,10 @@ namespace ExamBook.Entities
     public class StudentSpeciality : Entity
     {
         public StudentSpeciality() {}
-        public StudentSpeciality(Student? student, Speciality? Speciality)
+        public StudentSpeciality(Student student, Speciality speciality)
         {
             Student = student;
-            Speciality = Speciality;
+            Speciality = speciality;
         }
 
         public Student? Student { get; set; }

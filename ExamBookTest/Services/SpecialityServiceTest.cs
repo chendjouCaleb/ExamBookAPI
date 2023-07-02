@@ -205,7 +205,7 @@ namespace ExamBookTest.Services
         public async Task GetSpeciality()
         {
             var speciality = (await _specialityService.AddSpecialityAsync(_space, _model, _adminUser)).Item;
-            var resultSpeciality = await _specialityService.GetSpecialityAsync(speciality.Id);
+            var resultSpeciality = await _specialityService.GetAsync(speciality.Id);
             Assert.AreEqual(speciality.Id, resultSpeciality.Id);
         }
 
@@ -215,7 +215,7 @@ namespace ExamBookTest.Services
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
-                await _specialityService.GetSpecialityAsync(9000000000);
+                await _specialityService.GetAsync(9000000000);
             });
             
             Assert.AreEqual("SpecialityNotFound", ex!.Message);

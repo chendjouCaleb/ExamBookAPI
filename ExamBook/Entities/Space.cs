@@ -41,10 +41,11 @@ namespace ExamBook.Entities
         public string CoverImageId { get; set; } = "";
         
         
-        [JsonIgnore] public HashSet<Course> Courses { get; set; } = new();
-        [JsonIgnore] public HashSet<Examination> Examinations { get; set; } = new();
-        [JsonIgnore] public HashSet<Room> Rooms { get; set; } = new();
-        [JsonIgnore] public HashSet<Member> Members { get; set; } = new();
+        public List<Course> Courses { get; set; } = new();
+        public List<Examination> Examinations { get; set; } = new();
+        public List<Room> Rooms { get; set; } = new();
+        public List<Speciality> Specialities { get; set; } = new();
+        public List<Member> Members { get; set; } = new();
         
     }
 }

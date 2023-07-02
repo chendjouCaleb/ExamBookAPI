@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Helpers;
 using ExamBook.Identity;
@@ -55,6 +56,17 @@ namespace ExamBook.Controllers
                 return await _userService.GetByUserNameAsync(userName);
             
             return await _userService.GetByIdAsync(id);
+        }
+        
+        [HttpGet("tryget")]
+        public async Task<User?> TryGetEmailAsync([FromQuery] string userId)
+        {
+            var normalized = StringHelper.Normalize(userId);
+            return await _dbContext.Users
+            .Where(u => u.NormalizedEmail == normalized 
+                        || u.NormalizedUserName == normalized
+                        || u.Id == userId)
+            .FirstOrDefaultAsync();
         }
         
        

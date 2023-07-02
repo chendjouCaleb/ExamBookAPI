@@ -22,12 +22,12 @@ namespace Social.EFCore
             return _dbContext.Authors.FindAsync(id);
         }
 
-        public async Task<IEnumerable<Author>> GetAllAsync()
+        public async Task<ICollection<Author>> GetAllAsync()
         {
             return await _dbContext.Authors.ToListAsync();
         }
 
-        public async Task<IEnumerable<PostFile>> GetPostFilesAsync(Post post)
+        public async Task<ICollection<PostFile>> GetPostFilesAsync(Post post)
         {
             return await _dbContext.PostFiles
                 .Where(p => p.PostId == post.Id)
@@ -60,7 +60,7 @@ namespace Social.EFCore
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<AuthorSubscription>> GetAuthorSubscriptionsAsync(Author author)
+        public async Task<ICollection<AuthorSubscription>> GetAuthorSubscriptionsAsync(Author author)
         {
             return await _dbContext.AuthorSubscriptions
                 .Where(a => a.AuthorId == author.Id)

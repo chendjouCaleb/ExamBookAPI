@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
+using ExamBook.Persistence;
 using ExamBook.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,9 +21,9 @@ namespace ExamBook.Controllers
     {
         private readonly SpaceService _spaceService;
         private readonly UserService _userService;
-        private readonly DbContext _dbContext;
+        private readonly ApplicationDbContext _dbContext;
 
-        public SpaceController(SpaceService spaceService, DbContext dbContext, UserService userService)
+        public SpaceController(SpaceService spaceService, ApplicationDbContext dbContext, UserService userService)
         {
             _spaceService = spaceService;
             _dbContext = dbContext;
@@ -34,6 +35,8 @@ namespace ExamBook.Controllers
         public async Task<Space> FindAsync(ulong id)
         {
             Space space = await _spaceService.GetByIdAsync(id);
+            space.Rooms = await _dbContext.Rooms.Where(r => r.SpaceId == id).ToListAsync();
+            space.Specialities = await _dbContext.Specialities.Where(r => r.SpaceId == id).ToListAsync();
             return space;
         }
 

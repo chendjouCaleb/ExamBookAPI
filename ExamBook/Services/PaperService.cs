@@ -36,7 +36,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(test, nameof(test));
             
             var participants = _dbContext.Set<Participant>()
-                .Where(p => test.Examination.Equals(p.Examination));
+                .Where(p => test.ExaminationId == p.ExaminationId);
 
             var papers = new List<Paper>();
             foreach (var participant in participants)

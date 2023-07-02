@@ -34,6 +34,7 @@ namespace ExamBook.Services
         public async Task<CourseTeacher> GetAsync(ulong id)
         {
             var courseTeacher = await _dbContext.Set<CourseTeacher>()
+                .Include(ct => ct.Member)
                 .Where(ct => ct.Id == id)
                 .FirstOrDefaultAsync();
 

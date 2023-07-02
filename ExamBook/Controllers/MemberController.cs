@@ -44,18 +44,29 @@ namespace ExamBook.Controllers
 		}
 
 		[HttpGet]
-		public async Task<ICollection<Member>> ListAsync([FromQuery] ulong spaceId, [FromQuery] string userId)
+		public async Task<ICollection<Member>> ListAsync([FromQuery] MemberSelectModel model)
 		{
 			IQueryable<Member> query = _dbContext.Set<Member>();
 
-			if (spaceId != 0)
+			if (model.SpaceId != 0)
 			{
-				query = query.Where(m => m.SpaceId == spaceId);
+				query = query.Where(m => m.SpaceId == model.SpaceId);
 			}
 
-			if (!string.IsNullOrWhiteSpace(userId))
+			if (!string.IsNullOrWhiteSpace(model.UserId))
 			{
-				query = query.Where(m => m.UserId == userId).Include(m => m.Space);
+				query = query.Where(m => m.UserId == model.UserId)
+					.Include(m => m.Space);
+			}
+
+			if (model.IsTeacher != null)
+			{
+				query = query.Where(m => m.IsTeacher);
+			}
+			
+			if (model.IsAdmin != null)
+			{
+				query = query.Where(m => m.IsAdmin);
 			}
 
 			var members = await query.ToListAsync();
@@ -81,7 +92,9 @@ namespace ExamBook.Controllers
 			var space = await _spaceService.GetByIdAsync(spaceId);
 
 			var result = await _memberService.AddMemberAsync(space, model, user);
-			return CreatedAtAction("Get", new {memberId = result.Item.Id, result.Item});
+			var member = await _memberService.GetByIdAsync(result.Item.Id);
+			await _dbContext.Entry(member).ReloadAsync();
+			return CreatedAtAction("Get", new {memberId = result.Item.Id}, member);
 		}
 
 

@@ -2,6 +2,7 @@ using System.Text;
 using DriveIO;
 using DriveIO.Services;
 using ExamBook.Identity;
+using ExamBook.Identity.Services;
 using ExamBook.Persistence;
 using ExamBook.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -91,7 +92,7 @@ services.AddAuthentication(options =>
     {
         ValidIssuer = configuration["Jwt:Issuer"],
         ValidAudience = configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"])),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)),
         ValidateIssuer = true,
         ValidateAudience = false,
         ValidateLifetime = false,
@@ -118,7 +119,7 @@ services.AddVx(_ => { })
     .AddEntityFrameworkStores<ApplicationVxDbContext>()
     .AddNewtonSoftDataSerializer(settings =>
     {
-        
+        settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
     });
 
 
@@ -131,7 +132,11 @@ await folderService.CreateIfNotExistsAsync("gifs");
 await folderService.CreateIfNotExistsAsync("audios");
 
 var authorServices =  app.Services.CreateScope().ServiceProvider.GetRequiredService<AuthorService>();
-//await authorServices.EnsureAuthorSelfSubscribe();
+var userServices =  app.Services.CreateScope().ServiceProvider.GetRequiredService<UserService>();
+await userServices.EnsureVx();
+await authorServices.EnsureAuthorSelfSubscribe();
+await authorServices.EnsureAuthorsHasActor();
+await authorServices.EnsureAuthorsHasPublisher();
 
 app.UseAuthentication();
 app.UseAuthorization();

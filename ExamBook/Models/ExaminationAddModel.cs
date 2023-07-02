@@ -8,6 +8,6 @@ namespace ExamBook.Models
         public string Name { get; set; } = "";
         public DateTime StartAt { get; set; }
 
-        public HashSet<ulong> SpecialitiyIds { get; set; }
+        public HashSet<ulong> SpecialitiyIds { get; set; } = new();
     }
 }

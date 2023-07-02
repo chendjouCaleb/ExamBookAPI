@@ -31,7 +31,7 @@ namespace ExamBook.Services
                TestHelper.ThrowDuplicateTestGroup(test, room);
             }
 
-            if (!room.Space.Equals(test.Examination.Space))
+            if (!room.Space.Equals(test.Examination!.Space))
             {
                 throw new IncompatibleEntityException<Test, Room>(test, room);
             }

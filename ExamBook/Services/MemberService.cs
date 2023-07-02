@@ -166,7 +166,7 @@ namespace ExamBook.Services
             var publishers = await _publisherService.GetByIdAsync(
                 member.PublisherId, 
                 member.Space!.PublisherId, 
-                member.User.PublisherId);
+                member.User!.PublisherId);
 
             var @event = await _eventService.EmitAsync(publishers, actor, eventName, new {} );
             _logger.LogInformation("Member set as teacher");

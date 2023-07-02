@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -18,6 +17,8 @@ namespace ExamBook.Services
     public class CourseHourService
     {
         private readonly DbContext _dbContext;
+        private readonly CourseTeacherService _courseTeacherService;
+        private readonly RoomService _roomService;
         private readonly ILogger<CourseHourService> _logger;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
@@ -25,12 +26,15 @@ namespace ExamBook.Services
         public CourseHourService(DbContext dbContext, 
             ILogger<CourseHourService> logger, 
             PublisherService publisherService,
-            EventService eventService)
+            EventService eventService, RoomService roomService,
+            CourseTeacherService courseTeacherService)
         {
             _dbContext = dbContext;
             _logger = logger;
             _publisherService = publisherService;
             _eventService = eventService;
+            _roomService = roomService;
+            _courseTeacherService = courseTeacherService;
         }
 
 
@@ -41,11 +45,8 @@ namespace ExamBook.Services
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(user, nameof(user));
 
-            var room = await _dbContext.Set<Room>().FindAsync(model.RoomId);
-            var courseTeacher = await _dbContext.Set<CourseTeacher>().FindAsync(model.RoomId);
-
-            AssertHelper.NotNull(room, nameof(room));
-            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
+            var room = await _roomService.GetRoomAsync(model.RoomId);
+            var courseTeacher = await _courseTeacherService.GetAsync(model.CourseTeacherId);
 
             var publisher = await _publisherService.AddAsync();
             CourseHour courseHour = new()
@@ -65,7 +66,7 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string>
             {
-                courseTeacher.Member.PublisherId,
+                courseTeacher.Member!.PublisherId,
                 course.Space!.PublisherId, 
                 course.PublisherId, 
                 publisher.Id

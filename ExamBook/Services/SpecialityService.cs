@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -35,7 +36,7 @@ namespace ExamBook.Services
             _eventService = eventService;
         }
 
-        public async Task<Speciality> GetSpecialityAsync(ulong id)
+        public async Task<Speciality> GetAsync(ulong id)
         {
             var speciality = await _dbContext.Set<Speciality>().Where(r => r.Id == id)
                 .Include(r => r.Space)
@@ -43,7 +44,7 @@ namespace ExamBook.Services
 
             if (speciality == null)
             {
-                throw new ElementNotFoundException("SpecialityNotFound");
+                throw new ElementNotFoundException("SpecialityNotFound", id);
             }
 
             return speciality;
@@ -67,6 +68,7 @@ namespace ExamBook.Services
                 Space = space,
                 Name = model.Name,
                 NormalizedName = normalizedName,
+                Description = model.Description,
                 PublisherId = publisher.Id
             };
 
@@ -98,6 +100,26 @@ namespace ExamBook.Services
             
             var publisherIds = new[] {speciality.PublisherId, speciality.Space!.PublisherId};
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "SPECIALITY_CHANGE_NAME", data);
+        }
+        
+        
+        
+        public async Task<Event> ChangeDescriptionAsync(Speciality speciality, string description, User user)
+        {
+            AssertHelper.NotNull(speciality, nameof(speciality));
+            AssertHelper.NotNull(speciality.Space, nameof(speciality.Space));
+
+            var eventData = new ChangeValueData<string>(speciality.Description, description);
+
+            speciality.Description = description;
+            _dbContext.Update(speciality);
+            await _dbContext.SaveChangesAsync();
+            
+            var publisherIds = new List<string> {
+                speciality.PublisherId, 
+                speciality.Space!.PublisherId
+            };
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "SPECIALITY_CHANGE_DESCRIPTION", eventData);
         }
 
 

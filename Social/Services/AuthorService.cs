@@ -125,13 +125,19 @@ namespace Social.Services
             return author;
         }
 
-        public async Task<AuthorSubscription?> GetSubscriptionAsync(long id)
+        public async Task<AuthorSubscription> GetSubscriptionAsync(long id)
         {
-            return await _authorRepository.GetAuthorSubscriptionAsync(id);
+            var authorSubscription = await _authorRepository.GetAuthorSubscriptionAsync(id);
+            if (authorSubscription == null)
+            {
+                throw new InvalidOperationException($"AuthorSubscription with id={id} not found.");
+            }
+
+            return authorSubscription;
         }
 
 
-        public async Task<IEnumerable<AuthorSubscription>> GetSubscriptionsAsync(Author author)
+        public async Task<ICollection<AuthorSubscription>> GetSubscriptionsAsync(Author author)
         {
             var authorSubscriptions = await _authorRepository.GetAuthorSubscriptionsAsync(author);
             return authorSubscriptions;

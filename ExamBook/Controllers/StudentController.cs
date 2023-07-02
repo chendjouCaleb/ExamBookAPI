@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Helpers;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Persistence;
@@ -41,7 +42,25 @@ namespace ExamBook.Controllers
 		[HttpGet("{studentId}")]
 		public async Task<Student> GetAsync(ulong studentId)
 		{
-			return await _studentService.GetByIdAsync(studentId);
+			var student = await _studentService.GetByIdAsync(studentId);
+
+			return student;
+		}
+		
+		
+		[HttpGet("contains")]
+		public async Task<bool> ContainsAsync([FromQuery] ulong spaceId, [FromQuery] string code)
+		{
+
+			if (!string.IsNullOrWhiteSpace(code))
+			{
+				var normalizedCode = StringHelper.Normalize(code);
+				return await _dbContext.Students
+					.Where(c => c.SpaceId == spaceId && c.NormalizedCode == normalizedCode)
+					.AnyAsync();
+			}
+			
+			return false;
 		}
 
 		[HttpGet]
@@ -68,7 +87,22 @@ namespace ExamBook.Controllers
 					.Include(s => s.Space);
 			}
 
-			return await query.ToListAsync();
+			var students = await query.ToListAsync();
+
+			var members = students
+				.Where(s => s.Member != null)
+				.Select(ct => ct.Member!)
+				.ToList();
+			
+			var memberUserId = members.Select(m => m.UserId!).ToList();
+
+			var users = await _userService.ListById(memberUserId);
+			foreach (var member in members)
+			{
+				member.User = users.Find(u => u.Id == member.UserId);
+			}
+
+			return students;
 		}
 
 
@@ -83,7 +117,8 @@ namespace ExamBook.Controllers
 			var space = await _spaceService.GetByIdAsync(spaceId);
 
 			var result = await _studentService.AddAsync(space, model, user);
-			return CreatedAtAction("Get", new {studentId = result.Item.Id, result.Item});
+			await _dbContext.Entry(result.Item).ReloadAsync();
+			return CreatedAtAction("Get", new {studentId = result.Item.Id}, result.Item);
 		}
 		
 		
