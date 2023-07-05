@@ -3,9 +3,7 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -211,7 +209,7 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task GetNonExistingSpeciality_ShouldThrow()
+        public void GetNonExistingSpeciality_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
@@ -232,7 +230,7 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task GetNonExistingSpecialityByName_ShouldThrow()
+        public void GetNonExistingSpecialityByName_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {

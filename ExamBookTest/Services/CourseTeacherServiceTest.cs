@@ -3,17 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
-using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
-using ExamBook.Models.Data;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Social.Helpers;
 using Vx.Asserts;
 using Vx.Models;
 using Vx.Services;
@@ -38,8 +33,6 @@ namespace ExamBookTest.Services
         private Actor _actor = null!;
 
         private Space _space = null!;
-        private Course _course = null!;
-        private Member _member = null!;
         private Member _member1 = null!;
         private Member _member2 = null!;
         private ICollection<Member> _members = null!;

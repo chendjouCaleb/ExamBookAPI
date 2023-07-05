@@ -46,7 +46,7 @@ namespace ExamBook.Services
 
             if (examination == null)
             {
-                throw new ElementNotFoundException("ExaminationNotFoundById{0}", id);
+                throw new ElementNotFoundException("ExaminationNotFoundById", id);
             }
 
             return examination;
@@ -63,7 +63,7 @@ namespace ExamBook.Services
 
             if (examination == null)
             {
-                throw new ElementNotFoundException("ExaminationNotFoundByName{0}", name);
+                throw new ElementNotFoundException("ExaminationNotFoundByName", name);
             }
 
             return examination;

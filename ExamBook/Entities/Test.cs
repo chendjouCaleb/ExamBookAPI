@@ -4,18 +4,6 @@ namespace ExamBook.Entities
 {
     public class Test:Entity
     {
-        public Space Space { get; set; } = null!;
-        public ulong SpaceId { get; set; }
-        
-        public Examination? Examination { get; set; }
-        public ulong? ExaminationId { get; set; }
-        
-        public Course? Course { get; set; } 
-        public ulong? CourseId { get; set; }
-
-        public Room? Room { get; set; }
-        public ulong? RoomId { get; set; }
-        
         public string Name { get; set; } = "";
         public string NormalizedName { get; set; } = "";
         
@@ -30,8 +18,18 @@ namespace ExamBook.Entities
         public uint Duration { get; set; } = 60;
         public uint Coefficient { get; set; }
         public uint Radical { get; set; }
+        
+        public Space Space { get; set; } = null!;
+        public ulong SpaceId { get; set; }
+        
+        public Examination? Examination { get; set; }
+        public ulong? ExaminationId { get; set; }
+        
+        public Course? Course { get; set; } 
+        public ulong? CourseId { get; set; }
 
         public bool Closed { get; set; }
+        public bool IsLock { get; set; }
         public bool Specialized { get; set; }
     }
 }

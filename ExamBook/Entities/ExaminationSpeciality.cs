@@ -7,13 +7,15 @@ namespace ExamBook.Entities
     {
         public string Name { get; set; } = "";
         public string NormalizedName { get; set; } = "";
+
+        public string Description { get; set; } = "";
         
         
         [JsonIgnore]
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }
 
-        public Speciality Speciality { get; set; } = null!;
+        public Speciality? Speciality { get; set; } = null!;
         public ulong? SpecialityId { get; set; }
 
 

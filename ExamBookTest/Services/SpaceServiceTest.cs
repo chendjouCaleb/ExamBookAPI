@@ -2,9 +2,7 @@
 using System.Threading.Tasks;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -185,7 +183,7 @@ namespace ExamBookTest.Services
 
             await _dbContext.Entry(space).ReloadAsync();
             Assert.False(space.IsPublic);
-            Assert.AreEqual(ex!.Message, "SpaceIsNotPublic");
+            Assert.AreEqual( "SpaceIsNotPublic", ex!.Message);
         }
 
         [Test]
@@ -221,7 +219,7 @@ namespace ExamBookTest.Services
 
             await _dbContext.Entry(space).ReloadAsync();
             Assert.True(space.IsPublic);
-            Assert.AreEqual(ex!.Message, "SpaceIsNotPrivate");
+            Assert.AreEqual( "SpaceIsNotPrivate", ex!.Message);
         }
     }
 }

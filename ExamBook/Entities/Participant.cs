@@ -20,17 +20,18 @@ namespace ExamBook.Entities
         public string LastName { get; set; } = "";
 
         public string FullName => $"{FirstName} {LastName}";
-        public DateTime BirthDate { get; set; }
+        public DateOnly BirthDate { get; set; }
         public char Sex { get; set; }
 
-        [JsonIgnore] public Student? Student { get; set; }
+        public Student? Student { get; set; }
         public ulong? StudentId { get; set; }
 
-        [JsonIgnore]
+        
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }
 
         [JsonIgnore] public List<ParticipantSpeciality> ParticipantSpecialities { get; set; } = new();
+        
 
         [JsonIgnore] public List<Paper> Papers { get; set; } = new();
     }

@@ -35,6 +35,8 @@ namespace ExamBook.Entities
         public string Instagram { get; set; } = "";
         public string Website { get; set; } = "";
 
+        public int TestCount { get; set; }
+
         [NotMapped]
         public Picture? ImageFile { get; set; }
         public string ImageId { get; set; } = "";
@@ -46,6 +48,7 @@ namespace ExamBook.Entities
         public List<Room> Rooms { get; set; } = new();
         public List<Speciality> Specialities { get; set; } = new();
         public List<Member> Members { get; set; } = new();
+        
         
     }
 }

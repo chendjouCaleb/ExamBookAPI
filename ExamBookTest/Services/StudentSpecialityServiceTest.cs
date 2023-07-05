@@ -3,17 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
-using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
-using ExamBook.Models.Data;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Social.Helpers;
 using Vx.Asserts;
 using Vx.Models;
 using Vx.Services;
@@ -40,8 +35,6 @@ namespace ExamBookTest.Services
         private Speciality _speciality2 = null!;
         private ICollection<Speciality> _specialities = null!;
         private StudentAddModel _model = null!;
-        private Student _student = null!;
-
 
         [SetUp]
         public async Task Setup()

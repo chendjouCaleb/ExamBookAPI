@@ -351,7 +351,7 @@ namespace ExamBookTest.Services
                 await _examinationService.GetByIdAsync(9000000000);
             });
             
-            Assert.AreEqual("ExaminationNotFoundById{0}", ex!.Message);
+            Assert.AreEqual("ExaminationNotFoundById", ex!.Message);
         }
         
         

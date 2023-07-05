@@ -10,4 +10,11 @@ namespace ExamBook.Models
 
         public HashSet<ulong> SpecialitiyIds { get; set; } = new();
     }
+
+
+    public class ExaminationSpecialityAddModel
+    {
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
 }

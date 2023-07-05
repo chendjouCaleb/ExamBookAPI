@@ -68,7 +68,7 @@ namespace Vx.Asserts
             var dataValue = _serializer.Serialize(data);
             if (dataValue != Event.DataValue)
             {
-                throw new EventAssertionException($"Expected data: {dataValue}; actual={Event.DataValue}.");
+                throw new EventAssertionException($"Expected data: {dataValue};\n actual={Event.DataValue}.");
             }
 
             return this;

@@ -2,9 +2,7 @@
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Services;
@@ -90,7 +88,7 @@ namespace ExamBookTest.Services
 
 
         [Test]
-        public async Task GetNotFoundMember_ShouldThrow()
+        public void GetNotFoundMember_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {

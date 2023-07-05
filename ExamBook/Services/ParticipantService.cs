@@ -245,7 +245,7 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(participant, nameof(participant));
             participant.Sex = '0';
-            participant.BirthDate = DateTime.MinValue;
+            participant.BirthDate = DateOnly.MinValue;
             participant.FirstName = "";
             participant.LastName = "";
             participant.RId = "";

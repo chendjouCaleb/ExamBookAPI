@@ -15,16 +15,17 @@ namespace ExamBook.Models
         }
         public string Name { get; set; } = "";
         public DateTime StartAt { get; set; }
+        public uint Duration { get; set; } = 60;
 
         public DateTime EndAt => StartAt.AddMinutes(Duration);
         
-        public uint Duration { get; set; } = 60;
 
         public uint Coefficient { get; set; } = 1;
 
         public uint Radical { get; set; } = 20;
 
-        public ulong RoomId { get; set; }
+        public HashSet<ulong> RoomIds { get; set; } = new();
+        public HashSet<ulong> SpecialityIds { get; set; } = new();
 
         public HashSet<ulong> ExaminationSpecialityIds { get; set; } = new();
         

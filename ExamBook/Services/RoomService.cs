@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -39,10 +40,25 @@ namespace ExamBook.Services
 
             if (room == null)
             {
-                throw new ElementNotFoundException("RoomNotFound");
+                throw new ElementNotFoundException("RoomNotFound", id);
             }
 
             return room;
+        }
+
+        public async Task<List<Room>> GetRoomsAsync(ICollection<ulong> ids)
+        {
+            var rooms = await _dbContext.Set<Room>().Where(r => ids.Contains(r.Id))
+                .Include(r => r.Space)
+                .ToListAsync();
+
+            var notFounds = ids.Where(id => rooms.All(r => r.Id != id)).ToList();
+            if (notFounds.Count > 0)
+            {
+                throw new ElementNotFoundException("RoomNotFound", notFounds);
+            }
+
+            return rooms;
         }
 
         public async Task<ActionResultModel<Room>> AddRoomAsync(Space space, RoomAddModel model, User user)

@@ -93,6 +93,7 @@ namespace ExamBookTest
                 .AddNewtonSoftDataSerializer(options =>
                 {
                     options.NullValueHandling = NullValueHandling.Ignore;
+                    options.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                 });
 
             services.AddDrive(options =>
@@ -106,18 +107,24 @@ namespace ExamBookTest
                     storeOptions.CreateDirPath = true;
                 });
 
-            services.AddTransient<SpaceService>();
-            services.AddTransient<MemberService>();
-            services.AddTransient<RoomService>();
-            services.AddTransient<SpecialityService>();
+            services.AddTransient<SpaceService>()
+                .AddTransient<MemberService>()
+                .AddTransient<RoomService>()
+                .AddTransient<SpecialityService>()
 
-            services.AddTransient<StudentService>();
-            services.AddTransient<StudentSpecialityService>();
-            services.AddTransient<CourseService>();
-            services.AddTransient<CourseTeacherService>();
-            services.AddTransient<CourseHourService>();
-            services.AddTransient<CourseSessionService>();
-            services.AddTransient<ExaminationService>();
+                .AddTransient<StudentService>()
+                .AddTransient<StudentSpecialityService>()
+                .AddTransient<CourseService>()
+                .AddTransient<CourseTeacherService>()
+                .AddTransient<CourseHourService>()
+                .AddTransient<CourseSessionService>()
+                
+                .AddTransient<ExaminationService>()
+                .AddTransient<ExaminationSpecialityService>()
+                .AddTransient<ParticipantService>()
+                
+                .AddTransient<TestService>()
+                .AddTransient<PaperService>();
 
             services.AddTransient<UserService>();
             services.AddTransient<AuthenticationService>();

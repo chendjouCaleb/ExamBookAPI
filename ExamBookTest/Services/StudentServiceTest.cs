@@ -99,7 +99,7 @@ namespace ExamBookTest.Services
         }
 
         [Test]
-        public async Task GetNotFoundStudent_ShouldThrow()
+        public void GetNotFoundStudent_ShouldThrow()
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
@@ -199,7 +199,7 @@ namespace ExamBookTest.Services
             var result = await _service.AttachAsync(student, member, _adminUser);
             
             Assert.NotNull(member);
-            Assert.AreEqual(student.SpaceId, member!.SpaceId);
+            Assert.AreEqual(student.SpaceId, member.SpaceId);
 
             var userPublisher = await _publisherService.GetByIdAsync(_user.PublisherId);
             var memberPublisher = await _publisherService.GetByIdAsync(member.PublisherId);
