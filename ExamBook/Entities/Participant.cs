@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using ExamBook.Identity.Entities;
 using Newtonsoft.Json;
 
 namespace ExamBook.Entities
@@ -10,11 +12,10 @@ namespace ExamBook.Entities
         /// <summary>
         /// Registration id. Unique identifier of participant is real world.
         /// </summary>
-        public string RId { get; set; } = "";
+        public string Code { get; set; } = "";
+        public string NormalizedCode { get; set; } = "";
 
         public uint Index { get; set; }
-
-        public string NormalizedRId { get; set; } = "";
 
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
@@ -23,6 +24,10 @@ namespace ExamBook.Entities
         public DateOnly BirthDate { get; set; }
         public char Sex { get; set; }
 
+        public string? UserId { get; set; }
+        
+        [NotMapped]
+        public User? User { get; set; }
         public Student? Student { get; set; }
         public ulong? StudentId { get; set; }
 

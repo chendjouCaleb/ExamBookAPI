@@ -23,6 +23,12 @@ namespace Vx.EFCore
                 .Where(s => s.Id == id)
                 .FirstOrDefaultAsync();
         }
+        
+        public Publisher? GetById(string id)
+        {
+            return _dbContext.Publishers
+                .FirstOrDefault(s => s.Id == id);
+        }
 
         public async Task<ICollection<Publisher>> GetByIdAsync(ICollection<string> id)
         {

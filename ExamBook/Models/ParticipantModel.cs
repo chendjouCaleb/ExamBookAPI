@@ -8,7 +8,7 @@ namespace ExamBook.Models
     {
         
         [Required]
-        public string RId { get; set; } = "";
+        public string Code { get; set; } = "";
 
         [Required]
         public string FirstName { get; set; } = "";

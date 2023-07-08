@@ -13,6 +13,7 @@ namespace Vx.Asserts
     {
         private IDataSerializer _serializer;
         private PublisherService _publisherService;
+        private ActorService _actorService;
         public Event Event { get; set; }
         public IEnumerable<PublisherEvent> PublisherEvents { get; set; }
 
@@ -22,6 +23,7 @@ namespace Vx.Asserts
             PublisherEvents = Event.PublisherEvents;
             _serializer = provider.GetRequiredService<IDataSerializer>();
             _publisherService = provider.GetRequiredService<PublisherService>();
+            _actorService = provider.GetRequiredService<ActorService>();
         }
 
         public EventAssertions HasPublisher(Publisher publisher)
@@ -37,7 +39,7 @@ namespace Vx.Asserts
         }
         
         
-        public async Task<EventAssertions> HasPublisherId(string publisherId)
+        public async Task<EventAssertions> HasPublisherIdAsync(string publisherId)
         {
             var publisher = await _publisherService.GetByIdAsync(publisherId);
             return HasPublisher(publisher);
@@ -51,6 +53,12 @@ namespace Vx.Asserts
             }
 
             return this;
+        }
+        
+        public async Task<EventAssertions> HasActorIdAsync(string actorId)
+        {
+            var actor = await _actorService.GetByIdAsync(actorId);
+            return HasActor(actor);
         }
 
         public EventAssertions HasName(string name)

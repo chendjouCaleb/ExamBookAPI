@@ -41,6 +41,30 @@ namespace Vx.Services
             return publisher;
         }
         
+        
+        /// <summary>
+        /// Gets publisher by Id.
+        /// </summary>
+        /// <param name="publisherId">The id of the publisher to found.</param>
+        /// <returns>The publisher found.</returns>
+        /// <exception cref="InvalidOperationException">If the publisher not found.</exception>
+        public Publisher GetById(string publisherId)
+        {
+            if (string.IsNullOrWhiteSpace(publisherId))
+            {
+                throw new ArgumentNullException(publisherId);
+            }
+            
+            var publisher = _publisherRepository.GetById(publisherId);
+
+            if (publisher == null)
+            {
+                throw new InvalidOperationException($"Publisher with id={publisherId} not found.");
+            }
+
+            return publisher;
+        }
+        
         public async Task<ImmutableList<Publisher>> GetByIdAsync(params string[] publisherIds)
         {
             var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
