@@ -43,6 +43,12 @@ namespace Vx.EFCore
             await _dbContext.SaveChangesAsync();
         }
 
+        public async Task SaveAllAsync(ICollection<Publisher> publisher)
+        {
+            await _dbContext.AddRangeAsync(publisher);
+            await _dbContext.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(Publisher publisher)
         {
             _dbContext.Update(publisher);

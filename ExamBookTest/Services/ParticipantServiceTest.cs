@@ -24,6 +24,7 @@ namespace ExamBookTest.Services
 		private Space _space;
 		private Examination _examination;
 		private Student _student;
+		private Student _studentWithUser;
 		private User _adminUser;
 		private User _user;
 		private ParticipantAddModel _model = new ParticipantAddModel()

@@ -21,8 +21,8 @@ namespace ExamBook.Entities
         public Member? Member { get; set; }
         public ulong? MemberId { get; set; }
 
-        [JsonIgnore] public HashSet<Participant> Participants { get; set; } = new();
-        [JsonIgnore] public List<StudentSpeciality> Specialities { get; set; } = new();
+        [JsonIgnore] public HashSet<Participant> Participants { get; set; } 
+        [JsonIgnore] public List<StudentSpeciality> Specialities { get; set; } 
     }
 
 

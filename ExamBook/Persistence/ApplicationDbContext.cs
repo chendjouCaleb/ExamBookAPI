@@ -20,6 +20,7 @@ namespace ExamBook.Persistence
         
         public DbSet<Examination> Examinations { get; set; } = null!;
         public DbSet<ExaminationSpeciality> ExaminationSpecialities { get; set; }
+        public DbSet<ExaminationStudent> ExaminationStudents { get; set; }
         
         
         public DbSet<Member> Members { get; set; }

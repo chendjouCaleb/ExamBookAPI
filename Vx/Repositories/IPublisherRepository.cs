@@ -11,6 +11,7 @@ namespace Vx.Repositories
         Task<ICollection<Publisher>> GetByIdAsync(ICollection<string> id);
 
         Task SaveAsync(Publisher publisher);
+        Task SaveAllAsync(ICollection<Publisher> publishers);
 
         Task UpdateAsync(Publisher publisher);
 

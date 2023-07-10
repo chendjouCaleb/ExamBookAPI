@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using ExamBook.Identity.Entities;
 using Newtonsoft.Json;
+using Vx.Models;
 
 namespace ExamBook.Entities
 {
@@ -15,23 +14,7 @@ namespace ExamBook.Entities
         public string Code { get; set; } = "";
         public string NormalizedCode { get; set; } = "";
 
-        public uint Index { get; set; }
 
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-
-        public string FullName => $"{FirstName} {LastName}";
-        public DateOnly BirthDate { get; set; }
-        public char Sex { get; set; }
-
-        public string? UserId { get; set; }
-        
-        [NotMapped]
-        public User? User { get; set; }
-        public Student? Student { get; set; }
-        public ulong? StudentId { get; set; }
-
-        
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }
 
@@ -39,5 +22,7 @@ namespace ExamBook.Entities
         
 
         [JsonIgnore] public List<Paper> Papers { get; set; } = new();
+        
+        [NotMapped] public Publisher? Publisher { get; set; } 
     }
 }

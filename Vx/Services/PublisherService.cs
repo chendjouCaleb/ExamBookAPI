@@ -111,8 +111,18 @@ namespace Vx.Services
             return publisher;
         }
 
+        public async Task SaveAll(ICollection<Publisher> publishers)
+        {
+            await _publisherRepository.SaveAllAsync(publishers);
+        }
 
-        
+        public async Task<Publisher> CreateAsync()
+        {
+            return new Publisher();
+        }
+
+
+
         /// <summary>
         /// Delete a publisher by id.
         /// </summary>
