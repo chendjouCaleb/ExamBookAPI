@@ -25,9 +25,16 @@ namespace ExamBook.Models
         public uint Radical { get; set; } = 20;
 
         public HashSet<ulong> RoomIds { get; set; } = new();
-        public HashSet<ulong> SpecialityIds { get; set; } = new();
-
-        public HashSet<ulong> ExaminationSpecialityIds { get; set; } = new();
         
+        public HashSet<ulong> SpecialityIds { get; set; } = new();
+        public bool Specialized => SpecialityIds.Count > 0;
+
+    }
+
+
+    public class TestCreateResultModel
+    {
+        public Test Test { get; set; }
+        public List<TestSpeciality> TestSpecialities { get; set; } = new();
     }
 }

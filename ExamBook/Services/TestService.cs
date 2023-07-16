@@ -10,6 +10,7 @@ using ExamBook.Identity.Entities;
 using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
+using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,14 +21,15 @@ namespace ExamBook.Services
 {
     public class TestService
     {
-        private readonly DbContext _dbContext;
+        private readonly ApplicationDbContext _dbContext;
         private readonly PaperService _paperService;
         private readonly RoomService _roomService;
+        private readonly TestSpecialityService _testSpecialityService;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
         private readonly ILogger<TestService> _logger;
 
-        public TestService(DbContext dbContext, 
+        public TestService(ApplicationDbContext dbContext, 
             PaperService paperService, 
             ILogger<TestService> logger, 
             EventService eventService, 
@@ -57,7 +59,7 @@ namespace ExamBook.Services
             return test;
         }
 
-        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, User user)
+        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, User user)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(model, nameof(model));
@@ -65,39 +67,144 @@ namespace ExamBook.Services
 
             var rooms = await _roomService.GetRoomsAsync(model.RoomIds);
             AssertHelper.IsTrue(rooms.All(r => r.SpaceId == space.Id), "Bad Room space");
-
+            
+            var specialities = await _dbContext.Specialities
+                .Where(s => model.SpecialityIds.Contains(s.Id))
+                .ToListAsync();
+            AssertHelper.IsTrue(specialities.All(s => s.SpaceId == space.Id), "Bad speciality space");
+            
+            var publisher = await _publisherService.CreateAsync();
             var test = new Test
             {
                 Space = space,
+                SpaceId = space.Id,
                 Name = model.Name,
                 NormalizedName = StringHelper.Normalize(model.Name),
                 StartAt = model.StartAt,
                 Coefficient = model.Coefficient,
                 Radical = model.Radical,
                 Duration = model.Duration,
-                PublisherId = (await _publisherService.AddAsync()).Id
+                Specialized = model.Specialized,
+                PublisherId = publisher.Id,
+                Publisher = publisher
             };
 
-            var testGroups = rooms.Select(async (room, index) => new TestGroup
+            var testSpecialities = new List<TestSpeciality>();
+            if (model.Specialized)
+            {
+                
+                
+                foreach (var specialityId in model.SpecialityIds)
                 {
-                    PublisherId = (await _publisherService.AddAsync()).Id,
-                    Test = test,
-                    Room = room,
-                    Index = (uint)index
-                })
-                .ToList();
+                    var speciality = specialities.Find(s => s.Id == specialityId)!;
+                    var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
+                    var testSpecialityPublisher = await _publisherService.AddAsync();
+                    testSpeciality.Publisher = testSpecialityPublisher;
+                    testSpeciality.PublisherId = testSpecialityPublisher.Id;
+                    
+                    testSpecialities.Add(testSpeciality);
+                }
+            }
             
-
             await _dbContext.AddAsync(test);
-            await _dbContext.AddRangeAsync(testGroups);
+            await _dbContext.AddRangeAsync(testSpecialities);
             await _dbContext.SaveChangesAsync();
 
+            var publishers = testSpecialities.Select(t => t.Publisher!)
+                .Append(publisher)
+                .ToList();
+
+            await _publisherService.SaveAll(publishers);
+
             var publisherIds = ImmutableList<string>.Empty
-                .AddRange(new[] {space.PublisherId, test.PublisherId})
-                .AddRange(rooms.Select(r => r.PublisherId));
+                .Add(space.PublisherId)
+                .AddRange(specialities.Select(r => r.PublisherId).ToList())
+                .AddRange(publishers.Select(p => p.Id).ToList());
+                
             
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
             return new ActionResultModel<Test>(test, @event);
+        }
+
+
+         public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
+             TestAddModel model, User user)
+        {
+            AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(user, nameof(user));
+
+            var courseSpecialities = await _dbContext.CourseSpecialities
+                .Include(cs => cs.Speciality)
+                .Where(cs => cs.CourseId == course.Id)
+                .ToListAsync();
+            var specialities = courseSpecialities.Select(cs => cs.Speciality!).ToList();
+         
+            var publisher = await _publisherService.CreateAsync();
+            var test = new Test
+            {
+                Space = space,
+                SpaceId = space.Id,
+                Name = course.Name,
+                NormalizedName = StringHelper.Normalize(model.Name),
+                StartAt = model.StartAt,
+                Coefficient = model.Coefficient,
+                Radical = model.Radical,
+                Duration = model.Duration,
+                Specialized = model.Specialized,
+                PublisherId = publisher.Id,
+                Publisher = publisher
+            };
+
+            var testSpecialities = new List<TestSpeciality>();
+            if (model.Specialized)
+            {
+                foreach (var specialityId in model.SpecialityIds)
+                {
+                    var speciality = specialities.Find(s => s.Id == specialityId)!;
+                    var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
+                    var testSpecialityPublisher = await _publisherService.AddAsync();
+                    testSpeciality.Publisher = testSpecialityPublisher;
+                    testSpeciality.PublisherId = testSpecialityPublisher.Id;
+                    
+                    testSpecialities.Add(testSpeciality);
+                }
+            }
+            
+            await _dbContext.AddAsync(test);
+            await _dbContext.AddRangeAsync(testSpecialities);
+            await _dbContext.SaveChangesAsync();
+
+            var publishers = testSpecialities.Select(t => t.Publisher!)
+                .Append(publisher)
+                .ToList();
+
+            await _publisherService.SaveAll(publishers);
+
+            var publisherIds = ImmutableList<string>.Empty
+                .Add(space.PublisherId)
+                .AddRange(specialities.Select(r => r.PublisherId).ToList())
+                .AddRange(publishers.Select(p => p.Id).ToList());
+                
+            
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
+            return new ActionResultModel<Test>(test, @event);
+        }
+        public async Task SpecializeAsync(Test test, List<Speciality> specialities, User user)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(specialities, nameof(specialities));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.IsTrue(test.ExaminationId == null);
+            AssertHelper.IsTrue(specialities.Count > 0);
+            AssertHelper.IsFalse(test.Specialized);
+            AssertHelper.IsTrue(specialities.TrueForAll(s => s.SpaceId == test.Id));
+
+            test.Specialized = true;
+
+            var testSpecialities = new List<TestSpeciality>();
+
         }
 
         public async Task<ActionResultModel<Test>> Add(Course course, TestAddModel model, User user)

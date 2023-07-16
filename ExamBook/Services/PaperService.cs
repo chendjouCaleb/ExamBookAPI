@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +69,7 @@ namespace ExamBook.Services
 
             if (await ContainsAsync(test, participant))
             {
-                PaperHelper.ThrowDuplicatePaper(test, participant);
+                throw new DuplicateValueException("DuplicateParticipantPaper");
             }
             
             Paper paper = new()
@@ -125,7 +126,7 @@ namespace ExamBook.Services
 
             if (await ContainsPaperSpeciality(paper, participantSpeciality))
             {
-                PaperHelper.ThrowDuplicatePaperSpeciality();
+                throw new DuplicateValueException("DuplicateParticipantPaper");
             }
 
             return new(paper, participantSpeciality);

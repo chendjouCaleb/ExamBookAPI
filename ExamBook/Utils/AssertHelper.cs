@@ -29,6 +29,14 @@ namespace ExamBook.Utils
             }
         }
         
+        public static void IsFalse(bool state)
+        {
+            if (!state)
+            {
+                throw new ArgumentException("Should be false, but is true.");
+            }
+        }
+        
         public static void NotNull(object? value, string nameOf)
         {
             if (value == null)

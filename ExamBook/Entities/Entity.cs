@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
+using Vx.Models;
 
 namespace ExamBook.Entities
 {
@@ -14,5 +16,6 @@ namespace ExamBook.Entities
         public bool IsDeleted => DeletedAt != null;
 
         public string PublisherId { get; set; } = "";
+        [NotMapped] public Publisher? Publisher { get; set; }
     }
 }
