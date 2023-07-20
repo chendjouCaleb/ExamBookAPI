@@ -18,7 +18,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Drive\Drive.csproj" />
-      <ProjectReference Include="..\Vx\Vx.csproj" />
+      <ProjectReference Include="..\Traceability\Traceability.csproj" />
     </ItemGroup>
 
 </Project>

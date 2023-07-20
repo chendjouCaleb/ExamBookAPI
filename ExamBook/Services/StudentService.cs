@@ -12,8 +12,8 @@ using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {

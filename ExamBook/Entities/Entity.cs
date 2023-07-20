@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
-using Vx.Models;
+using Traceability.Models;
 
 namespace ExamBook.Entities
 {
@@ -17,5 +17,8 @@ namespace ExamBook.Entities
 
         public string PublisherId { get; set; } = "";
         [NotMapped] public Publisher? Publisher { get; set; }
+
+        public string SubjectId { get; set; } = "";
+        [NotMapped] public Subject Subject { get; set; } = null!;
     }
 }

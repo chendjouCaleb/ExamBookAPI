@@ -13,8 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Social;
-using Vx;
-using Vx.EFCore;
+using Traceability;
+using Traceability.EFCore;
 
 namespace ExamBookTest
 {
@@ -68,7 +68,7 @@ namespace ExamBookTest
                 
             });
             
-            services.AddDbContext<VxTestDbContext>(dbOptions =>
+            services.AddDbContext<TraceabilityTestDbContext>(dbOptions =>
             {
                 dbOptions.UseInMemoryDatabase("social");
             });
@@ -88,8 +88,8 @@ namespace ExamBookTest
             services.AddSocial(_ =>
                 { }).AddEntityFrameworkStores<SocialTestDbContext>();
 
-            services.AddVx(_ => { })
-                .AddEntityFrameworkStores<VxTestDbContext>()
+            services.AddTraceability(_ => { })
+                .AddEntityFrameworkStores<TraceabilityTestDbContext>()
                 .AddNewtonSoftDataSerializer(options =>
                 {
                     options.NullValueHandling = NullValueHandling.Ignore;
@@ -141,7 +141,7 @@ namespace ExamBookTest
 
             var _provider = services.BuildServiceProvider();
             var identityDbContext = _provider.GetRequiredService<ApplicationIdentityDbContext>();
-            var vxDbContext = _provider.GetRequiredService<VxTestDbContext>();
+            var vxDbContext = _provider.GetRequiredService<TraceabilityTestDbContext>();
             var appDbContext = _provider.GetRequiredService<DbContext>();
 
             identityDbContext.Database.EnsureDeleted();

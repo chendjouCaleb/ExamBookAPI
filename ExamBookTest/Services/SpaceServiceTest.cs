@@ -9,8 +9,8 @@ using ExamBook.Models.Data;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Vx.Asserts;
-using Vx.Models;
+using Traceability.Asserts;
+using Traceability.Models;
 
 #pragma warning disable NUnit2005
 namespace ExamBookTest.Services

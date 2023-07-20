@@ -5,15 +5,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
-using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {

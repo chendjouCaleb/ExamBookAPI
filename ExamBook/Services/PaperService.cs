@@ -6,7 +6,7 @@ using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
-using Vx.Services;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {

@@ -13,7 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Social;
 using Social.Services;
-using Vx;
+using Traceability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,7 +71,7 @@ services.AddDbContext<ApplicationSocialDbContext>(options =>
     options.UseMySql(connectionStrings, version);
 });
 
-services.AddDbContext<ApplicationVxDbContext>(options =>
+services.AddDbContext<ApplicationTraceabilityDbContext>(options =>
 {
     options.EnableSensitiveDataLogging();
     options.EnableDetailedErrors();
@@ -115,8 +115,8 @@ services.AddDrive(_ => { })
         options.DirectoryPath = "E:/Lab/Drive/ExamBook";
     });
 
-services.AddVx(_ => { })
-    .AddEntityFrameworkStores<ApplicationVxDbContext>()
+services.AddTraceability(_ => { })
+    .AddEntityFrameworkStores<ApplicationTraceabilityDbContext>()
     .AddNewtonSoftDataSerializer(settings =>
     {
         settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;

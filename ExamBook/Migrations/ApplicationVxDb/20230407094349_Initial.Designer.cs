@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ExamBook.Migrations.ApplicationVxDb
 {
-    [DbContext(typeof(ApplicationVxDbContext))]
+    [DbContext(typeof(ApplicationTraceabilityDbContext))]
     [Migration("20230407094349_Initial")]
     partial class Initial
     {
@@ -22,7 +22,7 @@ namespace ExamBook.Migrations.ApplicationVxDb
                 .HasAnnotation("ProductVersion", "7.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
-            modelBuilder.Entity("Vx.Models.Actor", b =>
+            modelBuilder.Entity("Traceability.Models.Actor", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("varchar(255)");
@@ -35,7 +35,7 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("Actors");
                 });
 
-            modelBuilder.Entity("Vx.Models.Event", b =>
+            modelBuilder.Entity("Traceability.Models.Event", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -63,7 +63,7 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("Events");
                 });
 
-            modelBuilder.Entity("Vx.Models.Publisher", b =>
+            modelBuilder.Entity("Traceability.Models.Publisher", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("varchar(255)");
@@ -76,7 +76,7 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("Publishers");
                 });
 
-            modelBuilder.Entity("Vx.Models.PublisherEvent", b =>
+            modelBuilder.Entity("Traceability.Models.PublisherEvent", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -98,7 +98,7 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("PublisherEvents");
                 });
 
-            modelBuilder.Entity("Vx.Models.Subscription", b =>
+            modelBuilder.Entity("Traceability.Models.Subscription", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("varchar(255)");
@@ -116,9 +116,9 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("Subscription");
                 });
 
-            modelBuilder.Entity("Vx.Models.Event", b =>
+            modelBuilder.Entity("Traceability.Models.Event", b =>
                 {
-                    b.HasOne("Vx.Models.Actor", "Actor")
+                    b.HasOne("Traceability.Models.Actor", "Actor")
                         .WithMany("Events")
                         .HasForeignKey("ActorId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -127,13 +127,13 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.Navigation("Actor");
                 });
 
-            modelBuilder.Entity("Vx.Models.PublisherEvent", b =>
+            modelBuilder.Entity("Traceability.Models.PublisherEvent", b =>
                 {
-                    b.HasOne("Vx.Models.Event", "Event")
+                    b.HasOne("Traceability.Models.Event", "Event")
                         .WithMany("PublisherEvents")
                         .HasForeignKey("EventId");
 
-                    b.HasOne("Vx.Models.Publisher", "Publisher")
+                    b.HasOne("Traceability.Models.Publisher", "Publisher")
                         .WithMany()
                         .HasForeignKey("PublisherId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -144,26 +144,26 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.Navigation("Publisher");
                 });
 
-            modelBuilder.Entity("Vx.Models.Subscription", b =>
+            modelBuilder.Entity("Traceability.Models.Subscription", b =>
                 {
-                    b.HasOne("Vx.Models.Publisher", "Publisher")
+                    b.HasOne("Traceability.Models.Publisher", "Publisher")
                         .WithMany("Subscriptions")
                         .HasForeignKey("PublisherId");
 
                     b.Navigation("Publisher");
                 });
 
-            modelBuilder.Entity("Vx.Models.Actor", b =>
+            modelBuilder.Entity("Traceability.Models.Actor", b =>
                 {
                     b.Navigation("Events");
                 });
 
-            modelBuilder.Entity("Vx.Models.Event", b =>
+            modelBuilder.Entity("Traceability.Models.Event", b =>
                 {
                     b.Navigation("PublisherEvents");
                 });
 
-            modelBuilder.Entity("Vx.Models.Publisher", b =>
+            modelBuilder.Entity("Traceability.Models.Publisher", b =>
                 {
                     b.Navigation("Subscriptions");
                 });

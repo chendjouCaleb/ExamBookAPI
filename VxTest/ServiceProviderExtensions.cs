@@ -1,8 +1,8 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Vx;
-using Vx.EFCore;
+using Traceability;
+using Traceability.EFCore;
 
 namespace VxTest
 {
@@ -10,13 +10,13 @@ namespace VxTest
     {
         public static IServiceCollection Setup(this IServiceCollection services)
         {
-            services.AddDbContext<VxDbContext>(options =>
+            services.AddDbContext<TraceabilityDbContext>(options =>
             {
                 options.UseInMemoryDatabase("vx");
             });
 
-            services.AddVx(_ => { })
-                .AddEntityFrameworkStores<VxDbContext>()
+            services.AddTraceability(_ => { })
+                .AddEntityFrameworkStores<TraceabilityDbContext>()
                 .AddNewtonSoftDataSerializer(_ => {});
                 
             services.AddLogging();

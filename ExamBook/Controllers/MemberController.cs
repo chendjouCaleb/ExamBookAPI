@@ -11,7 +11,7 @@ using ExamBook.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Vx.Models;
+using Traceability.Models;
 
 namespace ExamBook.Controllers
 {

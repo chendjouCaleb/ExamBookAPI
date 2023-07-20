@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Vx\Vx.csproj" />
+      <ProjectReference Include="..\Traceability\Traceability.csproj" />
     </ItemGroup>
 
 </Project>

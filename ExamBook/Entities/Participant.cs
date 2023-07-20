@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
-using Vx.Models;
 
 namespace ExamBook.Entities
 {
@@ -25,7 +24,5 @@ namespace ExamBook.Entities
         
 
         [JsonIgnore] public List<Paper> Papers { get; set; } = new();
-        
-        [NotMapped] public Publisher? Publisher { get; set; } 
     }
 }

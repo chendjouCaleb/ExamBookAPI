@@ -12,8 +12,8 @@ using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {
@@ -48,6 +48,12 @@ namespace ExamBook.Services
             }
 
             return speciality;
+        }
+
+        public async Task<ActionResultModel<Speciality>> AddSpecialityAsync(Space space,string name, User user)
+        {
+            var model = new SpecialityAddModel { Name = name };
+            return await AddSpecialityAsync(space, model, user);
         }
 
         public async Task<ActionResultModel<Speciality>> AddSpecialityAsync(Space space, SpecialityAddModel model, User user)

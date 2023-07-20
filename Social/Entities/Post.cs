@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using Vx.Models;
+using Traceability.Models;
 
 namespace Social.Entities
 {

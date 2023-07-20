@@ -6,14 +6,13 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {

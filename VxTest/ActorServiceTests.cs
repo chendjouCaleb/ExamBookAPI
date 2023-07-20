@@ -2,8 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
-using Vx.Repositories;
-using Vx.Services;
+using Traceability.Repositories;
+using Traceability.Services;
 
 #pragma warning disable NUnit2005
 namespace VxTest

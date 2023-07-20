@@ -20,7 +20,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Social\Social.csproj" />
-      <ProjectReference Include="..\Vx\Vx.csproj" />
+      <ProjectReference Include="..\Traceability\Traceability.csproj" />
     </ItemGroup>
 
 </Project>

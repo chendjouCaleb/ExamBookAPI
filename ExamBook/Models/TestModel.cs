@@ -23,12 +23,6 @@ namespace ExamBook.Models
         public uint Coefficient { get; set; } = 1;
 
         public uint Radical { get; set; } = 20;
-
-        public HashSet<ulong> RoomIds { get; set; } = new();
-        
-        public HashSet<ulong> SpecialityIds { get; set; } = new();
-        public bool Specialized => SpecialityIds.Count > 0;
-
     }
 
 

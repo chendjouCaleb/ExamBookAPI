@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamBook", "ExamBook\ExamBook.csproj", "{C892BBB4-CDA7-4D68-A306-B72D0F11091E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vx", "Vx\Vx.csproj", "{EE5C4F04-36FE-4E54-8FC5-32B7C8A5D376}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Traceability", "Traceability\Traceability.csproj", "{EE5C4F04-36FE-4E54-8FC5-32B7C8A5D376}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Social", "Social\Social.csproj", "{B78508C3-F40D-495D-9C56-15F22FE03A1D}"
 EndProject

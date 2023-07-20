@@ -8,7 +8,7 @@ using ExamBook.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Social.Services;
-using Vx.Services;
+using Traceability.Services;
 
 #pragma warning disable NUnit2005
 namespace ExamBookTest.Identity

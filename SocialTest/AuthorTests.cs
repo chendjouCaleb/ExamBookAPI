@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Social.Services;
-using Vx.Repositories;
+using Traceability.Repositories;
 
 namespace SocialTest
 {

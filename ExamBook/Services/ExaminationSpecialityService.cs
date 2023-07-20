@@ -12,8 +12,8 @@ using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {

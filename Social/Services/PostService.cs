@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using Social.Entities;
 using Social.Models;
 using Social.Repositories;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace Social.Services
 {

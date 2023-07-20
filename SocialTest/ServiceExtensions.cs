@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Social;
 using Social.EFCore;
-using Vx;
-using Vx.EFCore;
+using Traceability;
+using Traceability.EFCore;
 
 namespace SocialTest
 {
@@ -17,7 +17,7 @@ namespace SocialTest
                 options.UseInMemoryDatabase("vx");
             });
             
-            services.AddDbContext<VxDbContext>(dbOptions =>
+            services.AddDbContext<TraceabilityDbContext>(dbOptions =>
             {
                 dbOptions.UseInMemoryDatabase("social");
             });
@@ -25,8 +25,8 @@ namespace SocialTest
             services.AddSocial(_ =>
                 { }).AddEntityFrameworkStores<SocialTestDbContext>();
 
-            services.AddVx(_ => { })
-                .AddEntityFrameworkStores<VxDbContext>()
+            services.AddTraceability(_ => { })
+                .AddEntityFrameworkStores<TraceabilityDbContext>()
                 .AddNewtonSoftDataSerializer(_ => {});
             services.AddLogging();
 

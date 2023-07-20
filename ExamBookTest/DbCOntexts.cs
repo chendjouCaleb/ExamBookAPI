@@ -1,7 +1,7 @@
 ﻿using DriveIO.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Social.EFCore;
-using Vx.EFCore;
+using Traceability.EFCore;
 
 namespace ExamBookTest
 {
@@ -17,9 +17,9 @@ namespace ExamBookTest
         public DriveTestDbContext() { }
     } 
     
-    public class VxTestDbContext : VxDbContext
+    public class TraceabilityTestDbContext : TraceabilityDbContext
     {
-        public VxTestDbContext(DbContextOptions<VxTestDbContext> options) : base(options) { }
-        public VxTestDbContext() { }
+        public TraceabilityTestDbContext(DbContextOptions<TraceabilityTestDbContext> options) : base(options) { }
+        public TraceabilityTestDbContext() { }
     } 
 }

@@ -8,8 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Social.Entities;
 using Social.Services;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
+
 
 namespace ExamBook.Controllers
 {

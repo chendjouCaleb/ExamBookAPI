@@ -23,7 +23,7 @@
       <ProjectReference Include="..\Drive\Drive.csproj" />
       <ProjectReference Include="..\ExamBook\ExamBook.csproj" />
       <ProjectReference Include="..\Social\Social.csproj" />
-      <ProjectReference Include="..\Vx\Vx.csproj" />
+      <ProjectReference Include="..\Traceability\Traceability.csproj" />
     </ItemGroup>
 
     <ItemGroup>

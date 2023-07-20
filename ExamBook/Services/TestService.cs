@@ -7,15 +7,14 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Services
 {
@@ -59,20 +58,15 @@ namespace ExamBook.Services
             return test;
         }
 
-        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, User user)
+        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, List<Speciality> specialities)
         {
             AssertHelper.NotNull(space, nameof(space));
+            AssertHelper.NotNull(specialities, nameof(specialities));
             AssertHelper.NotNull(model, nameof(model));
-            AssertHelper.NotNull(user, nameof(user));
 
-            var rooms = await _roomService.GetRoomsAsync(model.RoomIds);
-            AssertHelper.IsTrue(rooms.All(r => r.SpaceId == space.Id), "Bad Room space");
-            
-            var specialities = await _dbContext.Specialities
-                .Where(s => model.SpecialityIds.Contains(s.Id))
-                .ToListAsync();
             AssertHelper.IsTrue(specialities.All(s => s.SpaceId == space.Id), "Bad speciality space");
-            
+
+            var specialized = specialities.Count > 0;
             var publisher = await _publisherService.CreateAsync();
             var test = new Test
             {
@@ -84,19 +78,16 @@ namespace ExamBook.Services
                 Coefficient = model.Coefficient,
                 Radical = model.Radical,
                 Duration = model.Duration,
-                Specialized = model.Specialized,
+                Specialized = specialized,
                 PublisherId = publisher.Id,
                 Publisher = publisher
             };
 
             var testSpecialities = new List<TestSpeciality>();
-            if (model.Specialized)
+            if (specialized)
             {
-                
-                
-                foreach (var specialityId in model.SpecialityIds)
+                foreach (var speciality in specialities)
                 {
-                    var speciality = specialities.Find(s => s.Id == specialityId)!;
                     var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
                     var testSpecialityPublisher = await _publisherService.AddAsync();
                     testSpeciality.Publisher = testSpecialityPublisher;
@@ -105,13 +96,24 @@ namespace ExamBook.Services
                     testSpecialities.Add(testSpeciality);
                 }
             }
-            
+
+            test.TestSpecialities = testSpecialities;
+
+            return test;
+        }
+
+        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, List<Speciality> specialities,
+            User user)
+        {
+
+            var test = await CreateTestAsync(space, model, specialities);
             await _dbContext.AddAsync(test);
-            await _dbContext.AddRangeAsync(testSpecialities);
+            await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = testSpecialities.Select(t => t.Publisher!)
-                .Append(publisher)
+            var publishers = test.TestSpecialities
+                .Select(t => t.Publisher!)
+                .Append(test.Publisher!)
                 .ToList();
 
             await _publisherService.SaveAll(publishers);
@@ -127,7 +129,7 @@ namespace ExamBook.Services
         }
 
 
-         public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
+        public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
              TestAddModel model, User user)
         {
             AssertHelper.NotNull(space, nameof(space));
@@ -140,50 +142,24 @@ namespace ExamBook.Services
                 .Where(cs => cs.CourseId == course.Id)
                 .ToListAsync();
             var specialities = courseSpecialities.Select(cs => cs.Speciality!).ToList();
-         
-            var publisher = await _publisherService.CreateAsync();
-            var test = new Test
-            {
-                Space = space,
-                SpaceId = space.Id,
-                Name = course.Name,
-                NormalizedName = StringHelper.Normalize(model.Name),
-                StartAt = model.StartAt,
-                Coefficient = model.Coefficient,
-                Radical = model.Radical,
-                Duration = model.Duration,
-                Specialized = model.Specialized,
-                PublisherId = publisher.Id,
-                Publisher = publisher
-            };
 
-            var testSpecialities = new List<TestSpeciality>();
-            if (model.Specialized)
-            {
-                foreach (var specialityId in model.SpecialityIds)
-                {
-                    var speciality = specialities.Find(s => s.Id == specialityId)!;
-                    var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
-                    var testSpecialityPublisher = await _publisherService.AddAsync();
-                    testSpeciality.Publisher = testSpecialityPublisher;
-                    testSpeciality.PublisherId = testSpecialityPublisher.Id;
-                    
-                    testSpecialities.Add(testSpeciality);
-                }
-            }
+
+            var test = await CreateTestAsync(space, model, specialities);
+            test.Course = course;
+            test.CourseId = course.Id;
             
             await _dbContext.AddAsync(test);
-            await _dbContext.AddRangeAsync(testSpecialities);
+            await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = testSpecialities.Select(t => t.Publisher!)
-                .Append(publisher)
+            var publishers = test.TestSpecialities.Select(t => t.Publisher!)
+                .Append(test.Publisher!)
                 .ToList();
 
             await _publisherService.SaveAll(publishers);
 
             var publisherIds = ImmutableList<string>.Empty
-                .Add(space.PublisherId)
+                .AddRange(new []{space.PublisherId, course.PublisherId})
                 .AddRange(specialities.Select(r => r.PublisherId).ToList())
                 .AddRange(publishers.Select(p => p.Id).ToList());
                 
@@ -191,6 +167,7 @@ namespace ExamBook.Services
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
             return new ActionResultModel<Test>(test, @event);
         }
+        
         public async Task SpecializeAsync(Test test, List<Speciality> specialities, User user)
         {
             AssertHelper.NotNull(test, nameof(test));
@@ -207,165 +184,7 @@ namespace ExamBook.Services
 
         }
 
-        public async Task<ActionResultModel<Test>> Add(Course course, TestAddModel model, User user)
-        {
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(course.Space, nameof(course.Space));
-            AssertHelper.NotNull(model, nameof(model));
-            AssertHelper.NotNull(user, nameof(user));
-            var space = course.Space!;
-            var test = await CreateTest(space!, model);
-            test.Course = course;
-            var publisher = await _publisherService.AddAsync();
-            test.PublisherId = publisher.Id;
-
-            await _dbContext.AddAsync(test);
-            await _dbContext.SaveChangesAsync();
-
-            var publisherIds = new List<string> {space.PublisherId, course.PublisherId, publisher.Id };
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
-            return new ActionResultModel<Test>(test, @event);
-        }
-        
-        public async Task<ActionResultModel<Test>> Add(Examination examination, TestAddModel model, User user)
-        {
-            AssertHelper.NotNull(examination, nameof(examination));
-            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
-            AssertHelper.NotNull(model, nameof(model));
-            AssertHelper.NotNull(user, nameof(user));
        
-            var space = examination.Space;
-            var test = await CreateTest(space, model);
-            test.Examination = examination;
-            var publisher = await _publisherService.AddAsync();
-            test.PublisherId = publisher.Id;
-
-            await _dbContext.AddAsync(test);
-            await _dbContext.SaveChangesAsync();
-
-            var publisherIds = new List<string> {space.PublisherId, examination.PublisherId, publisher.Id};
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
-            return new ActionResultModel<Test>(test, @event);
-        }
-        
-        public async Task<ActionResultModel<Test>> Add(Examination examination, Course course, TestAddModel model, User user)
-        {
-            AssertHelper.NotNull(examination, nameof(examination));
-            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(model, nameof(model));
-            AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.IsTrue(examination.SpaceId == course.SpaceId, "Incompatible entity");
-            
-            var space = examination.Space;
-            var test = await CreateTest(space, model);
-            test.Examination = examination;
-            test.Course = course;
-            var publisher = await _publisherService.AddAsync();
-            test.PublisherId = publisher.Id;
-
-            await _dbContext.AddAsync(test);
-            await _dbContext.SaveChangesAsync();
-
-            var publisherIds = new List<string> {
-                space.PublisherId, 
-                examination.PublisherId, 
-                publisher.Id, 
-                course.PublisherId
-            };
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
-            return new ActionResultModel<Test>(test, @event);
-        }
-        
-        public async Task<ActionResultModel<Test>> Add(Space space, Course? course, Examination? examination, TestAddModel model, User user)
-        {
-            AssertHelper.NotNull(space, nameof(space));
-            AssertHelper.NotNull(model, nameof(model));
-
-            if (course != null && course.SpaceId != space.Id)
-            {
-                throw new IncompatibleEntityException(course, space);
-            }
-            
-            if (examination != null && examination.SpaceId != space.Id)
-            {
-                throw new IncompatibleEntityException(examination, space);
-            }
-
-            var publisher =  await _publisherService.AddAsync();
-            Test test = new()
-            {
-                Space = space,
-                Course = course,
-                Examination = examination,
-                Name = model.Name,
-                StartAt = model.StartAt,
-                Coefficient = model.Coefficient,
-                Radical = model.Radical,
-                Duration = model.Duration,
-                PublisherId = publisher.Id
-            };
-            await _dbContext.AddAsync(test);
-
-            await _dbContext.SaveChangesAsync();
-            _logger.Log(LogLevel.Information, "New test");
-
-            var publisherIds = new List<string> {space.PublisherId, publisher.Id};
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
-
-            return new ActionResultModel<Test>(test, @event);
-        }
-
-        public async Task<Test> CreateTest(Space space, TestAddModel model)
-        {
-            AssertHelper.NotNull(space, nameof(space));
-            AssertHelper.NotNull(model, nameof(model));
-           
-           
-            return new Test
-            {
-                Space = space,
-                Name = model.Name,
-                StartAt = model.StartAt,
-                Coefficient = model.Coefficient,
-                Radical = model.Radical,
-                Duration = model.Duration
-            };
-        }
-
-        public TestGroup CreateTestGroup(Test test, Room room, uint index)
-        {
-            AssertHelper.NotNull(test, nameof(test));
-            AssertHelper.NotNull(room, nameof(room));
-            AssertHelper.IsTrue(test.SpaceId == room.Id);
-
-            TestGroup testGroup = new()
-            {
-                Test = test,
-                Room = room,
-                Index = index
-            };
-
-            return testGroup;
-        }
-
-        public async Task<ICollection<Test>> AddCourses(Examination examination)
-        {
-            var courses = await _dbContext.Set<Course>()
-                .Where(c => c.SpaceId == examination.SpaceId)
-                .Include(c => c.Space)
-                .ToListAsync();
-
-            var tests = new List<Test>();
-
-            foreach (Course course in courses)
-            {
-                
-            }
-
-            throw new NotImplementedException();
-        }
-        
         
         public async Task<Event> ChangeNameAsync(Test test, string name, User user)
         {

@@ -16,8 +16,8 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Social.Entities;
 using Social.Services;
-using Vx.Models;
-using Vx.Services;
+using Traceability.Models;
+using Traceability.Services;
 
 namespace ExamBook.Identity.Services
 {
