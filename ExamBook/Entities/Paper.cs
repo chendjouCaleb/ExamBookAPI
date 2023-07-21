@@ -19,29 +19,10 @@ namespace ExamBook.Entities
         public Student? Student { get; set; }
         public ulong? StudentId { get; set; }
 
-        public Test? Test { get; set; }
+        public Test Test { get; set; } = null!;
         public ulong TestId { get; set; }
-
-        public List<PaperSpeciality> PaperSpecialities { get; set; } = new();
 
         public TestSpeciality? TestSpeciality { get; set; }
         public ulong? TestSpecialityId { get; set; }
     }
-        
-        public class PaperSpeciality:Entity
-        {
-            public PaperSpeciality() {}
-            public PaperSpeciality(Paper paper, ParticipantSpeciality? participantSpeciality)
-            {
-                ParticipantSpeciality = participantSpeciality;
-                Paper = paper;
-            }
-            
-
-            public Paper? Paper { get; set; }
-            public ulong? PaperId { get; set; }
-
-            public ParticipantSpeciality? ParticipantSpeciality { get; set; }
-            public ulong? ParticipantSpecialityId { get; set; }
-        }
 }

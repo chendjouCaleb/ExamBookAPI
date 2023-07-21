@@ -111,12 +111,31 @@ namespace Traceability.Services
             return publisher;
         }
 
-        public async Task SaveAll(ICollection<Publisher> publishers)
+   
+        public async Task SaveAllAsync(ICollection<Publisher> publishers)
         {
             await _publisherRepository.SaveAllAsync(publishers);
         }
+        
+        public async Task SaveAllAsync(params Publisher[] publishers)
+        {
+            await _publisherRepository.SaveAllAsync(publishers);
+        }
+        
+       
+        
+        public async Task SaveAsync(Publisher publisher)
+        {
+            await _publisherRepository.SaveAsync(publisher);
+        }
 
+        [Obsolete("Use non async overload")]
         public async Task<Publisher> CreateAsync()
+        {
+            return new Publisher();
+        }
+        
+        public Publisher Create()
         {
             return new Publisher();
         }

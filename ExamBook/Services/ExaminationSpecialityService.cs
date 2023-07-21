@@ -96,7 +96,7 @@ namespace ExamBook.Services
 				throw new UsedValueException("ExaminationSpecialityNameUsed", model.Name);
 			}
 
-			var publisher = await _publisherService.AddAsync();
+			var publisher = _publisherService.Create();
 			ExaminationSpeciality examinationSpeciality = new ()
 			{
 				Examination = examination,
@@ -107,6 +107,7 @@ namespace ExamBook.Services
 			};
 			await _dbContext.AddAsync(examinationSpeciality);
 			await _dbContext.SaveChangesAsync();
+			await _publisherService.SaveAsync(publisher);
 
 			var publisherIds = new List<string> {examination.Space.PublisherId, examination.PublisherId, publisher.Id};
 			var @event = await _eventService.EmitAsync(publisherIds, actor.ActorId, 

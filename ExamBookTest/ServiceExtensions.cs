@@ -124,6 +124,7 @@ namespace ExamBookTest
                 .AddTransient<ParticipantService>()
                 
                 .AddTransient<TestService>()
+                .AddTransient<TestSpecialityService>()
                 .AddTransient<PaperService>();
 
             services.AddTransient<UserService>();
@@ -142,7 +143,7 @@ namespace ExamBookTest
             var _provider = services.BuildServiceProvider();
             var identityDbContext = _provider.GetRequiredService<ApplicationIdentityDbContext>();
             var vxDbContext = _provider.GetRequiredService<TraceabilityTestDbContext>();
-            var appDbContext = _provider.GetRequiredService<DbContext>();
+            var appDbContext = _provider.GetRequiredService<ApplicationDbContext>();
 
             identityDbContext.Database.EnsureDeleted();
             appDbContext.Database.EnsureDeleted();

@@ -26,7 +26,7 @@ namespace ExamBook.Controllers
 		{
 			var participant = await _dbContext.Participants
 				.Include(p => p.Examination)
-				.Include(p => p.ExaminationStudent)
+				.Include(p => p.Student)
 				.Include(p => p.ParticipantSpecialities)
 				.ThenInclude(ps => ps.ExaminationSpeciality.Speciality)
 				.Where(p => p.Id == participantId)
@@ -46,7 +46,7 @@ namespace ExamBook.Controllers
 		{
 			IQueryable<Participant> query = _dbContext.Participants
 				
-				.Include(p => p.ExaminationStudent)
+				.Include(p => p.Student)
 				.Include(p => p.ParticipantSpecialities)
 				.ThenInclude(ps => ps.ExaminationSpeciality.Speciality);
 
@@ -61,7 +61,7 @@ namespace ExamBook.Controllers
 			if (studentId != null)
 			{
 				query = query
-					.Include(p => p.ExaminationStudent!.Student)
+					.Include(p => p.Student!)
 					.Where(p => p.ExaminationId == examinationId);
 			}
 

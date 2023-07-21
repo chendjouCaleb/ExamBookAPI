@@ -17,13 +17,15 @@ namespace ExamBook.Services
 		private readonly ApplicationDbContext _dbContext;
 		private readonly EventService _eventService;
 		private readonly PublisherService _publisherService;
-		
-		
-		
-		
-		
-		
-		
+
+
+		public TestSpecialityService(ApplicationDbContext dbContext, EventService eventService, PublisherService publisherService)
+		{
+			_dbContext = dbContext;
+			_eventService = eventService;
+			_publisherService = publisherService;
+		}
+
 		public async Task<TestSpeciality> GetAsync(ulong id)
 		{
 			var testSpeciality = await _dbContext.TestSpecialities
@@ -92,7 +94,7 @@ namespace ExamBook.Services
 			
 			await _dbContext.TestSpecialities.AddRangeAsync(testSpecialities);
 			await _dbContext.SaveChangesAsync();
-			await _publisherService.SaveAll(testSpecialities.Select(ts => ts.Publisher!).ToList());
+			await _publisherService.SaveAllAsync(testSpecialities.Select(ts => ts.Publisher!).ToList());
 
 			var publisherIds = new List<string>
 			{
@@ -146,7 +148,7 @@ namespace ExamBook.Services
 			
 			await _dbContext.TestSpecialities.AddRangeAsync(testSpecialities);
 			await _dbContext.SaveChangesAsync();
-			await _publisherService.SaveAll(testSpecialities.Select(ts => ts.Publisher!).ToList());
+			await _publisherService.SaveAllAsync(testSpecialities.Select(ts => ts.Publisher!).ToList());
 
 			var publisherIds = new List<string>
 			{
@@ -210,7 +212,8 @@ namespace ExamBook.Services
 			return new TestSpeciality
 			{
 				Test = test,
-				Speciality = speciality
+				Speciality = speciality,
+				SpecialityId = speciality.Id
 			};
 		}
 	}

@@ -87,8 +87,8 @@ namespace ExamBook.Services
             var specialities = await _dbContext.Set<Speciality>()
                 .Where(s => model.SpecialitiyIds.Contains(s.Id))
                 .ToListAsync();
-            
-            var publisher = await _publisherService.AddAsync();
+
+            var publisher = _publisherService.Create();
             Examination examination = new ()
             {
                 Space = space,
@@ -96,14 +96,21 @@ namespace ExamBook.Services
                 Name = model.Name,
                 NormalizedName = StringHelper.Normalize(model.Name),
                 StartAt = model.StartAt,
-                PublisherId = publisher.Id
+                PublisherId = publisher.Id,
+                Publisher = publisher
             };
             examination.ExaminationSpecialities = (await CreateSpecialities(examination, specialities)).ToList();
+            var examinationSpecialityPublishers = examination.ExaminationSpecialities
+                .Select(es => es.Publisher!)
+                .ToList();
+            
             await _dbContext.AddAsync(examination);
             await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAllAsync(examinationSpecialityPublishers.Append(publisher).ToList());
 
             var publisherIds = new List<string> {space.PublisherId, publisher.Id};
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            publisherIds.AddRange(examinationSpecialityPublishers.Select(s => s.Id));
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_ADD", examination);
             _logger.LogInformation("New examination service");
             return new ActionResultModel<Examination>(examination, @event);
@@ -278,10 +285,13 @@ namespace ExamBook.Services
                 throw new IllegalOperationException("ExaminationSpecialityAlreadyExists");
             }
 
+            var publisher = _publisherService.Create();
             ExaminationSpeciality examinationSpeciality = new ()
             {
                 Examination = examination,
-                Speciality = speciality
+                Speciality = speciality,
+                Publisher = publisher,
+                PublisherId = publisher.Id
             };
 
             return examinationSpeciality;

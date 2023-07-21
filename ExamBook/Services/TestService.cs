@@ -32,7 +32,7 @@ namespace ExamBook.Services
             PaperService paperService, 
             ILogger<TestService> logger, 
             EventService eventService, 
-            PublisherService publisherService, RoomService roomService)
+            PublisherService publisherService, RoomService roomService, TestSpecialityService testSpecialityService)
         {
             _dbContext = dbContext;
             _paperService = paperService;
@@ -40,6 +40,7 @@ namespace ExamBook.Services
             _eventService = eventService;
             _publisherService = publisherService;
             _roomService = roomService;
+            _testSpecialityService = testSpecialityService;
         }
         
         
@@ -89,7 +90,7 @@ namespace ExamBook.Services
                 foreach (var speciality in specialities)
                 {
                     var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
-                    var testSpecialityPublisher = await _publisherService.AddAsync();
+                    var testSpecialityPublisher = await _publisherService.CreateAsync();
                     testSpeciality.Publisher = testSpecialityPublisher;
                     testSpeciality.PublisherId = testSpecialityPublisher.Id;
                     
@@ -116,7 +117,7 @@ namespace ExamBook.Services
                 .Append(test.Publisher!)
                 .ToList();
 
-            await _publisherService.SaveAll(publishers);
+            await _publisherService.SaveAllAsync(publishers);
 
             var publisherIds = ImmutableList<string>.Empty
                 .Add(space.PublisherId)
@@ -127,7 +128,7 @@ namespace ExamBook.Services
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
             return new ActionResultModel<Test>(test, @event);
         }
-
+        
 
         public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
              TestAddModel model, User user)
@@ -147,6 +148,13 @@ namespace ExamBook.Services
             var test = await CreateTestAsync(space, model, specialities);
             test.Course = course;
             test.CourseId = course.Id;
+
+            foreach (var testSpeciality in test.TestSpecialities)
+            {
+                var courseSpeciality = courseSpecialities
+                    .Find(cs => cs.SpecialityId == testSpeciality.SpecialityId);
+                testSpeciality.CourseSpeciality = courseSpeciality;
+            }
             
             await _dbContext.AddAsync(test);
             await _dbContext.AddRangeAsync(test.TestSpecialities);
@@ -156,11 +164,124 @@ namespace ExamBook.Services
                 .Append(test.Publisher!)
                 .ToList();
 
-            await _publisherService.SaveAll(publishers);
+            await _publisherService.SaveAllAsync(publishers);
 
             var publisherIds = ImmutableList<string>.Empty
-                .AddRange(new []{space.PublisherId, course.PublisherId})
+                .AddRange(new []{ space.PublisherId, course.PublisherId })
                 .AddRange(specialities.Select(r => r.PublisherId).ToList())
+                .AddRange(courseSpecialities.Select(cs => cs.PublisherId).ToList())
+                .AddRange(publishers.Select(p => p.Id).ToList());
+                
+            
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
+            return new ActionResultModel<Test>(test, @event);
+        }
+        
+        
+        public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
+            TestAddModel model, List<ExaminationSpeciality> examinationSpecialities,
+            User user)
+        {
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.IsTrue(examinationSpecialities.TrueForAll(es => es.Speciality != null));
+
+            var space = examination.Space;
+            var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
+            var test = await CreateTestAsync(space, model, specialities);
+
+
+            test.Examination = examination;
+            foreach (var testSpeciality in test.TestSpecialities)
+            {
+                var examinationSpeciality =
+                    examinationSpecialities.Find(es => es.SpecialityId == testSpeciality.SpecialityId);
+
+                testSpeciality.ExaminationSpeciality = examinationSpeciality;
+            }
+            
+            
+            
+            await _dbContext.AddAsync(test);
+            await _dbContext.AddRangeAsync(test.TestSpecialities);
+            await _dbContext.SaveChangesAsync();
+
+            var publishers = test.TestSpecialities
+                .Select(t => t.Publisher!)
+                .Append(test.Publisher!)
+                .ToList();
+
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = ImmutableList<string>.Empty
+                .Add(space.PublisherId)
+                .Add(examination.PublisherId)
+                .AddRange(specialities.Select(r => r.PublisherId).ToList())
+                .AddRange(examinationSpecialities.Select(es => es.PublisherId))
+                .AddRange(publishers.Select(p => p.Id).ToList());
+                
+            
+            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "TEST_ADD", test);
+            return new ActionResultModel<Test>(test, @event);
+        }
+        
+        
+        public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
+            Course course, TestAddModel model, List<ExaminationSpeciality> examinationSpecialities,
+            User user)
+        {
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examination.Space, nameof(examination.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(model, nameof(model));
+            AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
+            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.IsTrue(examinationSpecialities.TrueForAll(es => es.Speciality != null));
+
+            var space = examination.Space;
+            var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
+            var specialityIds = specialities.Select(s => s.Id).ToList();
+            var courseSpecialities = await _dbContext.CourseSpecialities
+                .Where(cs => cs.CourseId == course.Id)
+                .Where(cs => specialityIds.Contains(cs.SpecialityId))
+                .ToListAsync();
+            var test = await CreateTestAsync(space, model, specialities);
+
+
+            test.Examination = examination;
+            foreach (var testSpeciality in test.TestSpecialities)
+            {
+                var examinationSpeciality =
+                    examinationSpecialities.Find(es => es.SpecialityId == testSpeciality.SpecialityId);
+
+                var courseSpeciality = courseSpecialities.Find(cs => cs.SpecialityId == testSpeciality.Id);
+                
+                testSpeciality.ExaminationSpeciality = examinationSpeciality;
+                testSpeciality.CourseSpeciality = courseSpeciality;
+            }
+            
+            
+            
+            await _dbContext.AddAsync(test);
+            await _dbContext.AddRangeAsync(test.TestSpecialities);
+            await _dbContext.SaveChangesAsync();
+
+            var publishers = test.TestSpecialities
+                .Select(t => t.Publisher!)
+                .Append(test.Publisher!)
+                .ToList();
+
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = ImmutableList<string>.Empty
+                .Add(space.PublisherId)
+                .Add(examination.PublisherId)
+                .AddRange(specialities.Select(r => r.PublisherId).ToList())
+                .AddRange(examinationSpecialities.Select(es => es.PublisherId))
+                .AddRange(courseSpecialities.Select(es => es.PublisherId))
                 .AddRange(publishers.Select(p => p.Id).ToList());
                 
             

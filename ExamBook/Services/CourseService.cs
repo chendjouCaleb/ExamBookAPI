@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -146,7 +147,7 @@ namespace ExamBook.Services
                 throw new UsedValueException("CourseNameUsed", model.Name);
             }
 
-            var publisher = await _publisherService.AddAsync();
+            var publisher = await _publisherService.CreateAsync();
             Course course = new ()
             {
                 Name = model.Name,
@@ -156,7 +157,8 @@ namespace ExamBook.Services
                 Description = model.Description,
                 Coefficient = model.Coefficient,
                 Space = space,
-                PublisherId = publisher.Id
+                PublisherId = publisher.Id,
+                Publisher = publisher
             };
             await _dbContext.AddAsync(course);
 
@@ -170,12 +172,17 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation("New course");
 
-            var publisherIds = new List<string> {
-                publisher.Id, 
-                space.PublisherId
-            };
+            var publishers = ImmutableList<Publisher>.Empty
+                .Add(publisher)
+                .AddRange(courseSpecialities.Select(cs => cs.Publisher!))
+                .AddRange(courseTeachers.Select(ct => ct.Publisher!));
+            
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = new List<string> { space.PublisherId };
             publisherIds.AddRange(members.Select(m => m.PublisherId));
             publisherIds.AddRange(members.Select(m => m.User!.PublisherId));
+            publisherIds.AddRange(publishers.Select(p => p.Id));
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_ADD", course);
             return new ActionResultModel<Course>(course, @event);
@@ -307,10 +314,17 @@ namespace ExamBook.Services
             AssertHelper.NotNull(user, nameof(user));
 
             CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
+            var publisher = courseSpeciality.Publisher!;
             await _dbContext.AddAsync(courseSpeciality);
             await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAsync(publisher);
 
-            var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId, speciality.PublisherId};
+            var publisherIds = new List<string>
+            {
+                course.Space!.PublisherId, 
+                course.PublisherId, 
+                speciality.PublisherId
+            };
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_ADD", courseSpeciality);
 
             return new ActionResultModel<CourseSpeciality>(courseSpeciality, @event);
@@ -326,11 +340,16 @@ namespace ExamBook.Services
             AssertHelper.NotNull(user, nameof(user));
 
             var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
+            var publishers = courseSpecialities.Select(c => c.Publisher!).ToList();
             await _dbContext.AddRangeAsync(courseSpecialities);
             await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAllAsync(publishers);
+            
+            
 
             var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId};
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
+            publisherIds.AddRange(publishers.Select(p => p.Id).ToList());
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITIES_ADD", courseSpecialities);
 
             return new ActionResultModel<ICollection<CourseSpeciality>>(courseSpecialities, @event);
@@ -368,9 +387,12 @@ namespace ExamBook.Services
                 throw new IllegalOperationException("CourseSpecialityAlreadyExists");
             }
 
+            var publisher = await _publisherService.CreateAsync();
 
             CourseSpeciality courseSpeciality = new()
             {
+                PublisherId = publisher.Id,
+                Publisher = publisher,
                 Course = course,
                 Speciality = speciality
             };
@@ -447,10 +469,13 @@ namespace ExamBook.Services
                 throw new IllegalStateException("MemberIsNotTeacher");
             }
 
+            var publisher = _publisherService.Create();
             CourseTeacher courseTeacher = new()
             {
                 Course = course,
-                Member = member
+                Member = member,
+                PublisherId = publisher.Id,
+                Publisher = publisher
             };
 
             return courseTeacher;

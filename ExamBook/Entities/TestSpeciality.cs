@@ -10,10 +10,11 @@ namespace ExamBook.Entities
         public Speciality? Speciality { get; set; }
         public ulong? SpecialityId { get; set; }
 
+        public CourseSpeciality? CourseSpeciality { get; set; }
+        public ulong? CourseSpecialityId { get; set; }
+        
+
         public Test Test { get; set; } = null!;
         public ulong TestId { get; set; }
-        
-        public HashSet<PaperSpeciality> PaperSpecialities { get; set; } = new();
-        
     }
 }

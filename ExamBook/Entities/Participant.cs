@@ -17,8 +17,8 @@ namespace ExamBook.Entities
         public Examination Examination { get; set; } = null!;
         public ulong ExaminationId { get; set; }
 
-        public ExaminationStudent? ExaminationStudent { get; set; }
-        public ulong? ExaminationStudentId { get; set; }
+        public Student? Student { get; set; }
+        public ulong? StudentId { get; set; }
 
         [JsonIgnore] public List<ParticipantSpeciality> ParticipantSpecialities { get; set; } = new();
         
