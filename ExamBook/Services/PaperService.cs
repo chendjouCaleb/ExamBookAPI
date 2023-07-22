@@ -4,163 +4,235 @@ using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
+using ExamBook.Identity.Entities;
+using ExamBook.Models;
+using ExamBook.Models.Data;
+using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Traceability.Models;
 using Traceability.Services;
 
 namespace ExamBook.Services
 {
     public class PaperService
     {
-        private readonly DbContext _dbContext;
+        private readonly ApplicationDbContext _dbContext;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
 
-        public PaperService(DbContext dbContext, EventService eventService, PublisherService publisherService)
+        public PaperService(ApplicationDbContext dbContext, 
+            EventService eventService, 
+            PublisherService publisherService)
         {
             _dbContext = dbContext;
             _eventService = eventService;
             _publisherService = publisherService;
         }
 
-
-        public async Task<List<Paper>> AddTestPapers(Test test)
+        public async Task<Paper> GetByIdAsync(ulong paperId)
         {
-            var papers = await CreateTestPapers(test);
-            await _dbContext.AddRangeAsync(papers);
-            await _dbContext.SaveChangesAsync();
-            return papers;
-        }
+            var paper = await _dbContext.Set<Paper>()
+                .Include(p => p.Score)
+                .Include(p => p.Test)
+                .Where(p => p.Id == paperId)
+                .FirstOrDefaultAsync();
 
-        public async Task<List<Paper>> CreateTestPapers(Test test)
-        {
-            AssertHelper.NotNull(test, nameof(test));
-            
-            var participants = _dbContext.Set<Participant>()
-                .Where(p => test.ExaminationId == p.ExaminationId);
-
-            var papers = new List<Paper>();
-            foreach (var participant in participants)
+            if (paper == null)
             {
-                if (!await ContainsAsync(test, participant))
-                {
-                    var paper = await CreatePaperAsync(test, participant);
-                    papers.Add(paper);
-                }
+                throw new ElementNotFoundException("PaperNotFoundById", paperId);
             }
 
-            return papers;
-        }
-
-        public async Task<Paper> AddPaperAsync(Test test, Participant participant)
-        {
-            var paper = await CreatePaperAsync(test, participant);
-
-            await _dbContext.AddAsync(paper);
-            await _dbContext.AddRangeAsync(paper.PaperSpecialities);
-            await _dbContext.SaveChangesAsync();
             return paper;
         }
         
-        public async Task<Paper> CreatePaperAsync(Test test, Participant participant)
-        {
-            AssertHelper.NotNull(test, nameof(test));
-            AssertHelper.NotNull(participant, nameof(participant));
-
-            if (await ContainsAsync(test, participant))
-            {
-                throw new DuplicateValueException("DuplicateParticipantPaper");
-            }
-            
-            Paper paper = new()
-            {
-                Test = test,
-                Participant = participant,
-                ParticipantId = participant.Id
-            };
-            paper.PaperSpecialities = await CreatePaperSpecialitiesAsync(paper);
-            return paper;
-        }
-        
-
-        public async Task<PaperSpeciality> AddPaperSpecialityAsync(Paper paper, ParticipantSpeciality participantSpeciality)
-        {
-            var paperSpeciality = await CreatePaperSpecialityAsync(paper, participantSpeciality);
-            await _dbContext.AddAsync(paperSpeciality);
-            await _dbContext.SaveChangesAsync();
-            return paperSpeciality;
-        }
-
-        public async Task<List<PaperSpeciality>> AddPaperSpecialitiesAsync(Paper paper)
-        {
-            var paperSpecialities = await CreatePaperSpecialitiesAsync(paper);
-            await _dbContext.AddRangeAsync(paperSpecialities);
-            await _dbContext.SaveChangesAsync();
-            return paperSpecialities;
-        }
-        
-        public async Task<List<PaperSpeciality>> CreatePaperSpecialitiesAsync(Paper paper)
-        {
-            var participantSpecialities = await _dbContext.Set<ParticipantSpeciality>()
-                .Where(ps => paper.ParticipantId == ps.ParticipantId)
-                .ToListAsync();
-
-            var paperSpecialities = new List<PaperSpeciality>();
-            foreach (var participantSpeciality in participantSpecialities)
-            {
-                if (!(await ContainsPaperSpeciality(paper, participantSpeciality)))
-                {
-                    var paperSpeciality = await CreatePaperSpecialityAsync(paper, participantSpeciality);
-                    paperSpecialities.Add(paperSpeciality);
-                }
-            }
-
-            return paperSpecialities;
-        }
-
-        public async Task<PaperSpeciality> CreatePaperSpecialityAsync(Paper paper,
-            ParticipantSpeciality participantSpeciality)
-        {
-            AssertHelper.NotNull(paper, nameof(paper));
-            AssertHelper.NotNull(participantSpeciality, nameof(participantSpeciality));
-
-            if (await ContainsPaperSpeciality(paper, participantSpeciality))
-            {
-                throw new DuplicateValueException("DuplicateParticipantPaper");
-            }
-
-            return new(paper, participantSpeciality);
-        }
-
         public async Task<bool> ContainsAsync(Test test, Participant participant)
         {
             return await _dbContext.Set<Paper>()
                 .AnyAsync(p => test.Equals(p.Test) && participant.Equals(p.Participant));
         }
-
-        public async Task<bool> ContainsPaperSpeciality(Paper paper, ParticipantSpeciality participantSpeciality)
+        
+        
+        public async Task<bool> ContainsAsync(Test test, Student student)
         {
-            return await _dbContext.Set<PaperSpeciality>()
-                .AnyAsync(ps => paper.Equals(ps.Paper) && participantSpeciality.Equals(ps.ParticipantSpeciality));
+            return await _dbContext.Set<Paper>()
+                .AnyAsync(p => p.TestId == test.Id && p.StudentId == student.Id);
         }
+        
+        public async Task<List<Paper>> ContainsAsync(Test test, ICollection<Student> students)
+        {
+            var studentIds = students.Select(s => s.Id).ToList();
+            var duplicata = new List<Paper>();
+
+            duplicata = await _dbContext.Set<Paper>()
+                .Where(p => p.TestId == test.Id && p.StudentId != null && studentIds.Contains(p.StudentId ?? 0))
+                .ToListAsync();
+
+            return duplicata;
+        }
+        
+        
+
+
+        public async Task<ActionResultModel<List<Paper>>> AddTestPapers(Test test, List<Student> students, User adminUser)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            AssertHelper.NotNull(students, nameof(students));
+            AssertHelper.IsTrue(students.TrueForAll(s => s.SpaceId == test.SpaceId));
+
+            var papers = new List<Paper>();
+
+            var duplicata = await ContainsAsync(test, students);
+            if (duplicata.Count > 0)
+            {
+                throw new DuplicateValueException("PaperStudentExists", duplicata);
+            }
+
+            foreach (var student in students)
+            {
+                var paper = await CreatePaperAsync(test);
+                paper.Student = student;
+            }
+
+            var publishers = papers.Select(p => p.Publisher!).ToList();
+                        
+            
+            await _dbContext.AddRangeAsync(papers);
+            await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId };
+            publisherIds.AddRange(students.Select(s => s.PublisherId));
+            if (test.CourseId != null)
+            {
+                AssertHelper.NotNull(test.Course, nameof(test.Course));
+                publisherIds.Add(test.Course!.PublisherId);
+            }
+
+            var paperIds = papers.Select(p => p.Id).ToList();
+            var actionData = new {PaperIds = paperIds};
+            var action = await _eventService.EmitAsync(publisherIds, adminUser.Id, "PAPERS_ADD", actionData);
+            return new ActionResultModel<List<Paper>>(papers, action);
+        }
+
+
+        public async Task<Event> SetScore(Test test, List<PaperScoreModel> models, User adminUser)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(models, nameof(models));
+
+            var paperIds = models.Select(m => m.PaperId).ToList();
+            var papers = await _dbContext.Papers
+                .Include(p => p.PaperScore)
+                .Include(p => p.Student)
+                .Where(p => paperIds.Contains(p.Id))
+                .ToListAsync();
+
+            var changeDataList = new List<ChangeScoreData>();
+            foreach (var model in models)
+            {
+                var paper = papers.Find(p => p.Id == model.PaperId)!;
+                var score = paper.PaperScore;
+
+                var data = new ChangeScoreData
+                {
+                    PaperId = paper.Id,
+                    Last = score.Value,
+                    Current = model.Score
+                };
+                changeDataList.Add(data);
+                score.Value = model.Score;
+            }
+            
+            _dbContext.UpdateRange(papers.Select(p => p.PaperScore));
+            await _dbContext.SaveChangesAsync();
+            
+
+            var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId};
+            publisherIds.AddRange(papers.Select(p => p.PublisherId));
+            publisherIds.AddRange(papers.Select(p => p.Student!.PublisherId));
+            
+            
+            
+            if (test.Course != null)
+            {
+                publisherIds.Add(test.Course.PublisherId);
+            }
+
+            if (test.Examination != null)
+            {
+                publisherIds.Add(test.Examination.PublisherId);
+            }
+
+            _dbContext.UpdateRange(papers);
+            await _dbContext.SaveChangesAsync();
+            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, "PAPER_SET_SCORES", changeDataList);
+        }
+
+        public async Task<Paper> AddPaperAsync(Test test, Student student)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(student, nameof(student));
+            
+            var paper = await CreatePaperAsync(test);
+            paper.Student = student;
+
+            await _dbContext.AddAsync(paper);
+            await _dbContext.AddAsync(paper.PaperScore);
+            await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAsync(paper.Publisher!);
+            return paper;
+        }
+        
+        public async Task<Paper> AddPaperAsync(Test test, Participant participant)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(participant, nameof(participant));
+            
+            var paper = await CreatePaperAsync(test);
+            paper.Participant = participant;
+
+            if (participant.Student != null)
+            {
+                paper.Student = participant.Student;
+            }
+
+            await _dbContext.AddAsync(paper);
+            await _dbContext.AddAsync(paper.PaperScore);
+            await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAsync(paper.Publisher!);
+            return paper;
+        }
+        
+        public async Task<Paper> CreatePaperAsync(Test test)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+
+            var publisher = _publisherService.Create();
+            var score = new PaperScore();
+            Paper paper = new()
+            {
+                Test = test,
+                PaperScore = score,
+                Publisher = publisher,
+                PublisherId = publisher.Id
+            };
+            return paper;
+        }
+
+        
+        
 
 
         public async Task DeletePaper(Paper paper)
         {
             AssertHelper.NotNull(paper, nameof(paper));
-            var paperSpecialities = _dbContext.Set<PaperSpeciality>()
-                .Where(p => paper.Equals(p.Paper));
-            
-            _dbContext.RemoveRange(paperSpecialities);
             _dbContext.Remove(paper);
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task DeletePaperSpeciality(PaperSpeciality paperSpeciality)
-        {
-            AssertHelper.NotNull(paperSpeciality, nameof(paperSpeciality));
-            _dbContext.Remove(paperSpeciality);
-            await _dbContext.SaveChangesAsync();
-        }
+    
     }
 }

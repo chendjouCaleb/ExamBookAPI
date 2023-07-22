@@ -24,6 +24,7 @@ namespace ExamBook.Persistence
         
         public DbSet<Member> Members { get; set; }
         public DbSet<Paper> Papers { get; set; }
+        public DbSet<PaperScore> PaperScores => Set<PaperScore>();
         public DbSet<Participant> Participants { get; set; }
         public DbSet<ParticipantSpeciality> ParticipantSpecialities { get; set; }
         public DbSet<Room> Rooms { get; set; }

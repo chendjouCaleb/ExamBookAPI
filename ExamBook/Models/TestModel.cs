@@ -26,9 +26,5 @@ namespace ExamBook.Models
     }
 
 
-    public class TestCreateResultModel
-    {
-        public Test Test { get; set; }
-        public List<TestSpeciality> TestSpecialities { get; set; } = new();
-    }
+  
 }

@@ -5,10 +5,9 @@ namespace ExamBook.Entities
 {
     public class Paper:Entity
     {
-        public float? Score { get; set; }
         public uint IndexInGroup { get; set; }
         
-        [NotMapped] public bool IsCorrected => Score != null;
+        [NotMapped] public bool IsCorrected => PaperScore.Value != null;
 
         public bool IsPresent { get; set; }
 
@@ -24,5 +23,8 @@ namespace ExamBook.Entities
 
         public TestSpeciality? TestSpeciality { get; set; }
         public ulong? TestSpecialityId { get; set; }
+
+        public PaperScore PaperScore { get; set; }
+        public ulong PaperScoreId { get; set; }
     }
 }
