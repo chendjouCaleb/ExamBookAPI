@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Models;
 using ExamBook.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace ExamBook.Services
 {
@@ -13,7 +16,18 @@ namespace ExamBook.Services
 
 		public async Task<CourseTeacher> GetAsync(ulong courseTeacherId)
 		{
-			throw new NotImplementedException();
+			var courseTeacher = await _dbContext.TestTeachers
+				.Include(tt => tt.Test)
+				.Include(tt => tt.Member)
+				.Where(tt => tt.Id == courseTeacherId)
+				.FirstOrDefaultAsync();
+
+			if (courseTeacher == null)
+			{
+				throw new ElementNotFoundException("CourseTeacherNotFoundById", courseTeacherId);
+			}
+
+			return courseTeacher;
 		}
 
 		public async Task<bool> ContainsAsync(Test test, Member member)
