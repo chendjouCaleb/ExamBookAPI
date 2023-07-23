@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -33,8 +32,11 @@ namespace ExamBook.Services
         public async Task<Paper> GetByIdAsync(ulong paperId)
         {
             var paper = await _dbContext.Set<Paper>()
-                .Include(p => p.Score)
+                .Include(p => p.PaperScore)
+                .Include(p => p.Participant)
+                .Include(p => p.Student)
                 .Include(p => p.Test)
+                .Include(p => p.TestSpeciality)
                 .Where(p => p.Id == paperId)
                 .FirstOrDefaultAsync();
 
@@ -62,13 +64,12 @@ namespace ExamBook.Services
         public async Task<List<Paper>> ContainsAsync(Test test, ICollection<Student> students)
         {
             var studentIds = students.Select(s => s.Id).ToList();
-            var duplicata = new List<Paper>();
 
-            duplicata = await _dbContext.Set<Paper>()
+            var duplicates = await _dbContext.Set<Paper>()
                 .Where(p => p.TestId == test.Id && p.StudentId != null && studentIds.Contains(p.StudentId ?? 0))
                 .ToListAsync();
 
-            return duplicata;
+            return duplicates;
         }
         
         
@@ -118,7 +119,7 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<Event> SetScore(Test test, List<PaperScoreModel> models, User adminUser)
+        public async Task<Event> SetScoreAsync(Test test, List<PaperScoreModel> models, User adminUser)
         {
             AssertHelper.NotNull(test, nameof(test));
             AssertHelper.NotNull(models, nameof(models));
@@ -153,9 +154,7 @@ namespace ExamBook.Services
             var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId};
             publisherIds.AddRange(papers.Select(p => p.PublisherId));
             publisherIds.AddRange(papers.Select(p => p.Student!.PublisherId));
-            
-            
-            
+
             if (test.Course != null)
             {
                 publisherIds.Add(test.Course.PublisherId);

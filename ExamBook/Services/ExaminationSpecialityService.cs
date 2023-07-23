@@ -68,6 +68,24 @@ namespace ExamBook.Services
 			return examinationSpeciality;
 		}
 		
+		
+		public async Task<ICollection<ExaminationSpeciality>> ListAsync(HashSet<ulong> ids)
+		{
+			var examinationSpecialities = await _dbContext.Set<ExaminationSpeciality>()
+				.Where(s => ids.Contains(s.Id))
+				.Include(r => r.Examination)
+				.Include(r => r.Speciality)
+				.ToListAsync();
+
+			var notFounds = ids.TakeWhile(id => examinationSpecialities.All(s => s.Id != id));
+			if (!notFounds.Any())
+			{
+				throw new ElementNotFoundException("ExaminationSpecialityNotFoundByIds", notFounds);
+			}
+
+			return examinationSpecialities;
+		}
+		
 		public async Task<bool> ContainsAsync(Examination examination, string name)
 		{
 			var normalizedName = StringHelper.Normalize(name);

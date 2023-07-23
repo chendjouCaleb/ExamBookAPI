@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -6,6 +7,7 @@ using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
+using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,14 +18,14 @@ namespace ExamBook.Services
 {
     public class MemberService
     {
-        private readonly DbContext _dbContext;
+        private readonly ApplicationDbContext _dbContext;
         private readonly UserService _userService;
         private readonly ActorService _actorService;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
         private readonly ILogger<MemberService> _logger;
 
-        public MemberService(DbContext dbContext, 
+        public MemberService(ApplicationDbContext dbContext, 
             ILogger<MemberService> logger,
             PublisherService publisherService, 
             EventService eventService,
@@ -67,6 +69,14 @@ namespace ExamBook.Services
             }
 
             return null;
+        }
+
+        public async Task<ICollection<Member>> ListAsync(string userId)
+        {
+            return await _dbContext.Members
+                .Include(m => m.Space)
+                .Where(m => m.UserId == userId)
+                .ToListAsync();
         }
 
         public async Task<Member> GetOrAddAsync(Space space, string userId, User actor)

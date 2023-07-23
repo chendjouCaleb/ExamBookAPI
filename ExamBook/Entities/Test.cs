@@ -28,11 +28,15 @@ namespace ExamBook.Entities
         
         public Course? Course { get; set; } 
         public ulong? CourseId { get; set; }
-
-        public List<TestSpeciality> TestSpecialities { get; set; }
+        
 
         public bool Closed { get; set; }
         public bool IsLock { get; set; }
+
+        public bool IsPublished { get; set; }
         public bool Specialized { get; set; }
+        
+        public List<TestSpeciality> TestSpecialities { get; set; }
+        public List<TestTeacher> TestTeachers { get; set; } = new();
     }
 }

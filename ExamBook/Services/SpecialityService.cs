@@ -49,6 +49,23 @@ namespace ExamBook.Services
 
             return speciality;
         }
+        
+        
+        public async Task<ICollection<Speciality>> ListAsync(HashSet<ulong> specialityIds)
+        {
+            var specialities = await _dbContext.Set<Speciality>()
+                .Where(s => specialityIds.Contains(s.Id))
+                .Include(r => r.Space)
+                .ToListAsync();
+
+            var notFounds = specialityIds.TakeWhile(id => specialities.All(s => s.Id != id));
+            if (!notFounds.Any())
+            {
+                throw new ElementNotFoundException("SpecialityNotFoundByIds", notFounds);
+            }
+
+            return specialities;
+        }
 
         public async Task<ActionResultModel<Speciality>> AddSpecialityAsync(Space space,string name, User user)
         {

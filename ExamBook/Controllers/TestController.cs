@@ -21,8 +21,29 @@ namespace ExamBook.Controllers
 		private readonly ApplicationDbContext _dbContext;
 		private readonly TestService _testService;
 		private readonly SpaceService _spaceService;
+		private readonly CourseService _courseService;
+		private readonly ExaminationService _examinationService;
+		private readonly ExaminationSpecialityService _examinationSpecialityService;
 		private readonly UserService _userService;
+		private readonly SpecialityService _specialityService;
 
+
+		public TestController(ApplicationDbContext dbContext, 
+			TestService testService, 
+			SpaceService spaceService, 
+			UserService userService, 
+			SpecialityService specialityService, ExaminationService examinationService, 
+			ExaminationSpecialityService examinationSpecialityService, CourseService courseService)
+		{
+			_dbContext = dbContext;
+			_testService = testService;
+			_spaceService = spaceService;
+			_userService = userService;
+			_specialityService = specialityService;
+			_examinationService = examinationService;
+			_examinationSpecialityService = examinationSpecialityService;
+			_courseService = courseService;
+		}
 
 		[HttpGet("{testId}")]
 		public async Task<Test> GetAsync(ulong testId)
@@ -69,23 +90,85 @@ namespace ExamBook.Controllers
 			return await query.ToListAsync();
 		}
 
-		//
-		// [HttpPost]
-		// public async Task<CreatedAtActionResult> AddAsync(
-		// 	[FromQuery] ulong spaceId,
-		// 	[FromBody] TestAddModel model)
-		// {
-		// 	AssertHelper.NotNull(model, nameof(model));
-		// 	
-		// 	var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-		// 	var user = await _userService.FindByIdAsync(userId);
-		// 	var space = await _spaceService.GetByIdAsync(spaceId);
-		//
-		// 	var result = await _testService.AddAsync(space, model, user);
-		// 	return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
-		// }
+		
+
+		[HttpPost]
+		public async Task<CreatedAtActionResult> AddAsync(
+			[FromQuery] ulong spaceId,
+			[FromQuery] HashSet<ulong> specialityIds,
+			[FromBody] TestAddModel model)
+		{
+			AssertHelper.NotNull(model, nameof(model));
+			
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			var space = await _spaceService.GetByIdAsync(spaceId);
+			var specialities = await _specialityService.ListAsync(specialityIds);
+
+			var result = await _testService.AddAsync(space, model, specialities, user);
+			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
+		}
 
 		
+		
+		[HttpPost("test-courses")]
+		public async Task<CreatedAtActionResult> AddTestCourseAsync(
+			[FromQuery] ulong spaceId,
+			[FromQuery] ulong courseId,
+			[FromBody] TestAddModel model)
+		{
+			AssertHelper.NotNull(model, nameof(model));
+			
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			var space = await _spaceService.GetByIdAsync(spaceId);
+			var course = await _courseService.GetCourseAsync(courseId);
+
+			var result = await _testService.AddAsync(space, course, model, user);
+			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
+		}
+		
+		
+		[HttpPost("test-examinations")]
+		public async Task<CreatedAtActionResult> AddTestExaminationAsync(
+			[FromQuery] ulong examinationId,
+			[FromQuery] HashSet<ulong> examinationSpecialityIds,
+			[FromBody] TestAddModel model)
+		{
+			AssertHelper.NotNull(model, nameof(model));
+			
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+			var space = examination.Space;
+			var examinationSpecialities = await _examinationSpecialityService
+				.ListAsync(examinationSpecialityIds);
+
+			var result = await _testService.AddAsync(examination, model, examinationSpecialities, user);
+			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
+		}
+		
+		
+		[HttpPost("test-examination-courses")]
+		public async Task<CreatedAtActionResult> AddTestCourseExaminationAsync(
+			[FromQuery] ulong examinationId,
+			[FromQuery] ulong courseId,
+			[FromQuery] HashSet<ulong> examinationSpecialityIds,
+			[FromBody] TestAddModel model)
+		{
+			AssertHelper.NotNull(model, nameof(model));
+			
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+			var course = await _courseService.GetCourseAsync(courseId);
+			var space = examination.Space;
+			var examinationSpecialities = await _examinationSpecialityService
+				.ListAsync(examinationSpecialityIds);
+
+			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, user);
+			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
+		}
 		
 	}
 }

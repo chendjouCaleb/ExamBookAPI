@@ -49,6 +49,8 @@ namespace ExamBook.Services
             var test = await _dbContext.Set<Test>()
                 .Where(c => c.Id == id)
                 .Include(c => c.Space)
+                .Include(t => t.Examination)
+                .Include(t => t.Course)
                 .FirstOrDefaultAsync();
 
             if (test == null)
@@ -59,7 +61,7 @@ namespace ExamBook.Services
             return test;
         }
 
-        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, List<Speciality> specialities)
+        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, ICollection<Speciality> specialities)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(specialities, nameof(specialities));
@@ -68,7 +70,7 @@ namespace ExamBook.Services
             AssertHelper.IsTrue(specialities.All(s => s.SpaceId == space.Id), "Bad speciality space");
 
             var specialized = specialities.Count > 0;
-            var publisher = await _publisherService.CreateAsync();
+            var publisher = _publisherService.Create();
             var test = new Test
             {
                 Space = space,
@@ -103,7 +105,7 @@ namespace ExamBook.Services
             return test;
         }
 
-        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, List<Speciality> specialities,
+        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, ICollection<Speciality> specialities,
             User user)
         {
 
@@ -179,7 +181,7 @@ namespace ExamBook.Services
         
         
         public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
-            TestAddModel model, List<ExaminationSpeciality> examinationSpecialities,
+            TestAddModel model, ICollection<ExaminationSpeciality> examinationSpecialities,
             User user)
         {
             AssertHelper.NotNull(examination, nameof(examination));
@@ -187,7 +189,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
             AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.IsTrue(examinationSpecialities.TrueForAll(es => es.Speciality != null));
+            AssertHelper.IsTrue(examinationSpecialities.All(es => es.Speciality != null));
 
             var space = examination.Space;
             var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
@@ -198,7 +200,7 @@ namespace ExamBook.Services
             foreach (var testSpeciality in test.TestSpecialities)
             {
                 var examinationSpeciality =
-                    examinationSpecialities.Find(es => es.SpecialityId == testSpeciality.SpecialityId);
+                    examinationSpecialities.FirstOrDefault(es => es.SpecialityId == testSpeciality.SpecialityId);
 
                 testSpeciality.ExaminationSpeciality = examinationSpeciality;
             }
@@ -230,7 +232,7 @@ namespace ExamBook.Services
         
         
         public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
-            Course course, TestAddModel model, List<ExaminationSpeciality> examinationSpecialities,
+            Course course, TestAddModel model, ICollection<ExaminationSpeciality> examinationSpecialities,
             User user)
         {
             AssertHelper.NotNull(examination, nameof(examination));
@@ -239,7 +241,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
             AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.IsTrue(examinationSpecialities.TrueForAll(es => es.Speciality != null));
+            AssertHelper.IsTrue(examinationSpecialities.All(es => es.Speciality != null));
 
             var space = examination.Space;
             var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
@@ -255,7 +257,7 @@ namespace ExamBook.Services
             foreach (var testSpeciality in test.TestSpecialities)
             {
                 var examinationSpeciality =
-                    examinationSpecialities.Find(es => es.SpecialityId == testSpeciality.SpecialityId);
+                    examinationSpecialities.FirstOrDefault(es => es.SpecialityId == testSpeciality.SpecialityId);
 
                 var courseSpeciality = courseSpecialities.Find(cs => cs.SpecialityId == testSpeciality.Id);
                 

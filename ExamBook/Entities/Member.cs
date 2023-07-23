@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using ExamBook.Identity.Entities;
 using Newtonsoft.Json;
@@ -17,5 +18,7 @@ namespace ExamBook.Entities
         
         public bool IsAdmin { get; set; }
         public bool IsTeacher { get; set; }
+
+        public List<TestTeacher> TestTeachers { get; set; } = new();
     }
 }
