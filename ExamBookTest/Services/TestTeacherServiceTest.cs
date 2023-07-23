@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Persistence;
 using ExamBook.Services;
+using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Traceability.Asserts;
@@ -124,14 +126,29 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task Get()
 		{
+			var result = (await _testTeacherService.AddAsync(_test, _member, _adminUser)).Item;
+			var courseTeacher = await _testTeacherService.GetAsync(result.Id);
 			
+			Assert.AreEqual(result.Id, courseTeacher.Id);
+		}
+
+		[Test]
+		public void GetNotFound_ShouldThrow()
+		{
+			const ulong notFoundId = ulong.MaxValue;
+			var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
+			{
+				await _testTeacherService.GetAsync(notFoundId);
+			});
+			Assert.AreEqual(ex!.Code, "TestTeacherNotFoundById");
+			Assert.AreEqual(notFoundId, ex.Params[0]);
 		}
 
 
 		[Test]
 		public async Task Add()
 		{
-			var result = (await _testTeacherService.AddAsync(_test, _member, _adminUser));
+			var result = await _testTeacherService.AddAsync(_test, _member, _adminUser);
 			var testTeacher = result.Item;
 			var action = result.Event;
 			await _dbContext.Entry(testTeacher).ReloadAsync();
