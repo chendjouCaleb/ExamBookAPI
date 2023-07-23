@@ -5,6 +5,7 @@ using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Models;
 using ExamBook.Persistence;
+using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamBook.Services
@@ -32,7 +33,11 @@ namespace ExamBook.Services
 
 		public async Task<bool> ContainsAsync(Test test, Member member)
 		{
-			throw new NotImplementedException();
+			AssertHelper.NotNull(test, nameof(test));
+			AssertHelper.NotNull(member, nameof(member));
+
+			return await _dbContext.TestTeachers
+				.AnyAsync(tt => tt.TestId == test.Id && tt.MemberId == member.Id);
 		}
 
 		public async Task<ActionResultModel<CourseTeacher>> AddCourseTeacher(Test test, Member member)
