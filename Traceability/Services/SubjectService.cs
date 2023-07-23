@@ -111,12 +111,17 @@ namespace Traceability.Services
             return subject;
         }
 
-        public async Task SaveAll(ICollection<Subject> subjects)
+        public async Task SaveAllAsync(ICollection<Subject> subjects)
         {
             await _subjectRepository.SaveAllAsync(subjects);
         }
+        
+        public async Task SaveAsync(Subject subject)
+        {
+            await _subjectRepository.SaveAsync(subject);
+        }
 
-        public async Task<Subject> CreateAsync()
+        public Subject Create()
         {
             return new Subject();
         }
