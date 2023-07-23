@@ -146,6 +146,25 @@ namespace ExamBookTest.Services
 
 
 		[Test]
+		public async Task Contains()
+		{
+			await _testTeacherService.AddAsync(_test, _member, _adminUser);
+
+			var result = await _testTeacherService.ContainsAsync(_test, _member);
+			Assert.True(result);
+		}
+
+		[Test]
+		public async Task Contains_NotFound_ShouldBeFalse()
+		{
+			var notFoundMember = await _memberService.GetOrAddAsync(_space, _adminUser.Id, _adminUser);
+			var result = await _testTeacherService.ContainsAsync(_test, notFoundMember);
+			Assert.False(result);
+		}
+
+		
+
+		[Test]
 		public async Task Add()
 		{
 			var result = await _testTeacherService.AddAsync(_test, _member, _adminUser);
