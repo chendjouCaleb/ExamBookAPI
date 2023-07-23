@@ -21,6 +21,14 @@ namespace ExamBook.Services
 		private readonly EventService _eventService;
 
 
+		public TestTeacherService(ApplicationDbContext dbContext, SubjectService subjectService, PublisherService publisherService, EventService eventService)
+		{
+			_dbContext = dbContext;
+			_subjectService = subjectService;
+			_publisherService = publisherService;
+			_eventService = eventService;
+		}
+
 		public async Task<TestTeacher> GetAsync(ulong courseTeacherId)
 		{
 			var testTeacher = await _dbContext.TestTeachers
@@ -46,7 +54,7 @@ namespace ExamBook.Services
 				.AnyAsync(tt => tt.TestId == test.Id && tt.MemberId == member.Id);
 		}
 
-		public async Task<ActionResultModel<TestTeacher>> AddCourseTeacher(Test test, Member member, User user)
+		public async Task<ActionResultModel<TestTeacher>> AddAsync(Test test, Member member, User user)
 		{
 			AssertHelper.NotNull(test, nameof(test));
 			AssertHelper.NotNull(member, nameof(member));
@@ -75,7 +83,7 @@ namespace ExamBook.Services
 			await _publisherService.SaveAsync(publisher);
 			await _subjectService.SaveAsync(subject);
 
-			var publisherId = new List<string>() { test.Space.PublisherId, publisher.Id };
+			var publisherId = new List<string> { test.Space.PublisherId, publisher.Id };
 
 			if (test.ExaminationId != null)
 			{

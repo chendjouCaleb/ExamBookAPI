@@ -24,7 +24,6 @@ namespace ExamBook.Entities
         public TestSpeciality? TestSpeciality { get; set; }
         public ulong? TestSpecialityId { get; set; }
 
-        public PaperScore PaperScore { get; set; }
-        public ulong PaperScoreId { get; set; }
+        public PaperScore? PaperScore { get; set; }
     }
 }
