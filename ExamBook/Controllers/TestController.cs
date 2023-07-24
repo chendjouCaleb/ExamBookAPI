@@ -21,6 +21,7 @@ namespace ExamBook.Controllers
 		private readonly ApplicationDbContext _dbContext;
 		private readonly TestService _testService;
 		private readonly SpaceService _spaceService;
+		private readonly MemberService _memberService;
 		private readonly CourseService _courseService;
 		private readonly ExaminationService _examinationService;
 		private readonly ExaminationSpecialityService _examinationSpecialityService;
@@ -33,7 +34,9 @@ namespace ExamBook.Controllers
 			SpaceService spaceService, 
 			UserService userService, 
 			SpecialityService specialityService, ExaminationService examinationService, 
-			ExaminationSpecialityService examinationSpecialityService, CourseService courseService)
+			ExaminationSpecialityService examinationSpecialityService,
+			CourseService courseService,
+			MemberService memberService)
 		{
 			_dbContext = dbContext;
 			_testService = testService;
@@ -43,6 +46,7 @@ namespace ExamBook.Controllers
 			_examinationService = examinationService;
 			_examinationSpecialityService = examinationSpecialityService;
 			_courseService = courseService;
+			_memberService = memberService;
 		}
 
 		[HttpGet("{testId}")]
@@ -96,6 +100,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddAsync(
 			[FromQuery] ulong spaceId,
 			[FromQuery] HashSet<ulong> specialityIds,
+			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
 			AssertHelper.NotNull(model, nameof(model));
@@ -104,6 +109,7 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
 			var specialities = await _specialityService.ListAsync(specialityIds);
+			var members = await _memberService.ListAsync(memberIds);
 
 			var result = await _testService.AddAsync(space, model, specialities, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
