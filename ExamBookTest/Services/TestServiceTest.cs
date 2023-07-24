@@ -41,7 +41,6 @@ namespace ExamBookTest.Services
 		private Examination _examination = null!;
 		private Speciality _speciality1;
 		private Speciality _speciality2;
-		private Speciality _speciality3;
 		private Member _member1;
 		private Member _member2;
 		private HashSet<Member> _members;
@@ -85,13 +84,12 @@ namespace ExamBookTest.Services
 
 			_speciality1 = (await _specialityService.AddSpecialityAsync(_space, "Speciality1", _adminUser)).Item;
 			_speciality2 = (await _specialityService.AddSpecialityAsync(_space, "Speciality2", _adminUser)).Item;
-			_speciality3 = (await _specialityService.AddSpecialityAsync(_space, "Speciality3", _adminUser)).Item;
 
 			var user1 = await userService.AddUserAsync(ServiceExtensions.UserAddModel1);
 			var user2 = await userService.AddUserAsync(ServiceExtensions.UserAddModel2);
 			_member1 = await _memberService.GetOrAddAsync(_space, user1.Id, _adminUser);
 			_member2 = await _memberService.GetOrAddAsync(_space, user2.Id, _adminUser);
-			_members = new HashSet<Member>() {_member1, _member2};
+			_members = new HashSet<Member> {_member1, _member2};
 			var courseResult = await _courseService.AddCourseAsync(_space, new CourseAddModel()
 			{
 				Code = "125",
