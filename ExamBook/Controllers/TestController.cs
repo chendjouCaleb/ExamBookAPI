@@ -11,6 +11,7 @@ using ExamBook.Services;
 using ExamBook.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Traceability.Models;
 
 namespace ExamBook.Controllers
 {
@@ -181,6 +182,19 @@ namespace ExamBook.Controllers
 			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
-		
+
+
+
+		[HttpPut("{testId}/name")]
+		public async Task<Event> ChangeNameAsync(ulong testId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			string name = body["name"];
+
+			return await _testService.ChangeNameAsync(test, name, user);
+		}
 	}
 }
