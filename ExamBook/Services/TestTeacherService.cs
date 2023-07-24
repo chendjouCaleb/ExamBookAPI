@@ -30,17 +30,17 @@ namespace ExamBook.Services
 			_eventService = eventService;
 		}
 
-		public async Task<TestTeacher> GetAsync(ulong courseTeacherId)
+		public async Task<TestTeacher> GetAsync(ulong testTeacherId)
 		{
 			var testTeacher = await _dbContext.TestTeachers
 				.Include(tt => tt.Test)
 				.Include(tt => tt.Member)
-				.Where(tt => tt.Id == courseTeacherId)
+				.Where(tt => tt.Id == testTeacherId)
 				.FirstOrDefaultAsync();
 
 			if (testTeacher == null)
 			{
-				throw new ElementNotFoundException("TestTeacherNotFoundById", courseTeacherId);
+				throw new ElementNotFoundException("TestTeacherNotFoundById", testTeacherId);
 			}
 
 			return testTeacher;
