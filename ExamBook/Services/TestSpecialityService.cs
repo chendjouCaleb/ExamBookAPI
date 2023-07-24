@@ -86,8 +86,6 @@ namespace ExamBook.Services
 			foreach (var examinationSpeciality in specialities)
 			{
 				var testSpeciality = await CreateSpeciality(test, examinationSpeciality);
-				testSpeciality.Publisher = await _publisherService.CreateAsync();
-				testSpeciality.PublisherId = testSpeciality.Publisher.Id;
 				testSpecialities.Add(testSpeciality);
 			}
 			var testPublisherIds = testSpecialities.Select(t => t.PublisherId).ToList();
@@ -140,8 +138,6 @@ namespace ExamBook.Services
 			foreach (var speciality in specialities)
 			{
 				var testSpeciality = await CreateSpeciality(test, speciality);
-				testSpeciality.Publisher = await _publisherService.CreateAsync();
-				testSpeciality.PublisherId = testSpeciality.Publisher.Id;
 				testSpecialities.Add(testSpeciality);
 			}
 			var testPublisherIds = testSpecialities.Select(t => t.PublisherId).ToList();
@@ -184,11 +180,15 @@ namespace ExamBook.Services
 				throw new DuplicateValueException("TestExaminationSpecialityExists", test, examinationSpeciality);
 			}
 
+			var publisher = _publisherService.Create();
+
 			return new TestSpeciality
 			{
 				Test = test,
 				ExaminationSpeciality = examinationSpeciality,
-				Speciality = examinationSpeciality.Speciality
+				Speciality = examinationSpeciality.Speciality,
+				Publisher = publisher,
+				PublisherId = publisher.Id
 			};
 		}
 		

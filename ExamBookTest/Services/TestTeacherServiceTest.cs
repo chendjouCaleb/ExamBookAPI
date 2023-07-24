@@ -89,7 +89,7 @@ namespace ExamBookTest.Services
 			};
 
 			_test = (await _testService.AddAsync(_examination, _course, _model, 
-				new List<ExaminationSpeciality>(),
+				new List<ExaminationSpeciality>(), new HashSet<Member>(),
 				_adminUser)).Item;
 		}
 

@@ -65,6 +65,23 @@ namespace ExamBook.Services
 			AssertHelper.NotNull(user, nameof(user));
 			AssertHelper.IsTrue(test.SpaceId == member.SpaceId);
 
+			var testTeacher = await CreateAsync(test, member);
+
+			await _dbContext.AddAsync(testTeacher);
+			await _dbContext.SaveChangesAsync();
+			await _publisherService.SaveAsync(testTeacher.Publisher!);
+			await _subjectService.SaveAsync(testTeacher.Subject);
+
+			var publisherId = new List<string> { testTeacher.Publisher!.Id, member.PublisherId };
+
+			publisherId.AddRange(test.GetPublisherIds());
+
+			var action = await _eventService.EmitAsync(publisherId, user.ActorId, "TEST_TEACHER_ADD", testTeacher);
+			return new ActionResultModel<TestTeacher>(testTeacher, action);
+		}
+
+		public async Task<TestTeacher> CreateAsync(Test test, Member member)
+		{
 			if (await ContainsAsync(test, member))
 			{
 				throw new DuplicateValueException("TestTeacherDuplicate", test, member);
@@ -81,23 +98,7 @@ namespace ExamBook.Services
 				Subject = subject,
 				SubjectId = subject.Id
 			};
-
-			await _dbContext.AddAsync(testTeacher);
-			await _dbContext.SaveChangesAsync();
-			await _publisherService.SaveAsync(publisher);
-			await _subjectService.SaveAsync(subject);
-
-			var publisherId = new List<string> { publisher.Id, member.PublisherId };
-
-			publisherId.AddRange(test.GetPublisherIds());
-
-			var action = await _eventService.EmitAsync(publisherId, user.ActorId, "TEST_TEACHER_ADD", testTeacher);
-			return new ActionResultModel<TestTeacher>(testTeacher, action);
-		}
-
-		public async Task<CourseTeacher> CreateAsync(Test test, Member member)
-		{
-			throw new NotImplementedException();
+			return testTeacher;
 		}
 
 		public async Task<Event> DeleteAsync(TestTeacher testTeacher, User adminUser)

@@ -111,7 +111,7 @@ namespace ExamBook.Controllers
 			var specialities = await _specialityService.ListAsync(specialityIds);
 			var members = await _memberService.ListAsync(memberIds);
 
-			var result = await _testService.AddAsync(space, model, specialities, user);
+			var result = await _testService.AddAsync(space, model, specialities, members, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 
@@ -121,6 +121,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddTestCourseAsync(
 			[FromQuery] ulong spaceId,
 			[FromQuery] ulong courseId,
+			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
 			AssertHelper.NotNull(model, nameof(model));
@@ -129,8 +130,9 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
 			var course = await _courseService.GetCourseAsync(courseId);
+			var members = await _memberService.ListAsync(memberIds);
 
-			var result = await _testService.AddAsync(space, course, model, user);
+			var result = await _testService.AddAsync(space, course, model, members, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -139,6 +141,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddTestExaminationAsync(
 			[FromQuery] ulong examinationId,
 			[FromQuery] HashSet<ulong> examinationSpecialityIds,
+			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
 			AssertHelper.NotNull(model, nameof(model));
@@ -149,8 +152,9 @@ namespace ExamBook.Controllers
 			var space = examination.Space;
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
+			var members = await _memberService.ListAsync(memberIds);
 
-			var result = await _testService.AddAsync(examination, model, examinationSpecialities, user);
+			var result = await _testService.AddAsync(examination, model, examinationSpecialities, members, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -160,6 +164,7 @@ namespace ExamBook.Controllers
 			[FromQuery] ulong examinationId,
 			[FromQuery] ulong courseId,
 			[FromQuery] HashSet<ulong> examinationSpecialityIds,
+			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
 			AssertHelper.NotNull(model, nameof(model));
@@ -171,8 +176,9 @@ namespace ExamBook.Controllers
 			var space = examination.Space;
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
+			var members = await _memberService.ListAsync(memberIds);
 
-			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, user);
+			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		

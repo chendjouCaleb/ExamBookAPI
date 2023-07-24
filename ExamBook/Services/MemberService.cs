@@ -71,12 +71,12 @@ namespace ExamBook.Services
             return null;
         }
         
-        public async Task<ICollection<Member>> ListAsync(HashSet<ulong> memberIds)
+        public async Task<HashSet<Member>> ListAsync(HashSet<ulong> memberIds)
         {
-            var members = await _dbContext.Set<Member>()
+            var members = (await _dbContext.Set<Member>()
                 .Where(m => memberIds.Contains(m.Id) &&  m.DeletedAt == null)
                 .Include(m=> m.Space)
-                .ToListAsync();
+                .ToListAsync()).ToHashSet();
 
             var notFounds = memberIds.TakeWhile(id => members.All(s => s.Id != id));
             if (!notFounds.Any())

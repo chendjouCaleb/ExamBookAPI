@@ -23,6 +23,8 @@ namespace ExamBook.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly PaperService _paperService;
         private readonly RoomService _roomService;
+        private readonly MemberService _memberService;
+        private readonly TestTeacherService _testTeacherService;
         private readonly TestSpecialityService _testSpecialityService;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
@@ -32,7 +34,10 @@ namespace ExamBook.Services
             PaperService paperService, 
             ILogger<TestService> logger, 
             EventService eventService, 
-            PublisherService publisherService, RoomService roomService, TestSpecialityService testSpecialityService)
+            PublisherService publisherService, 
+            RoomService roomService, 
+            TestSpecialityService testSpecialityService, 
+            MemberService memberService)
         {
             _dbContext = dbContext;
             _paperService = paperService;
@@ -41,6 +46,7 @@ namespace ExamBook.Services
             _publisherService = publisherService;
             _roomService = roomService;
             _testSpecialityService = testSpecialityService;
+            _memberService = memberService;
         }
         
         
@@ -61,14 +67,17 @@ namespace ExamBook.Services
             return test;
         }
 
-        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, ICollection<Speciality> specialities)
+        public async Task<Test> CreateTestAsync(Space space, TestAddModel model, 
+            ICollection<Speciality> specialities,
+            HashSet<Member> members)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(specialities, nameof(specialities));
             AssertHelper.NotNull(model, nameof(model));
 
             AssertHelper.IsTrue(specialities.All(s => s.SpaceId == space.Id), "Bad speciality space");
-
+            AssertHelper.IsTrue(members.All(m => m.SpaceId == space.Id), "Bad member space");
+    
             var specialized = specialities.Count > 0;
             var publisher = _publisherService.Create();
             var test = new Test
@@ -86,38 +95,44 @@ namespace ExamBook.Services
                 Publisher = publisher
             };
 
+            var testTeachers = new List<TestTeacher>();
+
+            foreach (var member in members)
+            {
+                testTeachers.Add(await _testTeacherService.CreateAsync(test, member));
+            }
+
             var testSpecialities = new List<TestSpeciality>();
             if (specialized)
             {
                 foreach (var speciality in specialities)
                 {
-                    var testSpeciality = await _testSpecialityService.CreateSpeciality(test, speciality);
-                    var testSpecialityPublisher = await _publisherService.CreateAsync();
-                    testSpeciality.Publisher = testSpecialityPublisher;
-                    testSpeciality.PublisherId = testSpecialityPublisher.Id;
-                    
-                    testSpecialities.Add(testSpeciality);
+                    testSpecialities.Add(await _testSpecialityService.CreateSpeciality(test, speciality));
                 }
             }
 
             test.TestSpecialities = testSpecialities;
+            test.TestTeachers = testTeachers;
 
             return test;
         }
 
-        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, ICollection<Speciality> specialities,
+        public async Task<ActionResultModel<Test>> AddAsync(Space space, TestAddModel model, 
+            ICollection<Speciality> specialities,
+            HashSet<Member> members,
             User user)
         {
 
-            var test = await CreateTestAsync(space, model, specialities);
+            var test = await CreateTestAsync(space, model, specialities, members);
             await _dbContext.AddAsync(test);
             await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = test.TestSpecialities
-                .Select(t => t.Publisher!)
-                .Append(test.Publisher!)
-                .ToList();
+            var publishers = ImmutableList.Create<Publisher>()
+                .AddRange(test.TestSpecialities.Select(ts => ts.Publisher!))
+                .AddRange(test.TestTeachers.Select(tt => tt.Publisher!))
+                .Add(test.Publisher!);
+               
 
             await _publisherService.SaveAllAsync(publishers);
 
@@ -133,7 +148,9 @@ namespace ExamBook.Services
         
 
         public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
-             TestAddModel model, User user)
+            TestAddModel model,
+            HashSet<Member> members,
+            User user)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(course, nameof(course));
@@ -145,9 +162,9 @@ namespace ExamBook.Services
                 .Where(cs => cs.CourseId == course.Id)
                 .ToListAsync();
             var specialities = courseSpecialities.Select(cs => cs.Speciality!).ToList();
+            
 
-
-            var test = await CreateTestAsync(space, model, specialities);
+            var test = await CreateTestAsync(space, model, specialities, members);
             test.Course = course;
             test.CourseId = course.Id;
 
@@ -162,9 +179,10 @@ namespace ExamBook.Services
             await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = test.TestSpecialities.Select(t => t.Publisher!)
-                .Append(test.Publisher!)
-                .ToList();
+            var publishers = ImmutableList.Create<Publisher>()
+                .AddRange(test.TestSpecialities.Select(ts => ts.Publisher!))
+                .AddRange(test.TestTeachers.Select(tt => tt.Publisher!))
+                .Add(test.Publisher!);
 
             await _publisherService.SaveAllAsync(publishers);
 
@@ -182,6 +200,7 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
             TestAddModel model, ICollection<ExaminationSpeciality> examinationSpecialities,
+            HashSet<Member> members,
             User user)
         {
             AssertHelper.NotNull(examination, nameof(examination));
@@ -193,7 +212,7 @@ namespace ExamBook.Services
 
             var space = examination.Space;
             var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
-            var test = await CreateTestAsync(space, model, specialities);
+            var test = await CreateTestAsync(space, model, specialities, members);
 
 
             test.Examination = examination;
@@ -204,17 +223,15 @@ namespace ExamBook.Services
 
                 testSpeciality.ExaminationSpeciality = examinationSpeciality;
             }
-            
-            
-            
+
             await _dbContext.AddAsync(test);
             await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = test.TestSpecialities
-                .Select(t => t.Publisher!)
-                .Append(test.Publisher!)
-                .ToList();
+            var publishers = ImmutableList.Create<Publisher>()
+                .AddRange(test.TestSpecialities.Select(ts => ts.Publisher!))
+                .AddRange(test.TestTeachers.Select(tt => tt.Publisher!))
+                .Add(test.Publisher!);
 
             await _publisherService.SaveAllAsync(publishers);
 
@@ -233,6 +250,7 @@ namespace ExamBook.Services
         
         public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
             Course course, TestAddModel model, ICollection<ExaminationSpeciality> examinationSpecialities,
+            HashSet<Member> members,
             User user)
         {
             AssertHelper.NotNull(examination, nameof(examination));
@@ -250,7 +268,7 @@ namespace ExamBook.Services
                 .Where(cs => cs.CourseId == course.Id)
                 .Where(cs => specialityIds.Contains(cs.SpecialityId))
                 .ToListAsync();
-            var test = await CreateTestAsync(space, model, specialities);
+            var test = await CreateTestAsync(space, model, specialities, members);
 
 
             test.Examination = examination;
@@ -272,10 +290,10 @@ namespace ExamBook.Services
             await _dbContext.AddRangeAsync(test.TestSpecialities);
             await _dbContext.SaveChangesAsync();
 
-            var publishers = test.TestSpecialities
-                .Select(t => t.Publisher!)
-                .Append(test.Publisher!)
-                .ToList();
+            var publishers = ImmutableList.Create<Publisher>()
+                .AddRange(test.TestSpecialities.Select(ts => ts.Publisher!))
+                .AddRange(test.TestTeachers.Select(tt => tt.Publisher!))
+                .Add(test.Publisher!);
 
             await _publisherService.SaveAllAsync(publishers);
 
