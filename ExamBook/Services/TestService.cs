@@ -254,6 +254,7 @@ namespace ExamBook.Services
 
 
             test.Examination = examination;
+            test.Course = course;
             foreach (var testSpeciality in test.TestSpecialities)
             {
                 var examinationSpeciality =
@@ -281,6 +282,7 @@ namespace ExamBook.Services
             var publisherIds = ImmutableList<string>.Empty
                 .Add(space.PublisherId)
                 .Add(examination.PublisherId)
+                .Add(course.PublisherId)
                 .AddRange(specialities.Select(r => r.PublisherId).ToList())
                 .AddRange(examinationSpecialities.Select(es => es.PublisherId))
                 .AddRange(courseSpecialities.Select(es => es.PublisherId))

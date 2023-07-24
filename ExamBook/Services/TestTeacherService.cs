@@ -9,6 +9,7 @@ using ExamBook.Models;
 using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
+using Traceability.Models;
 using Traceability.Services;
 
 namespace ExamBook.Services
@@ -51,7 +52,10 @@ namespace ExamBook.Services
 			AssertHelper.NotNull(member, nameof(member));
 
 			return await _dbContext.TestTeachers
-				.AnyAsync(tt => tt.TestId == test.Id && tt.MemberId == member.Id);
+				.Where(tt => tt.TestId == test.Id)
+				.Where(tt => tt.MemberId == member.Id)
+				.Where(tt => tt.DeletedAt == null)
+				.AnyAsync();
 		}
 
 		public async Task<ActionResultModel<TestTeacher>> AddAsync(Test test, Member member, User user)
@@ -63,7 +67,7 @@ namespace ExamBook.Services
 
 			if (await ContainsAsync(test, member))
 			{
-				throw new DuplicateValueException("DuplicateTestTeacher", test, member);
+				throw new DuplicateValueException("TestTeacherDuplicate", test, member);
 			}
 
 			var publisher = _publisherService.Create();
@@ -83,13 +87,9 @@ namespace ExamBook.Services
 			await _publisherService.SaveAsync(publisher);
 			await _subjectService.SaveAsync(subject);
 
-			var publisherId = new List<string> { test.Space.PublisherId, publisher.Id };
+			var publisherId = new List<string> { publisher.Id, member.PublisherId };
 
-			if (test.ExaminationId != null)
-			{
-				AssertHelper.NotNull(test.Examination, nameof(test.Examination));
-				publisherId.Add(test.Examination!.PublisherId);
-			}
+			publisherId.AddRange(test.GetPublisherIds());
 
 			var action = await _eventService.EmitAsync(publisherId, user.ActorId, "TEST_TEACHER_ADD", testTeacher);
 			return new ActionResultModel<TestTeacher>(testTeacher, action);
@@ -100,9 +100,27 @@ namespace ExamBook.Services
 			throw new NotImplementedException();
 		}
 
-		public async Task DeleteAsync(TestTeacher testTeacher)
+		public async Task<Event> DeleteAsync(TestTeacher testTeacher, User adminUser)
 		{
-			throw new NotImplementedException();	
+			AssertHelper.NotNull(testTeacher.Test.Space, nameof(testTeacher.Test.Space));
+			AssertHelper.NotNull(testTeacher.Member, nameof(testTeacher.Member));
+			testTeacher.Test.AssertRelationNotNull();
+			AssertHelper.NotNull(adminUser, nameof(adminUser));
+
+			if (testTeacher.IsDeleted)
+			{
+				throw new InvalidOperationException("Element already deleted");
+			}
+
+			testTeacher.DeletedAt = DateTime.UtcNow;
+			_dbContext.Update(testTeacher);
+			await _dbContext.SaveChangesAsync();
+
+			var publisherIds = new List<string> {testTeacher.PublisherId, testTeacher.Member.PublisherId};
+			publisherIds.AddRange(testTeacher.Test.GetPublisherIds());
+
+			var data = new {TestTeacherId = testTeacher.Id};
+			return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, "TEST_TEACHER_DELETE", data);
 		}
 	}
 }

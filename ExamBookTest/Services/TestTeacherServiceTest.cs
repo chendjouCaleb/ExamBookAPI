@@ -118,7 +118,7 @@ namespace ExamBookTest.Services
 				Radical = 30
 			};
 
-			_test = (await _testService.AddAsync(_examination, _model, new List<ExaminationSpeciality>() { },
+			_test = (await _testService.AddAsync(_examination, _course, _model, new List<ExaminationSpeciality>() { },
 				_adminUser)).Item;
 		}
 
@@ -162,6 +162,15 @@ namespace ExamBookTest.Services
 			Assert.False(result);
 		}
 
+		[Test]
+		public async Task Contains_OnDeletedItem_ShouldBeFalse()
+		{
+			var courseTeacher = (await _testTeacherService.AddAsync(_test, _member, _adminUser)).Item;
+			await _testTeacherService.DeleteAsync(courseTeacher, _adminUser);
+			
+			var result = await _testTeacherService.ContainsAsync(_test, _member);
+			Assert.False(result);
+		}
 		
 
 		[Test]
@@ -180,9 +189,49 @@ namespace ExamBookTest.Services
 			await assertions.HasActorIdAsync(_adminUser.ActorId);
 			await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
 			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasPublisherIdAsync(_member.PublisherId);
 			await assertions.HasPublisherIdAsync(_examination.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
 			assertions.HasName("TEST_TEACHER_ADD");
 			assertions.HasData(testTeacher);
+		}
+
+
+		[Test]
+		public async Task TryAdd_Twice_ShouldThrow()
+		{
+			await _testTeacherService.AddAsync(_test, _member, _adminUser);
+			var ex = Assert.ThrowsAsync<DuplicateValueException>(async () =>
+			{
+				await _testTeacherService.AddAsync(_test, _member, _adminUser);
+			});
+
+			Assert.AreEqual("TestTeacherDuplicate", ex!.Code);
+			Assert.AreEqual(_test, ex.Params[0]);
+			Assert.AreEqual(_member, ex.Params[1]);
+		}
+
+		[Test]
+		public async Task DeleteAsync()
+		{
+			var testTeacher = (await _testTeacherService.AddAsync(_test, _member, _adminUser)).Item;
+
+			var action = await _testTeacherService.DeleteAsync(testTeacher, _adminUser);
+			await _dbContext.Entry(testTeacher).ReloadAsync();
+			
+			Assert.NotNull(testTeacher.DeletedAt);
+			Assert.That(testTeacher.DeletedAt, Is.EqualTo(DateTime.UtcNow).Within(50).Milliseconds);
+
+			var assertions = _eventAssertionsBuilder.Build(action);
+
+			assertions.HasName("TEST_TEACHER_DELETE");
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasPublisherIdAsync(_examination.PublisherId);
+			await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
+			await assertions.HasPublisherIdAsync(_member.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			assertions.HasData(new {TestTeacherId = testTeacher.Id});
 
 		}
 	}

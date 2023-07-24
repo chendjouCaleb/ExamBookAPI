@@ -38,5 +38,33 @@ namespace ExamBook.Entities
         
         public List<TestSpeciality> TestSpecialities { get; set; }
         public List<TestTeacher> TestTeachers { get; set; } = new();
+
+        public void AssertRelationNotNull()
+        {
+            if (ExaminationId != null && Examination == null)
+            {
+                throw new ArgumentNullException(nameof(Examination));
+            }
+
+            if (CourseId != null && Course == null)
+            {
+                throw new ArgumentNullException(nameof(Course));
+            }
+        }
+        public List<string> GetPublisherIds()
+        {
+            var publisherIds = new List<string> { PublisherId, Space.PublisherId };
+            if (Examination != null)
+            {
+                publisherIds.Add(Examination.PublisherId);
+            }
+
+            if (Course != null)
+            {
+                publisherIds.Add(Course.PublisherId);
+            }
+
+            return publisherIds;
+        }
     }
 }
