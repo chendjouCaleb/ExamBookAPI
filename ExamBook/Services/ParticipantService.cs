@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -11,7 +13,6 @@ using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Traceability.Models;
 using Traceability.Services;
 
 namespace ExamBook.Services
@@ -20,18 +21,20 @@ namespace ExamBook.Services
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly PublisherService _publisherService;
+        private readonly ParticipantSpecialityService _participantSpecialityService;
         private readonly EventService _eventService;
         private readonly ILogger<ParticipantService> _logger;
 
         public ParticipantService(ApplicationDbContext dbContext, 
             PublisherService publisherService, 
             EventService eventService, 
-            ILogger<ParticipantService> logger)
+            ILogger<ParticipantService> logger, ParticipantSpecialityService participantSpecialityService)
         {
             _dbContext = dbContext;
             _publisherService = publisherService;
             _eventService = eventService;
             _logger = logger;
+            _participantSpecialityService = participantSpecialityService;
         }
 
         public async Task<Participant> GetByIdAsync(ulong participantId)
@@ -74,79 +77,105 @@ namespace ExamBook.Services
                 .AnyAsync();
         }
 
-        public async Task<Participant> CreateAsync(Examination examination, List<ExaminationSpeciality> specialities)
+        public async Task<HashSet<Participant>> ContainsAsync(Examination examination, HashSet<Student> students)
         {
             AssertHelper.NotNull(examination, nameof(examination));
-            AssertHelper.NotNull(specialities, nameof(specialities));
-            
-            AssertHelper.IsTrue(specialities.TrueForAll(s => s.ExaminationId == examination.Id));
+            AssertHelper.NotNull(students, nameof(students));
 
+            var studentIds = students.Select(s => s.Id);
+            var participants = await _dbContext.Set<Participant>()
+                .Where(p => p.ExaminationId == examination.Id)
+                .Where(p => studentIds.Contains(p.StudentId ?? 0))
+                .ToListAsync();
+            return participants.ToHashSet();
+        }
+
+
+        public async Task<ActionResultModel<HashSet<Participant>>> AddAsync(Examination examination,
+            HashSet<Student> students, User adminUser)
+        {
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(students, nameof(students));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            var examinationSpecialities = await _dbContext.ExaminationSpecialities
+                .Include(es => es.Speciality!.Space)
+                .Include(es => es.Examination)
+                .Where(es => es.ExaminationId == examination.Id)
+                .ToListAsync();
+
+            var duplicates = await ContainsAsync(examination, students);
+            if (duplicates.Any())
+            {
+                throw new DuplicateValueException("StudentsAlreadyParticipant", duplicates);
+            }
+
+            var participants = new HashSet<Participant>();
+            foreach (var student in students)
+            {
+                AssertHelper.NotNull(student.Specialities, nameof(student.Specialities));
+                var specialityIds = student.Specialities.Select(s => s.SpecialityId).ToHashSet();
+                var specialities = examinationSpecialities
+                    .Where(es => specialityIds.Contains(es.SpecialityId ?? 0))
+                    .ToHashSet();
+
+                var participant =  Create(examination, specialities);
+                participant.Student = student;
+                foreach (var participantSpeciality in participant.ParticipantSpecialities)
+                {
+                    participantSpeciality.StudentSpeciality = student.Specialities
+                        .Where(s => s.Id == participantSpeciality.ExaminationSpeciality.SpecialityId)
+                        .First();
+                }
+                
+                participants.Add(participant);
+            }
+
+            var publishers = participants.Select(p => p.Publisher!).ToList();
+
+            await _dbContext.AddRangeAsync(participants);
+            await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = ImmutableList.Create<string>()
+                .AddRange(publishers.Select(p => p.Id))
+                .AddRange(students.Select(p => p.PublisherId))
+                .AddRange(new[] {examination.Space.PublisherId, examination.PublisherId});
+            var eventData = participants.Select(p => p.Id);
+
+            var action = await _eventService.EmitAsync(publisherIds, adminUser.ActorId, "PARTICIPANTS_ADD", eventData);
+
+            return new ActionResultModel<HashSet<Participant>>(participants, action);
+        }
+
+        public Participant Create(Examination examination, HashSet<ExaminationSpeciality> examinationSpecialities)
+        {
+            AssertHelper.NotNull(examination, nameof(examination));
+            AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
+            
+            AssertHelper.IsTrue(examinationSpecialities.All(s => s.ExaminationId == examination.Id));
+
+            var publisher = _publisherService.Create();
             Participant participant = new()
             {
                 Examination = examination,
                 ExaminationId = examination.Id,
-                PublisherId = (await _publisherService.CreateAsync()).Id,
+                PublisherId = publisher.Id,
+                Publisher = publisher
             };
-            participant.ParticipantSpecialities = specialities
-                .Select(s => CreateSpeciality(participant, s))
-                .ToList();
+
+            var participantSpecialities = new List<ParticipantSpeciality>();
+            foreach (var examinationSpeciality in examinationSpecialities)
+            {
+                var participantSpeciality = _participantSpecialityService.Create(participant, examinationSpeciality);
+                participantSpecialities.Add(participantSpeciality);
+            }
+
+            participant.ParticipantSpecialities = participantSpecialities;
 
             return participant;
         }
 
-        public async Task<ParticipantSpeciality> AddSpecialityAsync(Participant participant,
-            ExaminationSpeciality examinationSpeciality)
-        {
-            var participantSpeciality = await _AddSpecialityAsync(participant, examinationSpeciality);
-            await _dbContext.AddAsync(participantSpeciality);
-            await _dbContext.SaveChangesAsync();
-            return participantSpeciality;
-        }
-
-     
-        private ParticipantSpeciality CreateSpeciality(Participant participant,
-            ExaminationSpeciality examinationSpeciality)
-        {
-            AssertHelper.NotNull(participant, nameof(participant));
-            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            AssertHelper.NotNull(examinationSpeciality.Examination, nameof(examinationSpeciality.Examination));
-
-            AssertHelper.IsTrue(participant.ExaminationId == examinationSpeciality.ExaminationId);
-
-            ParticipantSpeciality participantSpeciality = new()
-            {
-                Participant = participant,
-                ExaminationSpeciality = examinationSpeciality
-            };
-            return participantSpeciality;
-        }
-
         
-        private async Task<ParticipantSpeciality> _AddSpecialityAsync(
-            Participant participant,
-            ExaminationSpeciality examinationSpeciality)
-        {
-            AssertHelper.NotNull(participant, nameof(participant));
-            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            AssertHelper.NotNull(examinationSpeciality.Examination, nameof(examinationSpeciality.Examination));
-
-            if (examinationSpeciality.ExaminationId != participant.ExaminationId)
-            {
-                throw new InvalidOperationException("Incompatible entities.");
-            }
-
-            if (await SpecialityContainsAsync(examinationSpeciality, participant))
-            {
-                ParticipantHelper.ThrowDuplicateParticipantSpeciality(examinationSpeciality, participant);
-            }
-
-            ParticipantSpeciality participantSpeciality = new()
-            {
-                Participant = participant,
-                ExaminationSpeciality = examinationSpeciality
-            };
-            return participantSpeciality;
-        }
 
 
         public async Task<bool> ContainsAsync(Examination examination, string code)
@@ -160,26 +189,7 @@ namespace ExamBook.Services
         }
         
         
-        public async Task<bool> SpecialityContainsAsync(ExaminationSpeciality examinationSpeciality, string code)
-        {
-            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            AssertHelper.NotNullOrWhiteSpace(code, nameof(code));
-
-            string normalized = code.Normalize().ToUpper();
-            return await _dbContext.Set<ParticipantSpeciality>()
-                .AnyAsync(p => examinationSpeciality.Equals(p.ExaminationSpeciality) 
-                               && p.Participant.Code == normalized);
-        }
         
-        public async Task<bool> SpecialityContainsAsync(ExaminationSpeciality examinationSpeciality, Participant participant)
-        {
-            AssertHelper.NotNull(examinationSpeciality, nameof(examinationSpeciality));
-            AssertHelper.NotNull(participant, nameof(participant));
-            
-            return await _dbContext.Set<ParticipantSpeciality>()
-                .AnyAsync(p => examinationSpeciality.Equals(p.ExaminationSpeciality) 
-                               && participant.Equals(p.ParticipantId));
-        }
 
         public async Task<Participant?> FindAsync(Examination examination, string code)
         {
@@ -196,14 +206,6 @@ namespace ExamBook.Services
             }
 
             return participant;
-        }
-
-        
-        public async Task DeleteSpeciality(ParticipantSpeciality participantSpeciality)
-        {
-            AssertHelper.NotNull(participantSpeciality, nameof(participantSpeciality));
-            _dbContext.Remove(participantSpeciality);
-            await _dbContext.SaveChangesAsync();
         }
 
 

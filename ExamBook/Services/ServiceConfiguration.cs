@@ -16,7 +16,10 @@ namespace ExamBook.Services
             collection.AddTransient<ExaminationService>();
             collection.AddTransient<MemberService>();
             collection.AddTransient<PaperService>();
+            
             collection.AddTransient<ParticipantService>();
+            collection.AddTransient<ParticipantSpecialityService>();
+            
             collection.AddTransient<RoomService>();
             collection.AddTransient<SpaceService>();
             collection.AddTransient<SpecialityService>();

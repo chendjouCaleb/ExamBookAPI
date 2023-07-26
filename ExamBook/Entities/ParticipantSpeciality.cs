@@ -7,5 +7,9 @@
 
         public ExaminationSpeciality ExaminationSpeciality { get; set; } = null!;
         public ulong ExaminationSpecialityId { get; set; }
+
+
+        public StudentSpeciality? StudentSpeciality { get; set; }
+        public ulong? StudentSpecialityId { get; set; }
     }
 }
