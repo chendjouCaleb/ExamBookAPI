@@ -85,7 +85,7 @@ namespace ExamBook.Services
             }
 
             var specialities = await _dbContext.Set<Speciality>()
-                .Where(s => model.SpecialitiyIds.Contains(s.Id))
+                .Where(s => model.SpecialityIds.Contains(s.Id))
                 .ToListAsync();
 
             var publisher = _publisherService.Create();

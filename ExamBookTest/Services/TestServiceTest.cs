@@ -102,7 +102,7 @@ namespace ExamBookTest.Services
 			_examination = (await _examinationService.AddAsync(_space, new ExaminationAddModel()
 			{
 				Name = "Exam name",
-				SpecialitiyIds = new HashSet<ulong>() {_speciality1.Id, _speciality2.Id}
+				SpecialityIds = new HashSet<ulong>() {_speciality1.Id, _speciality2.Id}
 			}, _adminUser)).Item;
 			
 			_model = new TestAddModel

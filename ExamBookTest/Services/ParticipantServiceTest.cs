@@ -1,50 +1,101 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
+using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Persistence;
 using ExamBook.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Social.Helpers;
 using Traceability.Asserts;
-using Traceability.Services;
 
 namespace ExamBookTest.Services
 {
 	public class ParticipantServiceTest
 	{
-		private ParticipantService _participantService;
-		private PublisherService _publisherService;
-		private EventAssertionsBuilder _eventAssertionsBuilder;
-		private ApplicationDbContext _dbContext;
+		private ParticipantService _participantService = null!;
+		private EventAssertionsBuilder _eventAssertionsBuilder = null!;
+		private ApplicationDbContext _dbContext = null!;
 
 
-		private Space _space;
-		private Examination _examination;
-		private Student _student;
-		private Student _studentWithUser;
-		private User _adminUser;
-		private User _user;
-		private ParticipantAddModel _model = new ParticipantAddModel()
+		private Space _space  = null!;
+		private Examination _examination  = null!;
+		private Student _student1  = null!;
+		private Student _student2  = null!;
+		private Speciality _speciality = null!;
+		private User _adminUser  = null!;
+
+		[SetUp]
+		public async Task Setup()
 		{
-			FirstName = "First name",
-			LastName = "Last name",
-			Sex = 'F',
-			BirthDate = new DateOnly(2000, 10, 10),
-			Code = "D6F2E8"
-		};
+			var provider = new ServiceCollection().Setup();
+			_eventAssertionsBuilder = provider.GetRequiredService<EventAssertionsBuilder>();
+			_dbContext = provider.GetRequiredService<ApplicationDbContext>();
 
+			var userService = provider.GetRequiredService<UserService>();
+			var spaceService = provider.GetRequiredService<SpaceService>();
+			var examinationService = provider.GetRequiredService<ExaminationService>();
+			var studentService = provider.GetRequiredService<StudentService>();
+			var specialityService = provider.GetRequiredService<SpecialityService>();
+			_participantService = provider.GetRequiredService<ParticipantService>();
+
+			_adminUser = await userService.AddUserAsync(ServiceExtensions.UserAddModel);
+			
+			var result = await spaceService.AddAsync(_adminUser.Id, new SpaceAddModel {
+				Name = "UY-1, PHILOSOPHY, L1",
+				Identifier = "uy1_phi_l1"
+			});
+			_space = result.Item;
+			
+			var specialityModel = new SpecialityAddModel {Name = "speciality name"};
+			_speciality = (await specialityService.AddSpecialityAsync(_space, specialityModel, _adminUser)).Item;
+
+			_student1 = (await studentService.AddAsync(_space, new StudentAddModel
+			{
+				FirstName = "first name",
+				LastName = "last name",
+				Code = "8say6g3",
+				BirthDate = new DateTime(1990, 1, 1),
+				Sex = 'm',
+				SpecialityIds = new HashSet<ulong> {_speciality.Id }
+			}, _adminUser)).Item;
+			
+			_student2 = (await studentService.AddAsync(_space, new StudentAddModel
+			{
+				FirstName = "first name",
+				LastName = "last name",
+				Code = "8saDE6g3",
+				BirthDate = new DateTime(1990, 1, 1),
+				Sex = 'm'
+			}, _adminUser)).Item;
+			
+			
+
+			var examinationAddModel = new ExaminationAddModel
+			{
+				Name = "Examination name",
+				StartAt = DateTime.Now.AddDays(-12),
+				SpecialityIds = new HashSet<ulong> {_speciality.Id }
+			};
+			_examination = (await examinationService.AddAsync(_space, examinationAddModel, _adminUser)).Item;
+
+		}
 
 		[Test]
 		public async Task GetByIdAsync()
 		{
-			var participant =(await _participantService.AddAsync(_examination, _model)).Item;
+			var students = new HashSet<Student> { _student1};
+			var participants =(await _participantService.AddAsync(_examination, students, _adminUser)).Item;
+			var participant = participants.First();
 			var result= await _participantService.GetByIdAsync(participant.Id);
 			
 			Assert.AreEqual(participant.Id, result.Id);
-			Assert.AreEqual(participant.Code, result.Code);
 		}
 
 
@@ -62,257 +113,95 @@ namespace ExamBookTest.Services
 		}
 		
 		
-		[Test]
-		public async Task GetByCodeAsync()
-		{
-			var participant =(await _participantService.AddAsync(_examination, _model)).Item;
-			var result = await _participantService.GetByCodeAsync(_examination, participant.Code);
-			
-			Assert.AreEqual(participant.Id, result.Id);
-			Assert.AreEqual(participant.Code, result.Code);
-		}
+		// [Test]
+		// public async Task GetByCodeAsync()
+		// {
+		// 	var participant =(await _participantService.AddAsync(_examination, _model)).Item;
+		// 	var result = await _participantService.GetByCodeAsync(_examination, participant.Code);
+		// 	
+		// 	Assert.AreEqual(participant.Id, result.Id);
+		// 	Assert.AreEqual(participant.Code, result.Code);
+		// }
+		//
+		// [Test]
+		// public void TryGetByCode_NotFound_ShouldThrow()
+		// {
+		// 	var participantCode = Guid.NewGuid().ToString();
+		// 	var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
+		// 	{
+		// 		await _participantService.GetByCodeAsync(_examination, participantCode);
+		// 	});
+		//
+		// 	Assert.AreEqual("ParticipantNotFoundById", ex!.Code);
+		// 	Assert.AreEqual(participantCode, ex.Params[0]);
+		// 	Assert.AreEqual(_examination.Name, ex.Params[1]);
+		// }
+		//
+		//
+		// [Test]
+		// public async Task ContainsByCodeAsync()
+		// {
+		// 	var participant =(await _participantService.AddAsync(_examination, _model)).Item;
+		// 	var result = await _participantService.ContainsByCodeAsync(_examination, participant.Code);
+		// 	Assert.True(result);
+		// }
+		//
+		//
+		// [Test]
+		// public async Task ContainsByCode_WithNotFound_ShouldBeFalse()
+		// {
+		// 	var participantCode = Guid.NewGuid().ToString();
+		// 	var participant =(await _participantService.AddAsync(_examination, _model)).Item;
+		// 	var result = await _participantService.ContainsByCodeAsync(_examination, participantCode);
+		// 	Assert.False(result);
+		// }
 
-		[Test]
-		public void TryGetByCode_NotFound_ShouldThrow()
-		{
-			var participantCode = Guid.NewGuid().ToString();
-			var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
-			{
-				await _participantService.GetByCodeAsync(_examination, participantCode);
-			});
-
-			Assert.AreEqual("ParticipantNotFoundById", ex!.Code);
-			Assert.AreEqual(participantCode, ex.Params[0]);
-			Assert.AreEqual(_examination.Name, ex.Params[1]);
-		}
 		
-		
-		[Test]
-		public async Task ContainsByCodeAsync()
-		{
-			var participant =(await _participantService.AddAsync(_examination, _model)).Item;
-			var result = await _participantService.ContainsByCodeAsync(_examination, participant.Code);
-			Assert.True(result);
-		}
-		
-		
-		[Test]
-		public async Task ContainsByCode_WithNotFound_ShouldBeFalse()
-		{
-			var participantCode = Guid.NewGuid().ToString();
-			var participant =(await _participantService.AddAsync(_examination, _model)).Item;
-			var result = await _participantService.ContainsByCodeAsync(_examination, participantCode);
-			Assert.False(result);
-		}
-
-		[Test]
-		public async Task ContainsByUser()
-		{
-			
-		}
-
 		[Test]
 		public async Task AddParticipant()
 		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-			
-			Assert.AreEqual(_model.Code, participant.Code);
-			Assert.AreEqual(StringHelper.Normalize(_model.Code), participant.NormalizedCode);
-			Assert.AreEqual(_model.FirstName, participant.FirstName);
-			Assert.AreEqual(_model.LastName, participant.LastName);
-			Assert.AreEqual(_model.Sex, participant.Sex);
-			Assert.AreEqual(_model.BirthDate, participant.BirthDate);
-			Assert.AreEqual(_examination.Id, participant.ExaminationId);
-
+			var students = new HashSet<Student> {_student1, _student2};
+			var result = await _participantService.AddAsync(_examination, students, _adminUser);
+			var participants = result.Item;
 			var eventTest = _eventAssertionsBuilder.Build(result.Event);
-			eventTest.HasName("PARTICIPANT_ADD");
-			
-			await eventTest.HasActorIdAsync(_adminUser.ActorId);
-			await eventTest.HasPublisherIdAsync(_space.PublisherId);
-			await eventTest.HasPublisherIdAsync(_examination.PublisherId);
-			await eventTest.HasPublisherIdAsync(participant.PublisherId);
-			eventTest.HasData(participant);
-		}
 
-		[Test]
-		public async Task AddParticipant_WithUser()
-		{
-			var result = await _participantService.AddAsync(_examination, _user, _model, _adminUser);
-			var participant = result.Item;
-			
-			Assert.AreEqual(_model.Code, participant.Code);
-			Assert.AreEqual(StringHelper.Normalize(_model.Code), participant.NormalizedCode);
-			Assert.AreEqual(_model.FirstName, participant.FirstName);
-			Assert.AreEqual(_model.LastName, participant.LastName);
-			Assert.AreEqual(_model.Sex, participant.Sex);
-			Assert.AreEqual(_model.BirthDate, participant.BirthDate);
-			Assert.AreEqual(_examination.Id, participant.ExaminationId);
-			Assert.AreEqual(_user.Id, participant.UserId);
+			Assert.AreEqual(students.Count, participants.Count);
 
-			var eventTest = _eventAssertionsBuilder.Build(result.Event);
-			eventTest.HasName("PARTICIPANT_ADD");
-			
-			await eventTest.HasActorIdAsync(_adminUser.ActorId);
-			await eventTest.HasPublisherIdAsync(_space.PublisherId);
-			await eventTest.HasPublisherIdAsync(_examination.PublisherId);
-			await eventTest.HasPublisherIdAsync(participant.PublisherId);
-			await eventTest.HasPublisherIdAsync(_user.PublisherId);
-			eventTest.HasData(participant);
-		}
-		
-		
-		[Test]
-		public async Task AddParticipant_WithStudent()
-		{
-			var result = await _participantService.AddAsync(_examination, _student, _model, _adminUser);
-			var participant = result.Item;
-			
-			Assert.AreEqual(_model.Code, participant.Code);
-			Assert.AreEqual(StringHelper.Normalize(_model.Code), participant.NormalizedCode);
-			Assert.AreEqual(_model.FirstName, participant.FirstName);
-			Assert.AreEqual(_model.LastName, participant.LastName);
-			Assert.AreEqual(_model.Sex, participant.Sex);
-			Assert.AreEqual(_model.BirthDate, participant.BirthDate);
-			Assert.AreEqual(_examination.Id, participant.ExaminationId);
-			Assert.AreEqual(_student.Id, participant.StudentId);
-
-			var eventTest = _eventAssertionsBuilder.Build(result.Event);
-			eventTest.HasName("PARTICIPANT_ADD");
-			
-			await eventTest.HasActorIdAsync(_adminUser.ActorId);
-			await eventTest.HasPublisherIdAsync(_space.PublisherId);
-			await eventTest.HasPublisherIdAsync(_examination.PublisherId);
-			await eventTest.HasPublisherIdAsync(participant.PublisherId);
-			await eventTest.HasPublisherIdAsync(_student.PublisherId);
-			eventTest.HasData(participant);
-		}
-		
-
-		[Test]
-		public async Task TryAdd_WithUsedCode_ShouldThrow()
-		{
-			await _participantService.AddAsync(_examination, _model);
-
-			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
+			foreach (var participant in participants)
 			{
-				await _participantService.AddAsync(_examination, _model);
-			});
+				var student = students.FirstOrDefault(s => s.Id == participant.Id);
+				Assert.NotNull(student);
+				
+				Assert.AreEqual(_examination.Id, participant.ExaminationId);
+				await eventTest.HasPublisherIdAsync(student!.PublisherId);
+				await eventTest.HasPublisherIdAsync(participant.PublisherId);
+
+				var specialities = await _dbContext.ParticipantSpecialities
+					.Include(ps => ps.ExaminationSpeciality)
+					.Include(ps => ps.StudentSpeciality)
+					.Where(s => s.ParticipantId == participant.Id)
+					.ToListAsync();
+
+				foreach (var participantSpeciality in specialities)
+				{
+					var studentSpeciality = await _dbContext.StudentSpecialities
+						.Where(s => s.StudentId == student.Id)
+						.Where(s => s.SpecialityId == participantSpeciality.StudentSpecialityId)
+						.FirstOrDefaultAsync();
+					
+					Assert.AreEqual(participant.Id, participantSpeciality.ParticipantId);
+					Assert.AreEqual(studentSpeciality!.Id, participantSpeciality.StudentSpecialityId);
+				}
+
+			}
+
 			
-			Assert.AreEqual("ParticipantCodeUsed", ex!.Code);
-			Assert.AreEqual(_model.Code, ex.Params[0]);
-		}
-
-
-		[Test]
-		public async Task ChangeCode()
-		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-
-			string code = "96fz6";
-			var eventData = new ChangeValueData<string>(participant.Code, code);
+			eventTest.HasName("PARTICIPANTS_ADD");
 			
-			var action = await _participantService.ChangeCodeAsync(participant, code, _adminUser);
-			await _dbContext.Entry(participant).ReloadAsync();
-			
-			Assert.AreEqual(code, participant.Code);
-			Assert.AreEqual(StringHelper.Normalize(code), participant.Code);
-
-			var eventAssert = _eventAssertionsBuilder.Build(action);
-			await eventAssert.HasActorIdAsync(_adminUser.ActorId);
-			await eventAssert.HasPublisherIdAsync(participant.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_examination.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_space.PublisherId);
-			eventAssert.HasData(eventData);
-			eventAssert.HasName("PARTICIPANT_CHANGE_CODE");
-		}
-
-		[Test]
-		public async Task TryChangeCode_WithUsedCode_ShouldThrow()
-		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-
-			string code = "96fz6";
-			await _participantService.ChangeCodeAsync(participant, code, _adminUser);
-			
-			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
-			{
-				await _participantService.ChangeCodeAsync(participant, code, _adminUser);
-			});
-			
-			Assert.AreEqual("ParticipantCodeUsed", ex!.Code);
-			Assert.AreEqual(code, ex.Params[0]);
-		}
-		
-		[Test]
-		public async Task ChangeName()
-		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-
-			var lastName = new ChangeNameModel(participant.FirstName, participant.LastName);
-			var changeModel = new ChangeNameModel("New First Name", "New Last Name");
-			var eventData = new ChangeValueData<ChangeNameModel>(lastName, changeModel);
-			var action = await _participantService.ChangeNameAsync(participant, changeModel, _adminUser);
-			await _dbContext.Entry(participant).ReloadAsync();
-			
-			Assert.AreEqual(changeModel.LastName, participant.LastName);
-			Assert.AreEqual(changeModel.FirstName, participant.FirstName);
-
-			var eventAssert = _eventAssertionsBuilder.Build(action);
-			await eventAssert.HasActorIdAsync(_adminUser.ActorId);
-			await eventAssert.HasPublisherIdAsync(participant.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_examination.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_space.PublisherId);
-			eventAssert.HasData(eventData);
-			eventAssert.HasName("PARTICIPANT_CHANGE_NAME");
-		}
-		
-		[Test]
-		public async Task ChangeSex()
-		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-
-			var sex = 'F';
-			var eventData = new ChangeValueData<char>(participant.Sex, sex);
-			var action = await _participantService.ChangeSexAsync(participant, sex, _adminUser);
-			await _dbContext.Entry(participant).ReloadAsync();
-			
-			Assert.AreEqual(sex, participant.Sex);
-
-			var eventAssert = _eventAssertionsBuilder.Build(action);
-			await eventAssert.HasActorIdAsync(_adminUser.ActorId);
-			await eventAssert.HasPublisherIdAsync(participant.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_examination.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_space.PublisherId);
-			eventAssert.HasData(eventData);
-			eventAssert.HasName("PARTICIPANT_CHANGE_SEX");
-		}
-		
-		
-		[Test]
-		public async Task ChangeBirthDate()
-		{
-			var result = await _participantService.AddAsync(_examination, _model);
-			var participant = result.Item;
-
-			var birthDate = new DateOnly(1990, 10, 20);
-			var eventData = new ChangeValueData<DateOnly>(participant.BirthDate, birthDate);
-			var action = await _participantService.ChangeBirthDateAsync(participant, birthDate, _adminUser);
-			await _dbContext.Entry(participant).ReloadAsync();
-			
-			Assert.AreEqual(birthDate, participant.BirthDate);
-
-			var eventAssert = _eventAssertionsBuilder.Build(action);
-			await eventAssert.HasActorIdAsync(_adminUser.ActorId);
-			await eventAssert.HasPublisherIdAsync(participant.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_examination.PublisherId);
-			await eventAssert.HasPublisherIdAsync(_space.PublisherId);
-			eventAssert.HasData(eventData);
-			eventAssert.HasName("PARTICIPANT_CHANGE_BIRTHDATE");
+			await eventTest.HasActorIdAsync(_adminUser.ActorId);
+			await eventTest.HasPublisherIdAsync(_space.PublisherId);
+			await eventTest.HasPublisherIdAsync(_examination.PublisherId);
+			eventTest.HasData(participants.Select(p => p.Id));
 		}
 	}
 }

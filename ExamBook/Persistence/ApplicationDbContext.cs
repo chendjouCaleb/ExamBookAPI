@@ -17,7 +17,8 @@ namespace ExamBook.Persistence
         public DbSet<CourseTeacher> CourseTeachers { get; set; }
         public DbSet<Speciality> Specialities { get; set; }
         public DbSet<Student> Students { get; set; }
-        
+        public DbSet<StudentSpeciality> StudentSpecialities => Set<StudentSpeciality>();
+
         public DbSet<Examination> Examinations { get; set; } = null!;
         public DbSet<ExaminationSpeciality> ExaminationSpecialities { get; set; }
         

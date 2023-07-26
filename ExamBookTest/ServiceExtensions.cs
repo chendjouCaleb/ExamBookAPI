@@ -122,6 +122,7 @@ namespace ExamBookTest
                 .AddTransient<ExaminationService>()
                 .AddTransient<ExaminationSpecialityService>()
                 .AddTransient<ParticipantService>()
+                .AddTransient<ParticipantSpecialityService>()
                 
                 .AddTransient<TestService>()
                 .AddTransient<TestTeacherService>()

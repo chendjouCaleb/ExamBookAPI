@@ -76,7 +76,7 @@ namespace ExamBookTest.Services
 			_examination = (await _examinationService.AddAsync(_space, new ExaminationAddModel()
 			{
 				Name = "Exam name",
-				SpecialitiyIds = new HashSet<ulong>()
+				SpecialityIds = new HashSet<ulong>()
 			}, _adminUser)).Item;
 			
 			_model = new TestAddModel
