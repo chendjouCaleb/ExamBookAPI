@@ -198,6 +198,20 @@ namespace ExamBook.Controllers
 			return await _testService.ChangeNameAsync(test, name, user);
 		}
 		
+		[HttpPut("{testId}/coefficient")]
+		public async Task<Event> ChangeCoefficientAsync(ulong testId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			string coefficientStr = body["coefficient"];
+
+			uint coefficient = uint.Parse(coefficientStr);
+
+			return await _testService.ChangeCoefficientAsync(test, coefficient, user);
+		}
+		
 		[HttpPut("{testId}/duration")]
 		public async Task<Event> ChangeDurationAsync(ulong testId, [FromBody] IDictionary<string, string> body)
 		{
