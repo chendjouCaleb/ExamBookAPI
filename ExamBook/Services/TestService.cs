@@ -23,7 +23,7 @@ namespace ExamBook.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly PaperService _paperService;
         private readonly RoomService _roomService;
-        private readonly MemberService _memberService;
+      
         private readonly TestTeacherService _testTeacherService;
         private readonly TestSpecialityService _testSpecialityService;
         private readonly PublisherService _publisherService;
@@ -37,7 +37,7 @@ namespace ExamBook.Services
             PublisherService publisherService, 
             RoomService roomService, 
             TestSpecialityService testSpecialityService, 
-            MemberService memberService)
+            TestTeacherService testTeacherService)
         {
             _dbContext = dbContext;
             _paperService = paperService;
@@ -46,7 +46,7 @@ namespace ExamBook.Services
             _publisherService = publisherService;
             _roomService = roomService;
             _testSpecialityService = testSpecialityService;
-            _memberService = memberService;
+            _testTeacherService = testTeacherService;
         }
         
         
@@ -481,7 +481,7 @@ namespace ExamBook.Services
         }
         
         
-        private async Task<Event> AttachCourseAsync(Test test, Course course, User adminUser)
+        public async Task<Event> AttachCourseAsync(Test test, Course course, User adminUser)
         {
             AssertHelper.NotNull(test.Space, nameof(test.Space));
             AssertHelper.NotNull(course, nameof(course));
@@ -490,7 +490,7 @@ namespace ExamBook.Services
 
             if (test.CourseId != null)
             {
-                throw new InvalidStateException("TestHasCourse", test);
+                throw new InvalidStateException("CannotAttachTestWithCourse", test);
             }
 
             var testSpecialities = await _dbContext.TestSpecialities
@@ -529,14 +529,14 @@ namespace ExamBook.Services
         }
         
         
-        private async Task<Event> DetachCourseAsync(Test test, User adminUser)
+        public async Task<Event> DetachCourseAsync(Test test, User adminUser)
         {
             AssertHelper.NotNull(test.Space, nameof(test.Space));
             AssertHelper.NotNull(adminUser, nameof(adminUser));
 
             if (test.CourseId == null)
             {
-                throw new InvalidStateException("TestHasNoCourse", test);
+                throw new InvalidStateException("CannotDetachTestWithoutCourse", test);
             }
 
             var testSpecialities = await _dbContext.TestSpecialities

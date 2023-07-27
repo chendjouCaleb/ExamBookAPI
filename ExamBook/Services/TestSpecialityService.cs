@@ -209,11 +209,15 @@ namespace ExamBook.Services
 				throw new DuplicateValueException("TestSpecialityExists", test, speciality);
 			}
 
+			var publisher = _publisherService.Create();
+
 			return new TestSpeciality
 			{
 				Test = test,
 				Speciality = speciality,
-				SpecialityId = speciality.Id
+				SpecialityId = speciality.Id,
+				Publisher = publisher,
+				PublisherId = publisher.Id
 			};
 		}
 	}

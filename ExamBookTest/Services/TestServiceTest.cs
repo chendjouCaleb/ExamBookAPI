@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
+using ExamBook.Exceptions;
 using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
@@ -329,6 +330,113 @@ namespace ExamBookTest.Services
 				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
 				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
 			}
+		}
+
+
+		[Test]
+		public async Task AttachTest()
+		{
+			var specialities = new List<Speciality> {_speciality1, _speciality2};
+			var test = (await _testService.AddAsync(_space, _model, specialities, _members, _adminUser)).Item;
+
+			var action = await _testService.AttachCourseAsync(test, _course, _adminUser);
+			await _dbContext.Entry(test).ReloadAsync();
+			var testSpecialities = await _dbContext.TestSpecialities
+				.Where(ts => ts.TestId == test.Id)
+				.ToListAsync();
+			var courseSpecialities = await _dbContext.CourseSpecialities
+				.Include(cs => cs.Speciality)
+				.Where(cs => cs.CourseId == _course.Id)
+				.ToListAsync();
+			
+			Assert.AreEqual(_course.Id, test.CourseId);
+			var assertions = _eventAssertionsBuilder.Build(action);
+			foreach (var testSpeciality in testSpecialities)
+			{
+				var courseSpeciality = courseSpecialities.Find(cs => cs.SpecialityId == testSpeciality.SpecialityId);
+				
+				Assert.NotNull(courseSpeciality);
+				Assert.AreEqual(courseSpeciality!.Id, testSpeciality.CourseSpecialityId);
+				
+				await assertions.HasPublisherIdAsync(testSpeciality.PublisherId);
+				await assertions.HasPublisherIdAsync(courseSpeciality.PublisherId);
+				await assertions.HasPublisherIdAsync(courseSpeciality.Speciality!.PublisherId);
+			}
+			
+			assertions.HasName("TEST_ATTACH_COURSE");
+			assertions.HasData(new {CourseId = _course.Id, TestId = test.Id});
+			await assertions.HasPublisherIdAsync(test.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+		}
+
+		[Test]
+		public async Task TryAttach_AttachedTest_ShouldThrow()
+		{
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+
+			var ex = Assert.ThrowsAsync<InvalidStateException>(async () =>
+			{
+				await _testService.AttachCourseAsync(test, _course, _adminUser);
+			});
+			
+			Assert.AreEqual("CannotAttachTestWithCourse", ex!.Code);
+			Assert.AreEqual(test, ex.Params[0]);
+		}
+		
+		
+		[Test]
+		public async Task DetachTest()
+		{
+		
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+
+			var action = await _testService.DetachCourseAsync(test, _adminUser);
+			await _dbContext.Entry(test).ReloadAsync();
+			var testSpecialities = await _dbContext.TestSpecialities
+				.Where(ts => ts.TestId == test.Id)
+				.ToListAsync();
+			var courseSpecialities = await _dbContext.CourseSpecialities
+				.Include(cs => cs.Speciality)
+				.Where(cs => cs.CourseId == _course.Id)
+				.ToListAsync();
+			
+			Assert.Null(test.CourseId);
+			var assertions = _eventAssertionsBuilder.Build(action);
+			foreach (var testSpeciality in testSpecialities)
+			{
+				var courseSpeciality = courseSpecialities.Find(cs => cs.SpecialityId == testSpeciality.SpecialityId);
+				
+				Assert.NotNull(courseSpeciality);
+				Assert.Null(testSpeciality.CourseSpecialityId);
+				
+				await assertions.HasPublisherIdAsync(testSpeciality.PublisherId);
+				await assertions.HasPublisherIdAsync(courseSpeciality!.PublisherId);
+				await assertions.HasPublisherIdAsync(courseSpeciality.Speciality!.PublisherId);
+			}
+			
+			assertions.HasName("TEST_DETACH_COURSE");
+			assertions.HasData(new {});
+			await assertions.HasPublisherIdAsync(test.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+		}
+		
+		[Test]
+		public async Task TryDetach_DetachedTest_ShouldThrow()
+		{
+			var specialities = new List<Speciality> {_speciality1, _speciality2};
+			var test = (await _testService.AddAsync(_space, _model, specialities, _members, _adminUser)).Item;
+
+			var ex = Assert.ThrowsAsync<InvalidStateException>(async () =>
+			{
+				await _testService.DetachCourseAsync(test, _adminUser);
+			});
+			
+			Assert.AreEqual("CannotDetachTestWithoutCourse", ex!.Code);
+			Assert.AreEqual(test, ex.Params[0]);
 		}
 
 		// [Test]
