@@ -226,6 +226,20 @@ namespace ExamBook.Controllers
 			return await _testService.ChangeDurationAsync(test, duration, user);
 		}
 		
+		[HttpPut("{testId}/radical")]
+		public async Task<Event> ChangeRadicalAsync(ulong testId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			string radicalStr = body["radical"];
+
+			uint radical = uint.Parse(radicalStr);
+
+			return await _testService.ChangeRadicalAsync(test, radical, user);
+		}
+		
 		
 		[HttpPut("{testId}/startAt")]
 		public async Task<Event> ChangeStartAtAsync(ulong testId, [FromBody] IDictionary<string, string> body)
@@ -240,5 +254,9 @@ namespace ExamBook.Controllers
 
 			return await _testService.ChangeStartAtAsync(test, startAt, user);
 		}
+
+
+		
+		
 	}
 }
