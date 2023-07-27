@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -195,6 +196,35 @@ namespace ExamBook.Controllers
 			string name = body["name"];
 
 			return await _testService.ChangeNameAsync(test, name, user);
+		}
+		
+		[HttpPut("{testId}/duration")]
+		public async Task<Event> ChangeDurationAsync(ulong testId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			string duration_str = body["duration"];
+
+			uint duration = uint.Parse(duration_str);
+
+			return await _testService.ChangeDurationAsync(test, duration, user);
+		}
+		
+		
+		[HttpPut("{testId}/startAt")]
+		public async Task<Event> ChangeStartAtAsync(ulong testId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			string startAt_str = body["startAt"];
+
+			DateTime startAt = DateTime.Parse(startAt_str);
+
+			return await _testService.ChangeStartAtAsync(test, startAt, user);
 		}
 	}
 }
