@@ -481,22 +481,47 @@ namespace ExamBook.Services
         }
         
         
-        private async Task _SetCourseAsync(Test test, ulong courseId)
+        private async Task<Event> AttachCourseAsync(Test test, Course course, User adminUser)
         {
-            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            AssertHelper.IsTrue(course.SpaceId == test.SpaceId);
+
+            var testSpecialities = await _dbContext.TestSpecialities
+                .Where(ts => ts.TestId == test.Id)
+                .ToListAsync();
+
+            var courseSpecialities = await _dbContext.CourseSpecialities
+                .Include(cs => cs.Speciality)
+                .Where(ts => ts.CourseId == course.Id)
+                .ToListAsync();
             
-            var course = await _dbContext.Set<Course>().FindAsync(courseId);
-            if (course == null)
+            test.Course = course;
+            foreach (var testSpeciality in testSpecialities)
             {
-                throw new ElementNotFoundException("CourseNotFoundById", courseId);
-            }
-            
-            if (test.SpaceId != course.SpaceId)
-            {
-                throw new IncompatibleEntityException(test, course);
+                var courseSpeciality = courseSpecialities
+                    .FirstOrDefault(cs => cs.SpecialityId == testSpeciality.SpecialityId);
+
+                if (courseSpeciality != null)
+                {
+                    testSpeciality.CourseSpeciality = courseSpeciality;
+                }
             }
 
-            test.Course = course;
+            _dbContext.Update(test);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = ImmutableList<string>.Empty
+                .AddRange(test.GetPublisherIds())
+                .AddRange(courseSpecialities.Select(cs => cs.Speciality!.PublisherId))
+                .AddRange(courseSpecialities.Select(cs => cs.PublisherId))
+                .AddRange(testSpecialities.Select(cs => cs.PublisherId));
+
+            var eventName = "TEST_ATTACH_COURSE";
+            var data = new {CourseId = course.Id, TestId = test.Id};
+            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
+
         }
 
         public async Task<bool> ContainsAsync(Examination examination, string name)
