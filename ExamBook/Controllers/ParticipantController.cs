@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
@@ -20,6 +21,17 @@ namespace ExamBook.Controllers
 		private readonly ExaminationService _examinationService;
 		private readonly UserService _userService;
 
+
+		public ParticipantController(ApplicationDbContext dbContext, 
+			ParticipantService participantService, 
+			ExaminationService examinationService, 
+			UserService userService)
+		{
+			_dbContext = dbContext;
+			_participantService = participantService;
+			_examinationService = examinationService;
+			_userService = userService;
+		}
 
 		[HttpGet("{participantId}")]
 		public async Task<Participant> GetAsync(ulong participantId)
@@ -68,5 +80,32 @@ namespace ExamBook.Controllers
 			return await query.ToListAsync();
 		}
 
+
+		[HttpPost("add-students")]
+		public async Task<ICollection<Participant>> AddAsync([FromQuery] ulong examinationId)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+
+			var students = await _dbContext.Students
+				.Where(s => s.SpaceId == examination.SpaceId)
+				.ToListAsync();
+			var currentParticipants = await _dbContext.Participants
+				.Where(s => s.ExaminationId == examinationId)
+				.ToListAsync();
+
+			var toAddStudents = students
+				.Where(s => currentParticipants.All(p => p.StudentId != s.Id))
+				.ToHashSet();
+			
+			var result = await _participantService.AddAsync(examination, toAddStudents, user);
+			var newParticipants = result.Item;
+
+			return newParticipants;
+		}
+		
+		
+		
 	}
 }
