@@ -254,9 +254,40 @@ namespace ExamBook.Controllers
 
 			return await _testService.ChangeStartAtAsync(test, startAt, user);
 		}
-
-
 		
+		
+		[HttpPut("{testId}/lock")]
+		public async Task<Event> LockAsync(ulong testId)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			return await _testService.LockAsync(test, user);
+		}
+		
+		[HttpPut("{testId}/unlock")]
+		public async Task<Event> UnLockAsync(ulong testId)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			return await _testService.UnLockAsync(test, user);
+		}
+
+
+		[HttpDelete("{testId}")]
+		public async Task<NoContentResult> DeleteAsync(ulong testId)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			await _testService.DeleteAsync(test);
+
+			return NoContent();
+		}
 		
 	}
 }
