@@ -488,6 +488,11 @@ namespace ExamBook.Services
             AssertHelper.NotNull(adminUser, nameof(adminUser));
             AssertHelper.IsTrue(course.SpaceId == test.SpaceId);
 
+            if (test.CourseId != null)
+            {
+                throw new InvalidStateException("TestHasCourse", test);
+            }
+
             var testSpecialities = await _dbContext.TestSpecialities
                 .Where(ts => ts.TestId == test.Id)
                 .ToListAsync();
@@ -518,10 +523,63 @@ namespace ExamBook.Services
                 .AddRange(courseSpecialities.Select(cs => cs.PublisherId))
                 .AddRange(testSpecialities.Select(cs => cs.PublisherId));
 
-            var eventName = "TEST_ATTACH_COURSE";
+            const string eventName = "TEST_ATTACH_COURSE";
             var data = new {CourseId = course.Id, TestId = test.Id};
             return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
+        }
+        
+        
+        private async Task<Event> DetachCourseAsync(Test test, User adminUser)
+        {
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
 
+            if (test.CourseId == null)
+            {
+                throw new InvalidStateException("TestHasNoCourse", test);
+            }
+
+            var testSpecialities = await _dbContext.TestSpecialities
+                .Where(ts => ts.TestId == test.Id)
+                .ToListAsync();
+
+            var courseSpecialities = await _dbContext.CourseSpecialities
+                .Include(cs => cs.Speciality)
+                .Where(ts => ts.CourseId == test.CourseId)
+                .ToListAsync();
+
+            var publisherIds = ImmutableList<string>.Empty
+                .AddRange(test.GetPublisherIds());
+
+            test.Course = null;
+            test.CourseId = null;
+            foreach (var testSpeciality in testSpecialities)
+            {
+                var courseSpeciality = courseSpecialities
+                    .Find(cs => cs.SpecialityId == testSpeciality.CourseSpecialityId);
+
+                if (courseSpeciality != null)
+                {
+                    publisherIds = publisherIds.AddRange(new[]
+                    {
+                        testSpeciality.PublisherId, 
+                        courseSpeciality.PublisherId,
+                        courseSpeciality.Speciality!.PublisherId
+                    });
+                }
+
+                testSpeciality.CourseSpeciality = null;
+                testSpeciality.CourseSpecialityId = null;
+            }
+
+            _dbContext.Update(test);
+            await _dbContext.SaveChangesAsync();
+
+            
+
+            const string eventName = "TEST_DETACH_COURSE";
+            var data = new {};
+            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
         }
 
         public async Task<bool> ContainsAsync(Examination examination, string name)
