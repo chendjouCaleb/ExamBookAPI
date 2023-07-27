@@ -276,6 +276,27 @@ namespace ExamBook.Controllers
 			return await _testService.UnLockAsync(test, user);
 		}
 
+		[HttpPut("{testId}/attach-course")]
+		public async Task<Event> AttachCourse(ulong testId, [FromQuery] ulong courseId)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			var course = await _courseService.GetCourseAsync(courseId);
+			return await _testService.AttachCourseAsync(test, course, user);
+		}
+		
+		[HttpPut("{testId}/detach-course")]
+		public async Task<Event> DetachCourse(ulong testId)
+		{
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+			
+			var test = await _testService.GetByIdAsync(testId);
+			return await _testService.DetachCourseAsync(test, user);
+		}
+
 
 		[HttpDelete("{testId}")]
 		public async Task<NoContentResult> DeleteAsync(ulong testId)
