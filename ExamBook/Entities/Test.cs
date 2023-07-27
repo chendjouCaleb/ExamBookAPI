@@ -28,6 +28,9 @@ namespace ExamBook.Entities
         
         public Course? Course { get; set; } 
         public ulong? CourseId { get; set; }
+
+        public Room? Room { get; set; }
+        public ulong? RoomId { get; set; }
         
 
         public bool Closed { get; set; }
