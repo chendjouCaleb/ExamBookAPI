@@ -527,8 +527,8 @@ namespace ExamBook.Services
             var data = new {CourseId = course.Id, TestId = test.Id};
             return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
         }
-        
-        
+
+
         public async Task<Event> DetachCourseAsync(Test test, User adminUser)
         {
             AssertHelper.NotNull(test.Space, nameof(test.Space));
@@ -580,6 +580,65 @@ namespace ExamBook.Services
             const string eventName = "TEST_DETACH_COURSE";
             var data = new {};
             return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
+        }
+        
+        
+        public async Task<Event> ChangeRoomAsync(Test test, Room room, User adminUser)
+        {
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(room, nameof(room));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            AssertHelper.IsTrue(room.SpaceId == test.SpaceId);
+            AssertHelper.IsTrue(test.RoomId != room.Id, "Same room");
+            var currentRoom = test.Room;
+            var eventData = new ChangeRoomData(test.RoomId, room.Id);
+
+            test.Room = room;
+            _dbContext.Update(test);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = ImmutableList<string>.Empty
+                .AddRange(new[] {test.PublisherId, room.PublisherId, test.Space.PublisherId});
+
+            if (test.ExaminationId != null)
+            {
+                publisherIds = publisherIds.Add(test.Examination!.PublisherId);
+            }
+
+            if (currentRoom != null)
+            {
+                publisherIds = publisherIds.Add(currentRoom.PublisherId);
+            }
+
+            const string eventName = "TEST_CHANGE_ROOM";
+            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, eventData);
+        }
+        
+        
+        public async Task<Event> RemoveRoomAsync(Test test, User adminUser)
+        {
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            AssertHelper.IsTrue(test.RoomId != null);
+            
+            var currentRoom = test.Room!;
+            var eventData = new ChangeRoomData(test.RoomId, null);
+
+            test.Room = null;
+            test.RoomId = null;
+            _dbContext.Update(test);
+            await _dbContext.SaveChangesAsync();
+
+            var publisherIds = ImmutableList<string>.Empty
+                .AddRange(new[] {test.PublisherId, currentRoom.PublisherId, test.Space.PublisherId});
+
+            if (test.ExaminationId != null)
+            {
+                publisherIds = publisherIds.Add(test.Examination!.PublisherId);
+            }
+
+            const string eventName = "TEST_REMOVE_ROOM";
+            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, eventData);
         }
 
         public async Task<bool> ContainsAsync(Examination examination, string name)

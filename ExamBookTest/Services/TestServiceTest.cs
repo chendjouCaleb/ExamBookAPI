@@ -8,6 +8,7 @@ using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
+using ExamBook.Models.Data;
 using ExamBook.Persistence;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
@@ -40,12 +41,13 @@ namespace ExamBookTest.Services
 
 		private Space _space = null!;
 		private Examination _examination = null!;
-		private Speciality _speciality1;
-		private Speciality _speciality2;
-		private Member _member1;
-		private Member _member2;
-		private HashSet<Member> _members;
-		private Room _room = null!;
+		private Speciality _speciality1 = null!;
+		private Speciality _speciality2 = null!;
+		private Member _member1 = null!;
+		private Member _member2 = null!;
+		private HashSet<Member> _members  = null!;
+		private Room _room1 = null!;
+		private Room _room2 = null!;
 		private Course _course = null!;
 		private TestAddModel _model = null!;
 
@@ -80,8 +82,11 @@ namespace ExamBookTest.Services
 			});
 			_space = result.Item;
 
-			var roomModel = new RoomAddModel {Capacity = 10, Name = "Room name"};
-			_room = (await _roomService.AddRoomAsync(_space, roomModel, _adminUser)).Item;
+			var room1Model = new RoomAddModel {Capacity = 10, Name = "Room1 name"};
+			_room1 = (await _roomService.AddRoomAsync(_space, room1Model, _adminUser)).Item;
+			
+			var room2Model = new RoomAddModel {Capacity = 10, Name = "Room2 name"};
+			_room2 = (await _roomService.AddRoomAsync(_space, room2Model, _adminUser)).Item;
 
 			_speciality1 = (await _specialityService.AddSpecialityAsync(_space, "Speciality1", _adminUser)).Item;
 			_speciality2 = (await _specialityService.AddSpecialityAsync(_space, "Speciality2", _adminUser)).Item;
@@ -334,7 +339,7 @@ namespace ExamBookTest.Services
 
 
 		[Test]
-		public async Task AttachTest()
+		public async Task AttachTestCourse()
 		{
 			var specialities = new List<Speciality> {_speciality1, _speciality2};
 			var test = (await _testService.AddAsync(_space, _model, specialities, _members, _adminUser)).Item;
@@ -437,6 +442,47 @@ namespace ExamBookTest.Services
 			
 			Assert.AreEqual("CannotDetachTestWithoutCourse", ex!.Code);
 			Assert.AreEqual(test, ex.Params[0]);
+		}
+		
+		[Test]
+		public async Task AttachWithCurrentRoom()
+		{
+		
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+
+			var action = await _testService.ChangeRoomAsync(test, _room1, _adminUser);
+			await _dbContext.Entry(test).ReloadAsync();
+
+			Assert.AreEqual(_room1.Id, test.RoomId);
+			var assertions = _eventAssertionsBuilder.Build(action);
+
+			assertions.HasName("TEST_CHANGE_ROOM");
+			assertions.HasData(new ChangeRoomData(null, _room1.Id));
+			await assertions.HasPublisherIdAsync(test.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasPublisherIdAsync(_room1.PublisherId);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+		}
+		
+		
+		[Test]
+		public async Task AttachWithoutCurrentRoom()
+		{
+		
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+
+			var action = await _testService.ChangeRoomAsync(test, _room1, _adminUser);
+			await _dbContext.Entry(test).ReloadAsync();
+
+			Assert.AreEqual(_room1.Id, test.RoomId);
+			var assertions = _eventAssertionsBuilder.Build(action);
+
+			assertions.HasName("TEST_CHANGE_ROOM");
+			assertions.HasData(new ChangeRoomData(null, _room1.Id));
+			await assertions.HasPublisherIdAsync(test.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasPublisherIdAsync(_room1.PublisherId);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
 		}
 
 		// [Test]
