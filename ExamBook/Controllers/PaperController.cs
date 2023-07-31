@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -18,15 +19,17 @@ namespace ExamBook.Controllers
 	{
 		private readonly PaperService _paperService;
 		private readonly MemberService _memberService;
+		private readonly TestService _testService;
 		private readonly UserService _userService;
 		private readonly ApplicationDbContext _dbContext;
 
 
-		public PaperController(PaperService paperService, UserService userService, ApplicationDbContext dbContext)
+		public PaperController(PaperService paperService, UserService userService, ApplicationDbContext dbContext, TestService testService)
 		{
 			_paperService = paperService;
 			_userService = userService;
 			_dbContext = dbContext;
+			_testService = testService;
 		}
 
 		[HttpGet("{paperId}")]
@@ -50,6 +53,7 @@ namespace ExamBook.Controllers
 		}
 
 
+		[HttpGet]
 		public async Task<ICollection<Paper>> ListAsync([FromQuery] ulong? studentId,
 			[FromQuery] ulong? participantId,
 			[FromQuery] ulong? testId)
@@ -92,7 +96,7 @@ namespace ExamBook.Controllers
 			var testTeachers = await _dbContext.TestTeachers
 				.Include(ct => ct.Member)
 				.Include(tt => tt.Test)
-				.Where(tt => tt.Member.UserId == userId)
+				.Where(tt => tt.Member.UserId == user.Id)
 				.ToListAsync();
 				
 
@@ -133,6 +137,13 @@ namespace ExamBook.Controllers
 			return scores;
 		}
 
+
+		public async Task<ICollection<Paper>> AddStudentPapers([FromQuery] ulong testId)
+		{
+			var test = await _testService.GetByIdAsync(testId);
+
+			throw new NotImplementedException();
+		}
 
 		private bool TakeScore(PaperScore score, List<TestTeacher> testTeachers)
 		{

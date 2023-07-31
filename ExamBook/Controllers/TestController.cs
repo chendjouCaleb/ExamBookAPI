@@ -151,7 +151,6 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var examination = await _examinationService.GetByIdAsync(examinationId);
-			var space = examination.Space;
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
 			var members = await _memberService.ListAsync(memberIds);
@@ -175,7 +174,7 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			var examination = await _examinationService.GetByIdAsync(examinationId);
 			var course = await _courseService.GetCourseAsync(courseId);
-			var space = examination.Space;
+			
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
 			var members = await _memberService.ListAsync(memberIds);
@@ -219,9 +218,9 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			
 			var test = await _testService.GetByIdAsync(testId);
-			string duration_str = body["duration"];
+			string value = body["duration"];
 
-			uint duration = uint.Parse(duration_str);
+			uint duration = uint.Parse(value);
 
 			return await _testService.ChangeDurationAsync(test, duration, user);
 		}
@@ -248,9 +247,9 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			
 			var test = await _testService.GetByIdAsync(testId);
-			string startAt_str = body["startAt"];
+			string startAtStr = body["startAt"];
 
-			DateTime startAt = DateTime.Parse(startAt_str);
+			DateTime startAt = DateTime.Parse(startAtStr);
 
 			return await _testService.ChangeStartAtAsync(test, startAt, user);
 		}

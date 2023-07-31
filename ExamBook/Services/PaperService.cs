@@ -72,6 +72,17 @@ namespace ExamBook.Services
             return duplicates;
         }
         
+        public async Task<List<Paper>> ContainsAsync(Test test, ICollection<Participant> participants)
+        {
+            var participantIds = participants.Select(s => s.Id).ToList();
+
+            var duplicates = await _dbContext.Set<Paper>()
+                .Where(p => p.TestId == test.Id && p.ParticipantId != null && participantIds.Contains(p.ParticipantId ?? 0))
+                .ToListAsync();
+
+            return duplicates;
+        }
+        
         
 
 
@@ -106,6 +117,50 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId };
             publisherIds.AddRange(students.Select(s => s.PublisherId));
+            if (test.CourseId != null)
+            {
+                AssertHelper.NotNull(test.Course, nameof(test.Course));
+                publisherIds.Add(test.Course!.PublisherId);
+            }
+
+            var paperIds = papers.Select(p => p.Id).ToList();
+            var actionData = new {PaperIds = paperIds};
+            var action = await _eventService.EmitAsync(publisherIds, adminUser.Id, "PAPERS_ADD", actionData);
+            return new ActionResultModel<List<Paper>>(papers, action);
+        }
+
+        
+        public async Task<ActionResultModel<List<Paper>>> AddTestPapers(Test test, List<Participant> participants, User adminUser)
+        {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(test.Space, nameof(test.Space));
+            AssertHelper.NotNull(adminUser, nameof(adminUser));
+            AssertHelper.NotNull(participants, nameof(participants));
+            AssertHelper.IsTrue(participants.TrueForAll(s => s.ExaminationId == test.ExaminationId));
+
+            var papers = new List<Paper>();
+
+            var duplicata = await ContainsAsync(test, participants);
+            if (duplicata.Count > 0)
+            {
+                throw new DuplicateValueException("PaperParticipantsExists", duplicata);
+            }
+
+            foreach (var participant in participants)
+            {
+                var paper = await CreatePaperAsync(test);
+                paper.Participant = participant;
+            }
+
+            var publishers = papers.Select(p => p.Publisher!).ToList();
+                        
+            
+            await _dbContext.AddRangeAsync(papers);
+            await _dbContext.SaveChangesAsync();
+            await _publisherService.SaveAllAsync(publishers);
+
+            var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId };
+            publisherIds.AddRange(participants.Select(s => s.PublisherId));
             if (test.CourseId != null)
             {
                 AssertHelper.NotNull(test.Course, nameof(test.Course));
@@ -199,7 +254,7 @@ namespace ExamBook.Services
             }
 
             await _dbContext.AddAsync(paper);
-            await _dbContext.AddAsync(paper.PaperScore);
+            await _dbContext.AddAsync(paper.PaperScore!);
             await _dbContext.SaveChangesAsync();
             await _publisherService.SaveAsync(paper.Publisher!);
             return paper;
