@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -77,6 +78,18 @@ namespace ExamBook.Controllers
 			return Ok(result);
 		}
 		
+		[Authorize]
+		[HttpPut("{examinationId}/startAt")]
+		public async Task<OkObjectResult> ChangeStartAtAsync(ulong examinationId, [FromBody] IDictionary<string, string> body)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+            
+			var date = DateTime.Parse(body["startAt"]);
+			var result = await _examinationService.ChangeStartAtAsync(examination, date, user);
+			return Ok(result);
+		}
 		
 		
 	}
