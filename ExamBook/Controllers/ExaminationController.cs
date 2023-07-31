@@ -92,5 +92,43 @@ namespace ExamBook.Controllers
 		}
 		
 		
+		
+		[Authorize]
+		[HttpPut("{examinationId}/lock")]
+		public async Task<OkObjectResult> LockAsync(ulong examinationId)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+			
+			var result = await _examinationService.LockAsync(examination, user);
+			return Ok(result);
+		}
+		
+		
+		[Authorize]
+		[HttpPut("{examinationId}/unlock")]
+		public async Task<OkObjectResult> UnLockAsync(ulong examinationId)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+			
+			var result = await _examinationService.UnLockAsync(examination, user);
+			return Ok(result);
+		}
+		
+		
+		[Authorize]
+		[HttpDelete("{examinationId}")]
+		public async Task<OkObjectResult> DeleteAsync(ulong examinationId)
+		{
+			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+			var user = await _userService.GetByIdAsync(userId);
+			var examination = await _examinationService.GetByIdAsync(examinationId);
+			
+			var result = await _examinationService.DeleteAsync(examination, user);
+			return Ok(result);
+		}
 	}
 }
