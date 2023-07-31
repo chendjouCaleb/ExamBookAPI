@@ -8,6 +8,7 @@ using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
+using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,13 +19,13 @@ namespace ExamBook.Services
 {
     public class ExaminationService
     {
-        private readonly DbContext _dbContext;
+        private readonly ApplicationDbContext _dbContext;
         private readonly PublisherService _publisherService;
         private readonly EventService _eventService;
         private readonly ILogger<ExaminationService> _logger;
         
 
-        public ExaminationService(DbContext dbContext, 
+        public ExaminationService(ApplicationDbContext dbContext, 
             PublisherService publisherService, 
             EventService eventService, 
             ILogger<ExaminationService> logger)
@@ -174,17 +175,24 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(examination, nameof(examination));
             AssertHelper.NotNull(examination.Space, nameof(examination.Space));
-            
+
             if (examination.IsLock)
             {
                 throw new IllegalStateException("ExaminationIsLocked");
             }
+            
+            var tests = await _dbContext.Tests.Where(e => e.ExaminationId == examination.Id)
+                .ToListAsync();
 
             examination.IsLock = true;
+            tests.ForEach(t => t.IsLock = false);
+            
             _dbContext.Update(examination);
+            _dbContext.UpdateRange(tests);
             await _dbContext.SaveChangesAsync();
 
             var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
+            publisherIds.AddRange(tests.Select(t => t.PublisherId));
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_LOCK", new {});
         }
         
@@ -200,10 +208,18 @@ namespace ExamBook.Services
             }
 
             examination.IsLock = false;
+
+            var tests = await _dbContext.Tests.Where(e => e.ExaminationId == examination.Id)
+                .ToListAsync();
+            
+            tests.ForEach(t => t.IsLock = false);
+            
             _dbContext.Update(examination);
+            _dbContext.UpdateRange(tests);
             await _dbContext.SaveChangesAsync();
 
             var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
+            publisherIds.AddRange(tests.Select(t => t.PublisherId));
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_UNLOCK", new {});
         }
         
