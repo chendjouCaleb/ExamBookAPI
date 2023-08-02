@@ -53,9 +53,14 @@ namespace ExamBook.Migrations.ApplicationVxDb
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("SubjectId")
+                        .HasColumnType("varchar(255)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ActorId");
+
+                    b.HasIndex("SubjectId");
 
                     b.ToTable("Events");
                 });
@@ -95,6 +100,19 @@ namespace ExamBook.Migrations.ApplicationVxDb
                     b.ToTable("PublisherEvents");
                 });
 
+            modelBuilder.Entity("Traceability.Models.Subject", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Subjects");
+                });
+
             modelBuilder.Entity("Traceability.Models.Subscription", b =>
                 {
                     b.Property<string>("Id")
@@ -121,7 +139,13 @@ namespace ExamBook.Migrations.ApplicationVxDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Traceability.Models.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId");
+
                     b.Navigation("Actor");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("Traceability.Models.PublisherEvent", b =>

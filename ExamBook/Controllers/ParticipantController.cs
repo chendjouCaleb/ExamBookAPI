@@ -54,7 +54,7 @@ namespace ExamBook.Controllers
 
 
 		[HttpPost]
-		public async Task<List<Participant>> ListAsync(ulong? examinationId, ulong? studentId)
+		public async Task<List<Participant>> ListAsync([FromQuery] ulong? examinationId, [FromQuery] ulong? studentId)
 		{
 			IQueryable<Participant> query = _dbContext.Participants
 				

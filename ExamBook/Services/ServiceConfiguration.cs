@@ -13,7 +13,10 @@ namespace ExamBook.Services
             collection.AddTransient<CourseSessionService>();
             collection.AddTransient<CourseHourService>();
             collection.AddTransient<CourseTeacherService>();
+            
             collection.AddTransient<ExaminationService>();
+            collection.AddTransient<ExaminationSpecialityService>();
+            
             collection.AddTransient<MemberService>();
             collection.AddTransient<PaperService>();
             
@@ -25,9 +28,11 @@ namespace ExamBook.Services
             collection.AddTransient<SpecialityService>();
             collection.AddTransient<StudentService>();
             collection.AddTransient<StudentSpecialityService>();
+            
             collection.AddTransient<TestGroupService>();
             collection.AddTransient<TestSpecialityService>();
             collection.AddTransient<TestService>();
+            collection.AddTransient<TestTeacherService>();
         }
     }
 }

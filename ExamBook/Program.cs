@@ -25,7 +25,7 @@ services.AddControllers()
     {
         options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
         options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
-        options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+        options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
     });
 
 services.AddSignalR().AddNewtonsoftJsonProtocol();

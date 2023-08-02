@@ -125,7 +125,7 @@ namespace ExamBook.Controllers
 
 			var course = (await _courseService.AddCourseAsync(space, model, user)).Item;
 
-			await _dbContext.Entry(course).ReloadAsync();
+			course = await _courseService.GetCourseAsync(course.Id);
 			return CreatedAtAction("Get", new {courseId = course.Id}, course);
 		}
 

@@ -138,6 +138,7 @@ namespace ExamBook.Controllers
 		}
 
 
+		[HttpPost]
 		public async Task<ICollection<Paper>> AddStudentPapers([FromQuery] ulong testId)
 		{
 			var test = await _testService.GetByIdAsync(testId);

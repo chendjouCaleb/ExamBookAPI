@@ -72,6 +72,10 @@ namespace ExamBook.Migrations
                     b.Property<ulong>("SpaceId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SpaceId");
@@ -123,6 +127,10 @@ namespace ExamBook.Migrations
 
                     b.Property<TimeOnly>("StartHour")
                         .HasColumnType("time(6)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -196,6 +204,10 @@ namespace ExamBook.Migrations
                     b.Property<DateTime?>("StartDateTime")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CourseHourId");
@@ -241,6 +253,10 @@ namespace ExamBook.Migrations
                     b.Property<ulong>("SpecialityId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
@@ -280,6 +296,10 @@ namespace ExamBook.Migrations
                         .HasColumnType("bigint unsigned");
 
                     b.Property<string>("PublisherId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SubjectId")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -333,6 +353,10 @@ namespace ExamBook.Migrations
                     b.Property<DateTime>("StartAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SpaceId");
@@ -360,6 +384,10 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<ulong>("ExaminationId")
                         .HasColumnType("bigint unsigned");
 
@@ -377,6 +405,10 @@ namespace ExamBook.Migrations
 
                     b.Property<ulong?>("SpecialityId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -419,6 +451,10 @@ namespace ExamBook.Migrations
 
                     b.Property<ulong>("SpaceId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("UserId")
                         .HasColumnType("longtext");
@@ -463,11 +499,12 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<float?>("Score")
-                        .HasColumnType("float");
-
                     b.Property<ulong?>("StudentId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<ulong?>("TestGroupId")
                         .HasColumnType("bigint unsigned");
@@ -493,48 +530,24 @@ namespace ExamBook.Migrations
                     b.ToTable("Papers");
                 });
 
-            modelBuilder.Entity("ExamBook.Entities.PaperSpeciality", b =>
+            modelBuilder.Entity("ExamBook.Entities.PaperScore", b =>
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("CreatedById")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("DeletedById")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<ulong?>("PaperId")
+                    b.Property<ulong>("PaperId")
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<ulong?>("ParticipantSpecialityId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<string>("PublisherId")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<ulong?>("TestSpecialityId")
-                        .HasColumnType("bigint unsigned");
+                    b.Property<float?>("Value")
+                        .HasColumnType("float");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PaperId");
+                    b.HasIndex("PaperId")
+                        .IsUnique();
 
-                    b.HasIndex("ParticipantSpecialityId");
-
-                    b.HasIndex("TestSpecialityId");
-
-                    b.ToTable("PaperSpeciality");
+                    b.ToTable("PaperScores");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Participant", b =>
@@ -543,8 +556,9 @@ namespace ExamBook.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<DateTime>("BirthDate")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -563,18 +577,7 @@ namespace ExamBook.Migrations
                     b.Property<ulong>("ExaminationId")
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<uint>("Index")
-                        .HasColumnType("int unsigned");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("NormalizedRId")
+                    b.Property<string>("NormalizedCode")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -582,16 +585,12 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("RId")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Sex")
-                        .IsRequired()
-                        .HasColumnType("varchar(1)");
-
                     b.Property<ulong?>("StudentId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -632,11 +631,20 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<ulong?>("StudentSpecialityId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExaminationSpecialityId");
 
                     b.HasIndex("ParticipantId");
+
+                    b.HasIndex("StudentSpecialityId");
 
                     b.ToTable("ParticipantSpecialities");
                 });
@@ -678,6 +686,10 @@ namespace ExamBook.Migrations
 
                     b.Property<ulong>("SpaceId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -748,6 +760,13 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("TestCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("Twitter")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -803,6 +822,10 @@ namespace ExamBook.Migrations
 
                     b.Property<ulong?>("SpaceId")
                         .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -864,6 +887,10 @@ namespace ExamBook.Migrations
                     b.Property<ulong?>("SpaceId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MemberId");
@@ -903,13 +930,17 @@ namespace ExamBook.Migrations
                     b.Property<ulong?>("StudentId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SpecialityId");
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("StudentSpeciality");
+                    b.ToTable("StudentSpecialities");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Test", b =>
@@ -951,6 +982,12 @@ namespace ExamBook.Migrations
                     b.Property<ulong?>("ExaminationId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<bool>("IsLock")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -981,6 +1018,10 @@ namespace ExamBook.Migrations
 
                     b.Property<DateTime>("StartAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -1028,6 +1069,10 @@ namespace ExamBook.Migrations
                     b.Property<ulong?>("RoomId")
                         .HasColumnType("bigint unsigned");
 
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<ulong>("TestId")
                         .HasColumnType("bigint unsigned");
 
@@ -1044,6 +1089,9 @@ namespace ExamBook.Migrations
                 {
                     b.Property<ulong>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<ulong?>("CourseSpecialityId")
                         .HasColumnType("bigint unsigned");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1067,16 +1115,70 @@ namespace ExamBook.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<ulong?>("SpecialityId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<ulong>("TestId")
                         .HasColumnType("bigint unsigned");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CourseSpecialityId");
+
                     b.HasIndex("ExaminationSpecialityId");
+
+                    b.HasIndex("SpecialityId");
 
                     b.HasIndex("TestId");
 
                     b.ToTable("TestSpecialities");
+                });
+
+            modelBuilder.Entity("ExamBook.Entities.TestTeacher", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CreatedById")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeletedById")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<ulong?>("MemberId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.Property<string>("PublisherId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<ulong?>("TestId")
+                        .HasColumnType("bigint unsigned");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId");
+
+                    b.HasIndex("TestId");
+
+                    b.ToTable("TestTeachers");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Course", b =>
@@ -1258,23 +1360,15 @@ namespace ExamBook.Migrations
                     b.Navigation("TestSpeciality");
                 });
 
-            modelBuilder.Entity("ExamBook.Entities.PaperSpeciality", b =>
+            modelBuilder.Entity("ExamBook.Entities.PaperScore", b =>
                 {
                     b.HasOne("ExamBook.Entities.Paper", "Paper")
-                        .WithMany("PaperSpecialities")
-                        .HasForeignKey("PaperId");
-
-                    b.HasOne("ExamBook.Entities.ParticipantSpeciality", "ParticipantSpeciality")
-                        .WithMany()
-                        .HasForeignKey("ParticipantSpecialityId");
-
-                    b.HasOne("ExamBook.Entities.TestSpeciality", null)
-                        .WithMany("PaperSpecialities")
-                        .HasForeignKey("TestSpecialityId");
+                        .WithOne("PaperScore")
+                        .HasForeignKey("ExamBook.Entities.PaperScore", "PaperId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Paper");
-
-                    b.Navigation("ParticipantSpeciality");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Participant", b =>
@@ -1308,9 +1402,15 @@ namespace ExamBook.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ExamBook.Entities.StudentSpeciality", "StudentSpeciality")
+                        .WithMany()
+                        .HasForeignKey("StudentSpecialityId");
+
                     b.Navigation("ExaminationSpeciality");
 
                     b.Navigation("Participant");
+
+                    b.Navigation("StudentSpeciality");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Room", b =>
@@ -1327,7 +1427,7 @@ namespace ExamBook.Migrations
             modelBuilder.Entity("ExamBook.Entities.Speciality", b =>
                 {
                     b.HasOne("ExamBook.Entities.Space", "Space")
-                        .WithMany()
+                        .WithMany("Specialities")
                         .HasForeignKey("SpaceId");
 
                     b.Navigation("Space");
@@ -1413,17 +1513,44 @@ namespace ExamBook.Migrations
 
             modelBuilder.Entity("ExamBook.Entities.TestSpeciality", b =>
                 {
+                    b.HasOne("ExamBook.Entities.CourseSpeciality", "CourseSpeciality")
+                        .WithMany()
+                        .HasForeignKey("CourseSpecialityId");
+
                     b.HasOne("ExamBook.Entities.ExaminationSpeciality", "ExaminationSpeciality")
                         .WithMany()
                         .HasForeignKey("ExaminationSpecialityId");
 
-                    b.HasOne("ExamBook.Entities.Test", "Test")
+                    b.HasOne("ExamBook.Entities.Speciality", "Speciality")
                         .WithMany()
+                        .HasForeignKey("SpecialityId");
+
+                    b.HasOne("ExamBook.Entities.Test", "Test")
+                        .WithMany("TestSpecialities")
                         .HasForeignKey("TestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("CourseSpeciality");
+
                     b.Navigation("ExaminationSpeciality");
+
+                    b.Navigation("Speciality");
+
+                    b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("ExamBook.Entities.TestTeacher", b =>
+                {
+                    b.HasOne("ExamBook.Entities.Member", "Member")
+                        .WithMany("TestTeachers")
+                        .HasForeignKey("MemberId");
+
+                    b.HasOne("ExamBook.Entities.Test", "Test")
+                        .WithMany("TestTeachers")
+                        .HasForeignKey("TestId");
+
+                    b.Navigation("Member");
 
                     b.Navigation("Test");
                 });
@@ -1465,9 +1592,14 @@ namespace ExamBook.Migrations
                     b.Navigation("ParticipantSpecialities");
                 });
 
+            modelBuilder.Entity("ExamBook.Entities.Member", b =>
+                {
+                    b.Navigation("TestTeachers");
+                });
+
             modelBuilder.Entity("ExamBook.Entities.Paper", b =>
                 {
-                    b.Navigation("PaperSpecialities");
+                    b.Navigation("PaperScore");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Participant", b =>
@@ -1486,6 +1618,8 @@ namespace ExamBook.Migrations
                     b.Navigation("Members");
 
                     b.Navigation("Rooms");
+
+                    b.Navigation("Specialities");
                 });
 
             modelBuilder.Entity("ExamBook.Entities.Speciality", b =>
@@ -1504,14 +1638,16 @@ namespace ExamBook.Migrations
                     b.Navigation("Specialities");
                 });
 
+            modelBuilder.Entity("ExamBook.Entities.Test", b =>
+                {
+                    b.Navigation("TestSpecialities");
+
+                    b.Navigation("TestTeachers");
+                });
+
             modelBuilder.Entity("ExamBook.Entities.TestGroup", b =>
                 {
                     b.Navigation("Papers");
-                });
-
-            modelBuilder.Entity("ExamBook.Entities.TestSpeciality", b =>
-                {
-                    b.Navigation("PaperSpecialities");
                 });
 #pragma warning restore 612, 618
         }
