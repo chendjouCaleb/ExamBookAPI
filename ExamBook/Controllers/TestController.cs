@@ -24,6 +24,7 @@ namespace ExamBook.Controllers
 		private readonly TestService _testService;
 		private readonly SpaceService _spaceService;
 		private readonly MemberService _memberService;
+		private readonly RoomService _roomService;
 		private readonly CourseService _courseService;
 		private readonly ExaminationService _examinationService;
 		private readonly ExaminationSpecialityService _examinationSpecialityService;
@@ -38,7 +39,7 @@ namespace ExamBook.Controllers
 			SpecialityService specialityService, ExaminationService examinationService, 
 			ExaminationSpecialityService examinationSpecialityService,
 			CourseService courseService,
-			MemberService memberService)
+			MemberService memberService, RoomService roomService)
 		{
 			_dbContext = dbContext;
 			_testService = testService;
@@ -49,6 +50,7 @@ namespace ExamBook.Controllers
 			_examinationSpecialityService = examinationSpecialityService;
 			_courseService = courseService;
 			_memberService = memberService;
+			_roomService = roomService;
 		}
 
 		[HttpGet("{testId}")]
@@ -101,6 +103,7 @@ namespace ExamBook.Controllers
 		[HttpPost]
 		public async Task<CreatedAtActionResult> AddAsync(
 			[FromQuery] ulong spaceId,
+			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> specialityIds,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
@@ -110,10 +113,11 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
+			var room = await _roomService.GetRoomAsync(roomId);
 			var specialities = await _specialityService.ListAsync(specialityIds);
 			var members = await _memberService.ListAsync(memberIds);
 
-			var result = await _testService.AddAsync(space, model, specialities, members, user);
+			var result = await _testService.AddAsync(space, model, specialities, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 
@@ -123,6 +127,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddTestCourseAsync(
 			[FromQuery] ulong spaceId,
 			[FromQuery] ulong courseId,
+			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
@@ -132,9 +137,11 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
 			var course = await _courseService.GetCourseAsync(courseId);
+			var room = await _roomService.GetRoomAsync(roomId);
 			var members = await _memberService.ListAsync(memberIds);
+			
 
-			var result = await _testService.AddAsync(space, course, model, members, user);
+			var result = await _testService.AddAsync(space, course, model, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -143,6 +150,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddTestExaminationAsync(
 			[FromQuery] ulong examinationId,
 			[FromQuery] HashSet<ulong> examinationSpecialityIds,
+			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
@@ -154,8 +162,9 @@ namespace ExamBook.Controllers
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
 			var members = await _memberService.ListAsync(memberIds);
+			var room = await _roomService.GetRoomAsync(roomId);
 
-			var result = await _testService.AddAsync(examination, model, examinationSpecialities, members, user);
+			var result = await _testService.AddAsync(examination, model, examinationSpecialities, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -164,6 +173,7 @@ namespace ExamBook.Controllers
 		public async Task<CreatedAtActionResult> AddTestCourseExaminationAsync(
 			[FromQuery] ulong examinationId,
 			[FromQuery] ulong courseId,
+			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> examinationSpecialityIds,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
@@ -178,8 +188,9 @@ namespace ExamBook.Controllers
 			var examinationSpecialities = await _examinationSpecialityService
 				.ListAsync(examinationSpecialityIds);
 			var members = await _memberService.ListAsync(memberIds);
-
-			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, user);
+			var room = await _roomService.GetRoomAsync(roomId);
+			
+			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 
