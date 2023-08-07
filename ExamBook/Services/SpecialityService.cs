@@ -59,7 +59,7 @@ namespace ExamBook.Services
                 .ToListAsync();
 
             var notFounds = specialityIds.TakeWhile(id => specialities.All(s => s.Id != id));
-            if (!notFounds.Any())
+            if (notFounds.Any())
             {
                 throw new ElementNotFoundException("SpecialityNotFoundByIds", notFounds);
             }
