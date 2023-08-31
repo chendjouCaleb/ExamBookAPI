@@ -5,9 +5,12 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
+using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
+using ExamBook.Models;
 using ExamBook.Persistence;
 using ExamBook.Services;
+using ExamBook.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,6 +62,7 @@ namespace ExamBook.Controllers
 			[FromQuery] ulong? testId)
 		{
 			IQueryable<Paper> query = _dbContext.Papers
+				.Include(p => p.PaperScore)
 				.Include(p => p.Test)
 				.Include(p => p.Participant)
 				.Include(p => p.Student)
@@ -137,14 +141,36 @@ namespace ExamBook.Controllers
 			return scores;
 		}
 
+		[HttpPut("score")]
+		public async Task SetScores([FromBody] PaperScoreModel model)
+		{
+			var paper = await _paperService.GetByIdAsync(model.PaperId);
+			var test = await _testService.GetByIdAsync(paper.Test.Id);
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
+
+
+			await _paperService.SetScoreAsync(test, new List<PaperScoreModel> {model}, user);
+		}
+
 
 		[HttpPost]
-		public async Task<ICollection<Paper>> AddStudentPapers([FromQuery] ulong testId)
+		public async Task AddPapers([FromQuery] ulong testId)
 		{
 			var test = await _testService.GetByIdAsync(testId);
+			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+			var user = await _userService.FindByIdAsync(userId);
 
-			throw new NotImplementedException();
+			if (test.ExaminationId != null)
+			{
+				await _paperService.AddExaminationTestPapers(test, user);
+			}
+			else
+			{
+				await _paperService.AddStudentTestPapersAsync(test, user);
+			}
 		}
+
 
 		private bool TakeScore(PaperScore score, List<TestTeacher> testTeachers)
 		{

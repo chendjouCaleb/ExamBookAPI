@@ -43,6 +43,7 @@ namespace ExamBookTest.Services
 		private Examination _examination = null!;
 		private Speciality _speciality1 = null!;
 		private Speciality _speciality2 = null!;
+		private List<Speciality> _specialities = null!;
 		private Member _member1 = null!;
 		private Member _member2 = null!;
 		private HashSet<Member> _members  = null!;
@@ -83,14 +84,15 @@ namespace ExamBookTest.Services
 			_space = result.Item;
 
 			var room1Model = new RoomAddModel {Capacity = 10, Name = "Room1 name"};
-			_room1 = (await _roomService.AddRoomAsync(_space, room1Model, _adminUser)).Item;
+			_room1 = (await _roomService.AddAsync(_space, room1Model, _adminUser)).Item;
 			
 			var room2Model = new RoomAddModel {Capacity = 10, Name = "Room2 name"};
-			_room2 = (await _roomService.AddRoomAsync(_space, room2Model, _adminUser)).Item;
+			_room2 = (await _roomService.AddAsync(_space, room2Model, _adminUser)).Item;
 
 			_speciality1 = (await _specialityService.AddSpecialityAsync(_space, "Speciality1", _adminUser)).Item;
 			_speciality2 = (await _specialityService.AddSpecialityAsync(_space, "Speciality2", _adminUser)).Item;
-
+			_specialities = new List<Speciality>() {_speciality1, _speciality2};
+			
 			var user1 = await userService.AddUserAsync(ServiceExtensions.UserAddModel1);
 			var user2 = await userService.AddUserAsync(ServiceExtensions.UserAddModel2);
 			_member1 = await _memberService.GetOrAddAsync(_space, user1.Id, _adminUser);
@@ -108,8 +110,8 @@ namespace ExamBookTest.Services
 			_examination = (await _examinationService.AddAsync(_space, new ExaminationAddModel()
 			{
 				Name = "Exam name",
-				SpecialityIds = new HashSet<ulong>() {_speciality1.Id, _speciality2.Id}
-			}, _adminUser)).Item;
+				StartAt = DateTime.Now
+			}, _specialities, _adminUser)).Item;
 			
 			_model = new TestAddModel
 			{
@@ -127,16 +129,14 @@ namespace ExamBookTest.Services
 		{
 			var specialities = new List<Speciality> {_speciality1, _speciality2};
 
-			var test = await _testService.CreateTestAsync(_space, _model, specialities, _members);
+			var test = await _testService.CreateTestAsync(_space, _model, specialities, _members, _room1);
 
 			await _dbContext.Entry(test).ReloadAsync();
 
-			Assert.AreEqual(_model.Name, test.Name);
 			Assert.AreEqual(_model.Coefficient, test.Coefficient);
 			Assert.AreEqual(_model.Radical, test.Radical);
 			Assert.AreEqual(_model.StartAt, test.StartAt);
 			Assert.AreEqual(_model.Duration, test.Duration);
-			Assert.AreEqual(StringHelper.Normalize(_model.Name), test.NormalizedName);
 			Assert.AreEqual(_space.Id, test.SpaceId);
 
 			Assert.NotNull(test.Publisher);
@@ -154,66 +154,13 @@ namespace ExamBookTest.Services
 		}
 
 
-		[Test]
-		public async Task AddTest()
-		{
-			var specialities = new List<Speciality> {_speciality1, _speciality2};
-			var result = await _testService.AddAsync(_space, _model, specialities, _members,_adminUser);
-			var test = result.Item;
-
-			await _dbContext.Entry(test).ReloadAsync();
-			var testSpecialities = await _dbContext.TestSpecialities
-				.Where(t => t.TestId == test.Id)
-				.ToListAsync();
-			var testTeachers = await _dbContext.TestTeachers
-				.Where(t => t.TestId == test.Id)
-				.ToListAsync();
-
-			Assert.AreEqual(_model.Name, test.Name);
-			Assert.AreEqual(_model.Coefficient, test.Coefficient);
-			Assert.AreEqual(_model.Radical, test.Radical);
-			Assert.AreEqual(_model.StartAt, test.StartAt);
-			Assert.AreEqual(_model.Duration, test.Duration);
-			Assert.AreEqual(StringHelper.Normalize(_model.Name), test.NormalizedName);
-			Assert.AreEqual(_space.Id, test.SpaceId);
-			Assert.IsNotEmpty(test.PublisherId);
-
-
-			var addEvent = result.Event;
-			var assertions = _eventAssertionsBuilder.Build(addEvent);
-			assertions.HasName("TEST_ADD");
-			assertions.HasActor(_actor);
-			await assertions.HasPublisherIdAsync(test.PublisherId);
-			await assertions.HasPublisherIdAsync(_space.PublisherId);
-			assertions.HasData(test);
-			
-			foreach (var speciality in specialities)
-			{
-				var testSpeciality = testSpecialities.Find(ts => ts.SpecialityId == speciality.Id);
-				Assert.NotNull(testSpeciality);
-				Assert.AreEqual(test.Id, testSpeciality!.TestId);
-				Assert.IsNotEmpty(test.PublisherId);
-				await assertions.HasPublisherIdAsync(testSpeciality.PublisherId);
-				await assertions.HasPublisherIdAsync(speciality.PublisherId);
-			}
-			
-			foreach (var member in _members)
-			{
-				var testTeacher = testTeachers.Find(tt => tt.MemberId == member.Id);
-				Assert.NotNull(testTeacher);
-				Assert.AreEqual(test.Id, testTeacher!.TestId);
-				Assert.IsNotEmpty(test.PublisherId);
-				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
-				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
-			}
-		}
 		
 		
 		[Test]
 		public async Task AddCourseTest()
 		{
 			var specialities = new List<Speciality> {_speciality1, _speciality2};
-			var result = await _testService.AddAsync(_space, _course, _model, _members, _adminUser);
+			var result = await _testService.AddAsync(_space, _course, _model, _members, _room1, _adminUser);
 			var test = result.Item;
 
 			await _dbContext.Entry(test).ReloadAsync();
@@ -224,12 +171,10 @@ namespace ExamBookTest.Services
 				.Where(t => t.TestId == test.Id)
 				.ToListAsync();
 
-			Assert.AreEqual(_model.Name, test.Name);
 			Assert.AreEqual(_model.Coefficient, test.Coefficient);
 			Assert.AreEqual(_model.Radical, test.Radical);
 			Assert.AreEqual(_model.StartAt, test.StartAt);
 			Assert.AreEqual(_model.Duration, test.Duration);
-			Assert.AreEqual(StringHelper.Normalize(_model.Name), test.NormalizedName);
 			Assert.AreEqual(_space.Id, test.SpaceId);
 			Assert.AreEqual(_course, test.Course);
 			Assert.IsNotEmpty(test.PublisherId);
@@ -272,114 +217,11 @@ namespace ExamBookTest.Services
 			}
 		}
 
-		
-		[Test]
-		public async Task AddExaminationTest()
-		{
-			var examinationSpecialities = await _dbContext.ExaminationSpecialities
-				.Include(es => es.Examination)
-				.Where(es => es.ExaminationId == _examination.Id)
-				.ToListAsync();
-			
-			var result = await _testService.AddAsync(_examination, _model, examinationSpecialities, _members, _adminUser);
-			var test = result.Item;
-
-			await _dbContext.Entry(test).ReloadAsync();
-			var testSpecialities = await _dbContext.TestSpecialities
-				.Where(t => t.TestId == test.Id)
-				.ToListAsync();
-			
-			var testTeachers = await _dbContext.TestTeachers
-				.Where(t => t.TestId == test.Id)
-				.ToListAsync();
-
-			Assert.AreEqual(_model.Name, test.Name);
-			Assert.AreEqual(_model.Coefficient, test.Coefficient);
-			Assert.AreEqual(_model.Radical, test.Radical);
-			Assert.AreEqual(_model.StartAt, test.StartAt);
-			Assert.AreEqual(_model.Duration, test.Duration);
-			Assert.AreEqual(StringHelper.Normalize(_model.Name), test.NormalizedName);
-			Assert.AreEqual(_space.Id, test.SpaceId);
-			Assert.AreEqual(_examination.Id, test.ExaminationId);
-			Assert.IsNotEmpty(test.PublisherId);
-
-
-			var addEvent = result.Event;
-			var assertions = _eventAssertionsBuilder.Build(addEvent);
-			assertions.HasName("TEST_ADD");
-			assertions.HasActor(_actor);
-			await assertions.HasPublisherIdAsync(test.PublisherId);
-			await assertions.HasPublisherIdAsync(_space.PublisherId);
-			assertions.HasData(test);
-			
-			foreach (var examinationSpeciality in examinationSpecialities)
-			{
-				var testSpeciality = testSpecialities
-					.Find(ts => ts.ExaminationSpecialityId == examinationSpeciality.Id);
-				Assert.NotNull(testSpeciality);
-				Assert.AreEqual(test.Id, testSpeciality!.TestId);
-				Assert.AreEqual(examinationSpeciality.Id, testSpeciality.ExaminationSpecialityId);
-				Assert.AreEqual(examinationSpeciality.SpecialityId, testSpeciality.SpecialityId);
-				Assert.IsNotEmpty(test.PublisherId);
-				await assertions.HasPublisherIdAsync(testSpeciality.PublisherId);
-				await assertions.HasPublisherIdAsync(examinationSpeciality.PublisherId);
-				await assertions.HasPublisherIdAsync(examinationSpeciality.Speciality!.PublisherId);
-			}
-			
-			foreach (var member in _members)
-			{
-				var testTeacher = testTeachers.Find(tt => tt.MemberId == member.Id);
-				Assert.NotNull(testTeacher);
-				Assert.AreEqual(test.Id, testTeacher!.TestId);
-				Assert.IsNotEmpty(test.PublisherId);
-				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
-				await assertions.HasPublisherIdAsync(testTeacher.PublisherId);
-			}
-		}
-
-
-		[Test]
-		public async Task AttachTestCourse()
-		{
-			var specialities = new List<Speciality> {_speciality1, _speciality2};
-			var test = (await _testService.AddAsync(_space, _model, specialities, _members, _adminUser)).Item;
-
-			var action = await _testService.AttachCourseAsync(test, _course, _adminUser);
-			await _dbContext.Entry(test).ReloadAsync();
-			var testSpecialities = await _dbContext.TestSpecialities
-				.Where(ts => ts.TestId == test.Id)
-				.ToListAsync();
-			var courseSpecialities = await _dbContext.CourseSpecialities
-				.Include(cs => cs.Speciality)
-				.Where(cs => cs.CourseId == _course.Id)
-				.ToListAsync();
-			
-			Assert.AreEqual(_course.Id, test.CourseId);
-			var assertions = _eventAssertionsBuilder.Build(action);
-			foreach (var testSpeciality in testSpecialities)
-			{
-				var courseSpeciality = courseSpecialities.Find(cs => cs.SpecialityId == testSpeciality.SpecialityId);
-				
-				Assert.NotNull(courseSpeciality);
-				Assert.AreEqual(courseSpeciality!.Id, testSpeciality.CourseSpecialityId);
-				
-				await assertions.HasPublisherIdAsync(testSpeciality.PublisherId);
-				await assertions.HasPublisherIdAsync(courseSpeciality.PublisherId);
-				await assertions.HasPublisherIdAsync(courseSpeciality.Speciality!.PublisherId);
-			}
-			
-			assertions.HasName("TEST_ATTACH_COURSE");
-			assertions.HasData(new {CourseId = _course.Id, TestId = test.Id});
-			await assertions.HasPublisherIdAsync(test.PublisherId);
-			await assertions.HasPublisherIdAsync(_course.PublisherId);
-			await assertions.HasPublisherIdAsync(_space.PublisherId);
-			await assertions.HasActorIdAsync(_adminUser.ActorId);
-		}
-
+	
 		[Test]
 		public async Task TryAttach_AttachedTest_ShouldThrow()
 		{
-			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _room1, _adminUser)).Item;
 
 			var ex = Assert.ThrowsAsync<InvalidStateException>(async () =>
 			{
@@ -395,7 +237,7 @@ namespace ExamBookTest.Services
 		public async Task DetachTest()
 		{
 		
-			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _room1, _adminUser)).Item;
 
 			var action = await _testService.DetachCourseAsync(test, _adminUser);
 			await _dbContext.Entry(test).ReloadAsync();
@@ -428,27 +270,13 @@ namespace ExamBookTest.Services
 			await assertions.HasPublisherIdAsync(_space.PublisherId);
 			await assertions.HasActorIdAsync(_adminUser.ActorId);
 		}
-		
-		[Test]
-		public async Task TryDetach_DetachedTest_ShouldThrow()
-		{
-			var specialities = new List<Speciality> {_speciality1, _speciality2};
-			var test = (await _testService.AddAsync(_space, _model, specialities, _members, _adminUser)).Item;
-
-			var ex = Assert.ThrowsAsync<InvalidStateException>(async () =>
-			{
-				await _testService.DetachCourseAsync(test, _adminUser);
-			});
-			
-			Assert.AreEqual("CannotDetachTestWithoutCourse", ex!.Code);
-			Assert.AreEqual(test, ex.Params[0]);
-		}
+	
 		
 		[Test]
 		public async Task AttachWithCurrentRoom()
 		{
 		
-			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _room1, _adminUser)).Item;
 
 			var action = await _testService.ChangeRoomAsync(test, _room1, _adminUser);
 			await _dbContext.Entry(test).ReloadAsync();
@@ -469,7 +297,7 @@ namespace ExamBookTest.Services
 		public async Task AttachWithoutCurrentRoom()
 		{
 		
-			var test = (await _testService.AddAsync(_space, _course, _model, _members, _adminUser)).Item;
+			var test = (await _testService.AddAsync(_space, _course, _model, _members, _room1, _adminUser)).Item;
 
 			var action = await _testService.ChangeRoomAsync(test, _room1, _adminUser);
 			await _dbContext.Entry(test).ReloadAsync();

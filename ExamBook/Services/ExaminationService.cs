@@ -69,25 +69,27 @@ namespace ExamBook.Services
             return examination;
         }
 
-        public async Task<ActionResultModel<Examination>> AddAsync(Space space, ExaminationAddModel model, User user)
+        public async Task<ActionResultModel<Examination>> AddAsync(Space space, ExaminationAddModel model, 
+            List<Speciality> specialities,
+            User user)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(specialities, nameof(specialities));
+            AssertHelper.IsTrue(specialities.TrueForAll(s => s.SpaceId == space.Id), "Bad speciality.");
             
             if (await ContainsAsync(space, model.Name))
             {
                 throw new UsedValueException("ExaminationNameUsed{0}", model.Name);
             }
 
-            if (model.StartAt > DateTime.Now)
+            if (model.StartAt < DateTime.Now)
             {
                 throw new IllegalValueException("StartDateBeforeNow");
             }
 
-            var specialities = await _dbContext.Set<Speciality>()
-                .Where(s => model.SpecialityIds.Contains(s.Id))
-                .ToListAsync();
+           
 
             var publisher = _publisherService.Create();
             Examination examination = new ()

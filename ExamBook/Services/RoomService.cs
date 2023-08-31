@@ -61,7 +61,7 @@ namespace ExamBook.Services
             return rooms;
         }
 
-        public async Task<ActionResultModel<Room>> AddRoomAsync(Space space, RoomAddModel model, User user)
+        public async Task<ActionResultModel<Room>> AddAsync(Space space, RoomAddModel model, User user)
         {
             AssertHelper.NotNull(space, nameof(space));
             AssertHelper.NotNull(model, nameof(model));

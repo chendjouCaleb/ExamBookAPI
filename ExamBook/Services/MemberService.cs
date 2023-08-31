@@ -79,7 +79,7 @@ namespace ExamBook.Services
                 .ToListAsync()).ToHashSet();
 
             var notFounds = memberIds.TakeWhile(id => members.All(s => s.Id != id));
-            if (!notFounds.Any())
+            if (notFounds.Any())
             {
                 throw new ElementNotFoundException("MemberNotFoundByIds", notFounds);
             }

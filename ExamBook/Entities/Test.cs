@@ -5,9 +5,7 @@ namespace ExamBook.Entities
 {
     public class Test:Entity
     {
-        public string Name { get; set; } = "";
-        public string NormalizedName { get; set; } = "";
-        
+
         public string Code { get; set; } = "";
         public string NormalizedCode { get; set; } = "";
         
@@ -32,12 +30,10 @@ namespace ExamBook.Entities
         public Room? Room { get; set; }
         public ulong? RoomId { get; set; }
         
-
-        public bool Closed { get; set; }
         public bool IsLock { get; set; }
 
         public bool IsPublished { get; set; }
-        public bool Specialized { get; set; }
+        public bool IsSpecialized { get; set; }
         
         public List<TestSpeciality> TestSpecialities { get; set; }
         public List<TestTeacher> TestTeachers { get; set; } = new();

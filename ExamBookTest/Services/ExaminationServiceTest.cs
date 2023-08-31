@@ -1,11 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Helpers;
-using ExamBook.Identity;
 using ExamBook.Identity.Entities;
-using ExamBook.Identity.Models;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -36,8 +35,9 @@ namespace ExamBookTest.Services
         private Space _space = null!;
         private Room _room = null!;
         private ExaminationAddModel _model = null!;
-            
-        
+        private List<Speciality> _specialities = null!;
+
+
         [SetUp]
         public async Task Setup()
         {
@@ -63,7 +63,7 @@ namespace ExamBookTest.Services
             _space = result.Item;
 
             var roomModel = new RoomAddModel{Capacity = 10, Name = "Room name"};
-            _room = (await _roomService.AddRoomAsync(_space, roomModel, _adminUser)).Item;
+            _room = (await _roomService.AddAsync(_space, roomModel, _adminUser)).Item;
 
             var specialityModel = new SpecialityAddModel {Name = "speciality name"};
 
@@ -78,7 +78,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task AddExamination()
         {
-            var result = await _examinationService.AddAsync(_space, _model, _adminUser);
+            var result = await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var examination = result.Item;
             
             await _dbContext.Entry(examination).ReloadAsync();
@@ -105,11 +105,11 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryAddExaminationWithUsedName_ShouldThrow()
         {
-            await _examinationService.AddAsync(_space, _model, _adminUser);
+            await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
 
             var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
             {
-                await _examinationService.AddAsync(_space, _model, _adminUser);
+                await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             });
             
             Assert.AreEqual("ExaminationNameUsed{0}", ex!.Message);
@@ -120,7 +120,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ChangeExaminationName()
         {
-            var result = await _examinationService.AddAsync(_space, _model, _adminUser);
+            var result = await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var examination = result.Item;
 
             var newName = "new examination name";
@@ -148,7 +148,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryChangeExaminationNameWithUsedName_ShouldThrow()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
 
             string newName = examination.Name;
             
@@ -165,7 +165,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ChangeExaminationStartAt()
         {
-            var result = await _examinationService.AddAsync(_space, _model, _adminUser);
+            var result = await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var examination = result.Item;
 
             var newDate = DateTime.Now.AddDays(-5);
@@ -191,7 +191,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryChangeExaminationStartAtAfterNow_ShouldThrow()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
 
             var newDate = DateTime.Now.AddDays(5);
             var ex = Assert.ThrowsAsync<IllegalValueException>(async () =>
@@ -206,7 +206,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ExaminationLock()
         {
-            var result = await _examinationService.AddAsync(_space, _model, _adminUser);
+            var result = await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var examination = result.Item;
 
             var changeEvent = await _examinationService.LockAsync(examination, _adminUser);
@@ -231,7 +231,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryLock_LockedExamination_ShouldThrow()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
             await _examinationService.LockAsync(examination, _adminUser);
 
             var ex = Assert.ThrowsAsync<IllegalStateException>(async () =>
@@ -245,7 +245,7 @@ namespace ExamBookTest.Services
         
         public async Task ExaminationUnLock()
         {
-            var result = await _examinationService.AddAsync(_space, _model, _adminUser);
+            var result = await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var examination = result.Item;
 
             await _examinationService.LockAsync(examination, _adminUser);
@@ -271,7 +271,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryUnLock_UnLockedExamination_ShouldThrow()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
 
             var ex = Assert.ThrowsAsync<IllegalStateException>(async () =>
             {
@@ -309,7 +309,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ContainsExamination()
         {
-            await _examinationService.AddAsync(_space, _model, _adminUser);
+            await _examinationService.AddAsync(_space, _model, _specialities, _adminUser);
             var isExamination = await _examinationService.ContainsAsync(_space, _model.Name);
             Assert.True(isExamination);
         }
@@ -337,7 +337,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task GetExamination()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
             var resultExamination = await _examinationService.GetByIdAsync(examination.Id);
             Assert.AreEqual(examination.Id, resultExamination.Id);
         }
@@ -358,7 +358,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task GetExaminationByName()
         {
-            var examination = (await _examinationService.AddAsync(_space, _model, _adminUser)).Item;
+            var examination = (await _examinationService.AddAsync(_space, _model, _specialities, _adminUser)).Item;
             var resultExamination = await _examinationService.GetByNameAsync(examination.NormalizedName);
             Assert.AreEqual(examination.Id, resultExamination.Id);
         }

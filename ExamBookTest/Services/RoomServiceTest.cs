@@ -68,7 +68,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task AddRoom()
         {
-            var result = await _roomService.AddRoomAsync(_space, _model, _adminUser);
+            var result = await _roomService.AddAsync(_space, _model, _adminUser);
             var room = result.Item;
             
             await _dbContext.Entry(room).ReloadAsync();
@@ -95,11 +95,11 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryAddRoomWithUsedName_ShouldThrow()
         {
-            await _roomService.AddRoomAsync(_space, _model, _adminUser);
+            await _roomService.AddAsync(_space, _model, _adminUser);
 
             var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
             {
-                await _roomService.AddRoomAsync(_space, _model, _adminUser);
+                await _roomService.AddAsync(_space, _model, _adminUser);
             });
             
             Assert.AreEqual("RoomNameUsed", ex!.Message);
@@ -108,7 +108,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ChangeRoomName()
         {
-            var result = await _roomService.AddRoomAsync(_space, _model, _adminUser);
+            var result = await _roomService.AddAsync(_space, _model, _adminUser);
             var room = result.Item;
 
             var changeNameModel = new RoomChangeNameModel
@@ -138,7 +138,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task TryChangeRoomNameWithUsedName_ShouldThrow()
         {
-            var room = (await _roomService.AddRoomAsync(_space, _model, _adminUser)).Item;
+            var room = (await _roomService.AddAsync(_space, _model, _adminUser)).Item;
 
             var changeNameModel = new RoomChangeNameModel
             {
@@ -158,7 +158,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task ChangeRoomCapacity()
         {
-            var result = await _roomService.AddRoomAsync(_space, _model, _adminUser);
+            var result = await _roomService.AddAsync(_space, _model, _adminUser);
             var room = result.Item;
 
             var changeCapacityModel = new RoomChangeCapacityModel { Capacity = 100 };
@@ -185,7 +185,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task DeleteRoom()
         {
-            var room = (await _roomService.AddRoomAsync(_space, _model, _adminUser)).Item;
+            var room = (await _roomService.AddAsync(_space, _model, _adminUser)).Item;
             
             var deleteEvent = await _roomService.DeleteAsync(room, _adminUser);
             await _dbContext.Entry(room).ReloadAsync();
@@ -211,7 +211,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task IsSpaceRoom()
         {
-            await _roomService.AddRoomAsync(_space, _model, _adminUser);
+            await _roomService.AddAsync(_space, _model, _adminUser);
             var isRoom = await _roomService.ContainsAsync(_space, _model.Name);
             Assert.True(isRoom);
         }
@@ -227,7 +227,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task IsRoom_WithDeletedUser_ShouldBeFalse()
         {
-            var room = (await _roomService.AddRoomAsync(_space, _model, _adminUser)).Item;
+            var room = (await _roomService.AddAsync(_space, _model, _adminUser)).Item;
             await _roomService.DeleteAsync(room, _adminUser);
             var isRoom = await _roomService.ContainsAsync(_space, _model.Name);
             Assert.False(isRoom);
@@ -237,7 +237,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task GetRoom()
         {
-            var room = (await _roomService.AddRoomAsync(_space, _model, _adminUser)).Item;
+            var room = (await _roomService.AddAsync(_space, _model, _adminUser)).Item;
             var resultRoom = await _roomService.GetRoomAsync(room.Id);
             Assert.AreEqual(room.Id, resultRoom.Id);
         }
@@ -258,7 +258,7 @@ namespace ExamBookTest.Services
         [Test]
         public async Task GetRoomByName()
         {
-            var room = (await _roomService.AddRoomAsync(_space, _model, _adminUser)).Item;
+            var room = (await _roomService.AddAsync(_space, _model, _adminUser)).Item;
             var resultRoom = await _roomService.GetByNameAsync(_space, room.NormalizedName);
             Assert.AreEqual(room.Id, resultRoom.Id);
         }

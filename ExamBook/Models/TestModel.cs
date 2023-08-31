@@ -24,7 +24,4 @@ namespace ExamBook.Models
 
         public uint Radical { get; set; } = 20;
     }
-
-
-  
 }

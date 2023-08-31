@@ -58,6 +58,7 @@ namespace ExamBook.Controllers
 		{
 			var test = await _dbContext.Tests
 				.Where(t => t.Id == testId)
+				.Include(t => t.Room)
 				.Include(t => t.Course)
 				.Include(t => t.Space)
 				.Include(t => t.Examination)
@@ -78,6 +79,7 @@ namespace ExamBook.Controllers
 			[FromQuery] ulong? examinationId)
 		{
 			IQueryable<Test> query = _dbContext.Tests
+				.Include(t => t.Room)
 				.Include(t => t.Course);
 
 			if (courseId != null)
@@ -99,31 +101,8 @@ namespace ExamBook.Controllers
 		}
 
 		
-
+		
 		[HttpPost]
-		public async Task<CreatedAtActionResult> AddAsync(
-			[FromQuery] ulong spaceId,
-			[FromQuery] ulong roomId,
-			[FromQuery] HashSet<ulong> specialityIds,
-			[FromQuery] HashSet<ulong> memberIds,
-			[FromBody] TestAddModel model)
-		{
-			AssertHelper.NotNull(model, nameof(model));
-			
-			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-			var user = await _userService.FindByIdAsync(userId);
-			var space = await _spaceService.GetByIdAsync(spaceId);
-			var room = await _roomService.GetRoomAsync(roomId);
-			var specialities = await _specialityService.ListAsync(specialityIds);
-			var members = await _memberService.ListAsync(memberIds);
-
-			var result = await _testService.AddAsync(space, model, specialities, members, room, user);
-			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
-		}
-
-		
-		
-		[HttpPost("test-courses")]
 		public async Task<CreatedAtActionResult> AddTestCourseAsync(
 			[FromQuery] ulong spaceId,
 			[FromQuery] ulong courseId,
@@ -146,35 +125,12 @@ namespace ExamBook.Controllers
 		}
 		
 		
-		[HttpPost("test-examinations")]
-		public async Task<CreatedAtActionResult> AddTestExaminationAsync(
-			[FromQuery] ulong examinationId,
-			[FromQuery] HashSet<ulong> examinationSpecialityIds,
-			[FromQuery] ulong roomId,
-			[FromQuery] HashSet<ulong> memberIds,
-			[FromBody] TestAddModel model)
-		{
-			AssertHelper.NotNull(model, nameof(model));
-			
-			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-			var user = await _userService.FindByIdAsync(userId);
-			var examination = await _examinationService.GetByIdAsync(examinationId);
-			var examinationSpecialities = await _examinationSpecialityService
-				.ListAsync(examinationSpecialityIds);
-			var members = await _memberService.ListAsync(memberIds);
-			var room = await _roomService.GetRoomAsync(roomId);
 
-			var result = await _testService.AddAsync(examination, model, examinationSpecialities, members, room, user);
-			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
-		}
-		
-		
-		[HttpPost("test-examination-courses")]
+		[HttpPost("test-examinations")]
 		public async Task<CreatedAtActionResult> AddTestCourseExaminationAsync(
 			[FromQuery] ulong examinationId,
 			[FromQuery] ulong courseId,
 			[FromQuery] ulong roomId,
-			[FromQuery] HashSet<ulong> examinationSpecialityIds,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
 		{
@@ -184,29 +140,25 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			var examination = await _examinationService.GetByIdAsync(examinationId);
 			var course = await _courseService.GetCourseAsync(courseId);
+
+			var courseSpecialities = await _dbContext.CourseSpecialities
+				.Where(cs => cs.CourseId == course.Id)
+				.ToListAsync();
+			var specialityIds = courseSpecialities.Select(cs => cs.SpecialityId)
+				.ToList();
+
+			var examinationSpecialities = await _dbContext.ExaminationSpecialities
+				.Include(es => es.Speciality)
+				.Where(es => specialityIds.Contains(es.SpecialityId ?? 0))
+				.ToListAsync();
 			
-			var examinationSpecialities = await _examinationSpecialityService
-				.ListAsync(examinationSpecialityIds);
 			var members = await _memberService.ListAsync(memberIds);
 			var room = await _roomService.GetRoomAsync(roomId);
 			
 			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
-
-
-
-		[HttpPut("{testId}/name")]
-		public async Task<Event> ChangeNameAsync(ulong testId, [FromBody] IDictionary<string, string> body)
-		{
-			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-			var user = await _userService.FindByIdAsync(userId);
-			
-			var test = await _testService.GetByIdAsync(testId);
-			string name = body["name"];
-
-			return await _testService.ChangeNameAsync(test, name, user);
-		}
+		
 		
 		[HttpPut("{testId}/coefficient")]
 		public async Task<Event> ChangeCoefficientAsync(ulong testId, [FromBody] IDictionary<string, string> body)

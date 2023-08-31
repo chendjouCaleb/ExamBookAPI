@@ -45,7 +45,25 @@ namespace ExamBook.Controllers
 
 			return examination;
 		}
-		
+
+
+		[HttpGet]
+		public async Task<List<Examination>> ListAsync([FromQuery] ulong? spaceId)
+		{
+			var query = _dbContext.Examinations
+				.Include(e => e.Space)
+				.Include(e => e.ExaminationSpecialities)
+				.ThenInclude(es => es.Speciality)
+				.AsQueryable();
+
+			if (spaceId != null)
+			{
+				query = query.Where(e => e.SpaceId == spaceId);
+			}
+
+			return await query.ToListAsync();
+		}
+
 
 
 		[HttpPost]
@@ -57,9 +75,13 @@ namespace ExamBook.Controllers
 			var user = await _userService.GetByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
 
-			var result = await _examinationService.AddAsync(space, model, user);
+			var specialities = await _dbContext.Specialities
+				.Where(s => s.SpaceId == spaceId)
+				.ToListAsync();
+
+			var result = await _examinationService.AddAsync(space, model, specialities, user);
 			var examination = result.Item;
-			await _dbContext.Entry(examination).ReloadAsync();
+			examination = await GetAsync(examination.Id);
 
 			return CreatedAtAction("Get", new {examinationId = examination.Id}, examination);
 		}

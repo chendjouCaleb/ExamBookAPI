@@ -34,6 +34,7 @@ namespace ExamBook.Persistence
         public DbSet<TestGroup> TestGroups { get; set; }
         public DbSet<TestSpeciality> TestSpecialities { get; set; }
         public DbSet<Space> Spaces { get; set; }
-        
+        public DbSet<Classroom> Classrooms { get; set; }
+
     }
 }

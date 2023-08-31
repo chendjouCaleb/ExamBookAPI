@@ -82,9 +82,7 @@ namespace ExamBookTest
             {
                 options.UseInMemoryDatabase("exambook");
             });
-            
-            
-            
+
             services.AddSocial(_ =>
                 { }).AddEntityFrameworkStores<SocialTestDbContext>();
 

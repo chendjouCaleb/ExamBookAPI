@@ -30,6 +30,7 @@ namespace ExamBookTest.Services
 		private User _user = null!;
 		private Member _member = null!;
 		private Space _space = null!;
+		private Room _room = null!;
 		private Examination _examination = null!;
 		private Test _test = null!;
 		private Course _course = null!;
@@ -47,6 +48,7 @@ namespace ExamBookTest.Services
 			_dbContext = _provider.GetRequiredService<ApplicationDbContext>();
 
 			var userService = _provider.GetRequiredService<UserService>();
+			var roomService = _provider.GetRequiredService<RoomService>();
 			_spaceService = _provider.GetRequiredService<SpaceService>();
 			_memberService = _provider.GetRequiredService<MemberService>();
 			_courseService = _provider.GetRequiredService<CourseService>();
@@ -63,6 +65,8 @@ namespace ExamBookTest.Services
 			});
 			_space = result.Item;
 			_member = await _memberService.GetOrAddAsync(_space, _user.Id, _user);
+			_room = (await roomService.AddAsync(_space, new RoomAddModel {Name = "name", Capacity = 10}, _adminUser))
+				.Item;
 
 			var courseResult = await _courseService.AddCourseAsync(_space, new CourseAddModel()
 			{
@@ -76,8 +80,7 @@ namespace ExamBookTest.Services
 			_examination = (await _examinationService.AddAsync(_space, new ExaminationAddModel()
 			{
 				Name = "Exam name",
-				SpecialityIds = new HashSet<ulong>()
-			}, _adminUser)).Item;
+			}, new List<Speciality>(), _adminUser)).Item;
 			
 			_model = new TestAddModel
 			{
@@ -89,7 +92,7 @@ namespace ExamBookTest.Services
 			};
 
 			_test = (await _testService.AddAsync(_examination, _course, _model, 
-				new List<ExaminationSpeciality>(), new HashSet<Member>(),
+				new List<ExaminationSpeciality>(), new HashSet<Member>(), _room,
 				_adminUser)).Item;
 		}
 

@@ -26,11 +26,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(test, nameof(test));
             AssertHelper.NotNull(room, nameof(room));
             
-            if (await ContainsRoom(test, room))
-            {
-               TestHelper.ThrowDuplicateTestGroup(test, room);
-            }
-
+           
             if (!room.Space.Equals(test.Examination!.Space))
             {
                 throw new IncompatibleEntityException<Test, Room>(test, room);

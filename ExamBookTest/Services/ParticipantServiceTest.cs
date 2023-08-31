@@ -7,12 +7,10 @@ using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
 using ExamBook.Identity.Services;
 using ExamBook.Models;
-using ExamBook.Models.Data;
 using ExamBook.Persistence;
 using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Social.Helpers;
 using Traceability.Asserts;
 
 namespace ExamBookTest.Services
@@ -29,6 +27,7 @@ namespace ExamBookTest.Services
 		private Student _student1  = null!;
 		private Student _student2  = null!;
 		private Speciality _speciality = null!;
+		private List<Speciality> _specialities = null!;
 		private User _adminUser  = null!;
 
 		[SetUp]
@@ -55,6 +54,7 @@ namespace ExamBookTest.Services
 			
 			var specialityModel = new SpecialityAddModel {Name = "speciality name"};
 			_speciality = (await specialityService.AddSpecialityAsync(_space, specialityModel, _adminUser)).Item;
+			_specialities = new List<Speciality>() {_speciality};
 
 			_student1 = (await studentService.AddAsync(_space, new StudentAddModel
 			{
@@ -80,10 +80,9 @@ namespace ExamBookTest.Services
 			var examinationAddModel = new ExaminationAddModel
 			{
 				Name = "Examination name",
-				StartAt = DateTime.Now.AddDays(-12),
-				SpecialityIds = new HashSet<ulong> {_speciality.Id }
+				StartAt = DateTime.Now.AddDays(-12)
 			};
-			_examination = (await examinationService.AddAsync(_space, examinationAddModel, _adminUser)).Item;
+			_examination = (await examinationService.AddAsync(_space, examinationAddModel, _specialities, _adminUser)).Item;
 
 		}
 

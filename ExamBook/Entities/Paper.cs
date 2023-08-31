@@ -6,7 +6,7 @@ namespace ExamBook.Entities
     {
         public uint IndexInGroup { get; set; }
         
-        [NotMapped] public bool IsCorrected => PaperScore.Value != null;
+        [NotMapped] public bool IsCorrected => PaperScore?.Value != null;
 
         public bool IsPresent { get; set; }
 

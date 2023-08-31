@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
@@ -33,6 +34,7 @@ namespace ExamBookTest.Services
 		private Space _space = null!;
 		private Examination _examination = null!;
 		private Speciality _speciality = null!;
+		private List<Speciality> _specialities = null!;
 		private ExaminationSpecialityAddModel _model = null!;
 
 
@@ -64,6 +66,7 @@ namespace ExamBookTest.Services
 
 			var specialityModel = new SpecialityAddModel {Name = "speciality name"};
 			_speciality = (await _specialityService.AddSpecialityAsync(_space, specialityModel, _adminUser)).Item;
+			_specialities = new List<Speciality> {_speciality};
 
 			var examinationAddModel = new ExaminationAddModel
 			{
@@ -71,7 +74,7 @@ namespace ExamBookTest.Services
 				StartAt = DateTime.Now.AddDays(-12)
 			};
 
-			_examination = (await examinationService.AddAsync(_space, examinationAddModel, _adminUser)).Item;
+			_examination = (await examinationService.AddAsync(_space, examinationAddModel, _specialities, _adminUser)).Item;
 
 			_model = new ExaminationSpecialityAddModel()
 			{

@@ -73,7 +73,7 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
-			var result = await _roomService.AddRoomAsync(space, model, user);
+			var result = await _roomService.AddAsync(space, model, user);
 			var room = result.Item;
 
 			await _dbContext.Rooms.Entry(room).ReloadAsync();

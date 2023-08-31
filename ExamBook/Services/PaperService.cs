@@ -50,6 +50,8 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsAsync(Test test, Participant participant)
         {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(participant, nameof(participant));
             return await _dbContext.Set<Paper>()
                 .AnyAsync(p => test.Equals(p.Test) && participant.Equals(p.Participant));
         }
@@ -57,6 +59,9 @@ namespace ExamBook.Services
         
         public async Task<bool> ContainsAsync(Test test, Student student)
         {
+            AssertHelper.NotNull(test, nameof(test));
+            AssertHelper.NotNull(student, nameof(student));
+
             return await _dbContext.Set<Paper>()
                 .AnyAsync(p => p.TestId == test.Id && p.StudentId == student.Id);
         }
@@ -84,9 +89,57 @@ namespace ExamBook.Services
         }
         
         
+        public async Task<ActionResultModel<List<Paper>>> AddStudentTestPapersAsync(Test test, User user)
+        {
+            AssertHelper.IsTrue(test.ExaminationId == null);
+			
+            var papers = await _dbContext.Papers
+                .Where(p => p.TestId == test.Id)
+                .Select(p => new { p.StudentId, p.ParticipantId })
+                .ToListAsync();
 
+            var studentQuery = _dbContext.Students
+                .Where(s => s.SpaceId == test.SpaceId);
 
-        public async Task<ActionResultModel<List<Paper>>> AddTestPapers(Test test, List<Student> students, User adminUser)
+            var students = await studentQuery.ToListAsync();
+
+            var selectedStudents = students
+                .Where(s => papers.All(p => p.StudentId != s.Id))
+                .ToList();
+
+            return await AddTestPapersAsync(test, selectedStudents, user);
+        }
+
+        
+        public async Task<ActionResultModel<List<Paper>>> AddExaminationTestPapers(Test test, User user)
+        {
+            AssertHelper.IsTrue(test.ExaminationId != null);
+			
+            var papers = await _dbContext.Papers
+                .Where(p => p.TestId == test.Id)
+                .Select(p => new { p.StudentId, p.ParticipantId })
+                .ToListAsync();
+            var specialities = test.TestSpecialities;
+
+            IQueryable<Participant> query = _dbContext.Participants
+                .Where(p => p.ExaminationId == test.ExaminationId);
+
+            if (test.IsSpecialized)
+            {
+                query = query.Where(p => p.ParticipantSpecialities
+                    .Any(ps => specialities
+                        .Any(ts => ps.ExaminationSpecialityId == ts.ExaminationSpecialityId)));
+            }
+
+            var participants = await query.ToListAsync();
+            var selectedParticipants = participants
+                .SkipWhile(p => papers.Any(paper => paper.ParticipantId == p.Id))
+                .ToList();
+				
+            return await AddTestPapersAsync(test, selectedParticipants, user);
+        }
+
+        public async Task<ActionResultModel<List<Paper>>> AddTestPapersAsync(Test test, List<Student> students, User adminUser)
         {
             AssertHelper.NotNull(test, nameof(test));
             AssertHelper.NotNull(test.Space, nameof(test.Space));
@@ -106,6 +159,7 @@ namespace ExamBook.Services
             {
                 var paper = await CreatePaperAsync(test);
                 paper.Student = student;
+                papers.Add(paper);
             }
 
             var publishers = papers.Select(p => p.Publisher!).ToList();
@@ -125,12 +179,14 @@ namespace ExamBook.Services
 
             var paperIds = papers.Select(p => p.Id).ToList();
             var actionData = new {PaperIds = paperIds};
-            var action = await _eventService.EmitAsync(publisherIds, adminUser.Id, "PAPERS_ADD", actionData);
+            var action = await _eventService.EmitAsync(publisherIds, adminUser.ActorId, "PAPERS_ADD", actionData);
             return new ActionResultModel<List<Paper>>(papers, action);
         }
 
         
-        public async Task<ActionResultModel<List<Paper>>> AddTestPapers(Test test, List<Participant> participants, User adminUser)
+        public async Task<ActionResultModel<List<Paper>>> AddTestPapersAsync(Test test, 
+            List<Participant> participants, 
+            User adminUser)
         {
             AssertHelper.NotNull(test, nameof(test));
             AssertHelper.NotNull(test.Space, nameof(test.Space));
@@ -140,10 +196,10 @@ namespace ExamBook.Services
 
             var papers = new List<Paper>();
 
-            var duplicata = await ContainsAsync(test, participants);
-            if (duplicata.Count > 0)
+            var duplicates = await ContainsAsync(test, participants);
+            if (duplicates.Count > 0)
             {
-                throw new DuplicateValueException("PaperParticipantsExists", duplicata);
+                throw new DuplicateValueException("PaperParticipantsExists", duplicates);
             }
 
             foreach (var participant in participants)
@@ -234,7 +290,7 @@ namespace ExamBook.Services
             paper.Student = student;
 
             await _dbContext.AddAsync(paper);
-            await _dbContext.AddAsync(paper.PaperScore);
+            await _dbContext.AddAsync(paper.PaperScore!);
             await _dbContext.SaveChangesAsync();
             await _publisherService.SaveAsync(paper.Publisher!);
             return paper;

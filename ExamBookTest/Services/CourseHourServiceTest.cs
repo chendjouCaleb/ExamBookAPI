@@ -88,8 +88,8 @@ namespace ExamBookTest.Services
             _member2 = (await _memberService.AddMemberAsync(_space, memberModel2, _adminUser)).Item;
             _members = new List<Member> {_member1, _member2};
 
-            _room1 = (await _roomService.AddRoomAsync(_space, new RoomAddModel("Room 1", 10), _adminUser)).Item;
-            _room2 = (await _roomService.AddRoomAsync(_space, new RoomAddModel("Room 2", 10), _adminUser)).Item;
+            _room1 = (await _roomService.AddAsync(_space, new RoomAddModel("Room 1", 10), _adminUser)).Item;
+            _room2 = (await _roomService.AddAsync(_space, new RoomAddModel("Room 2", 10), _adminUser)).Item;
 
             _courseAddModel = new CourseAddModel
             {
