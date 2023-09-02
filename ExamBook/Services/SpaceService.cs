@@ -196,14 +196,15 @@ namespace ExamBook.Services
             {
                 throw new IllegalOperationException("SpaceIsNotPrivate");
             }
-            var publisher = await GetPublisherAsync(space);
-            var actor = await _userService.GetActor(user);
-
+           
             space.IsPublic = true;
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
 
-            return await _eventService.EmitAsync(publisher, actor, "SPACE_AS_PUBLIC", new { });
+            var publisherIds = new[] {space.PublisherId};
+            var actorIds = new[] {user.ActorId};
+            return await _eventService
+                .EmitAsync(publisherIds, actorIds, space.SubjectId, "SPACE_AS_PUBLIC", new { });
         }
 
         public async Task<Event> SetAsPrivate(Space space, User user)
@@ -214,14 +215,12 @@ namespace ExamBook.Services
                 throw new IllegalOperationException("SpaceIsNotPublic");
             }
             
-            var publisher = await GetPublisherAsync(space);
-            var actor = await _userService.GetActor(user);
-
             space.IsPublic = false;
             _dbContext.Update(space);
             await _dbContext.SaveChangesAsync();
-            
-            return await _eventService.EmitAsync(publisher, actor, "SPACE_AS_PRIVATE", new { });
+
+            var publisherIds = new[] {space.PublisherId};
+            return await _eventService.EmitAsync(publisherIds, user.ActorId, "SPACE_AS_PRIVATE", new { });
         }
 
 

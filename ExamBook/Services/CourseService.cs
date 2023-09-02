@@ -469,7 +469,8 @@ namespace ExamBook.Services
                 throw new IllegalStateException("MemberIsNotTeacher");
             }
 
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("COURSE_PUBLISHER");
+            
             CourseTeacher courseTeacher = new()
             {
                 Course = course,

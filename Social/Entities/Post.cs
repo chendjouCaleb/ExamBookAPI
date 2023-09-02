@@ -18,6 +18,9 @@ namespace Social.Entities
 
         public string PublisherId { get; set; } = null!;
         [NotMapped] public Publisher? Publisher { get; set; } 
+        
+        public string SubjectId { get; set; } = null!;
+        [NotMapped] public Subject? Subject { get; set; } 
 
         /// <summary>
         /// Json post metadata.

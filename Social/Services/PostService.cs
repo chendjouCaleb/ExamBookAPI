@@ -19,6 +19,7 @@ namespace Social.Services
         private readonly IRepostRepository _repostRepository;
         private readonly PublisherService _publisherService;
         private readonly ActorService _actorService;
+        private readonly SubjectService _subjectService;
         private readonly SubscriptionService _subscriptionService;
         private readonly EventService _eventService;
         private readonly ILogger<PostService> _logger;
@@ -28,7 +29,7 @@ namespace Social.Services
             ILogger<PostService> logger, 
             SubscriptionService subscriptionService, 
             PublisherService publisherService,
-            EventService eventService, ActorService actorService, IRepostRepository repostRepository)
+            EventService eventService, ActorService actorService, IRepostRepository repostRepository, SubjectService subjectService)
         {
             _postRepository = postRepository;
             _authorRepository = authorRepository;
@@ -38,6 +39,7 @@ namespace Social.Services
             _eventService = eventService;
             _actorService = actorService;
             _repostRepository = repostRepository;
+            _subjectService = subjectService;
         }
 
 
@@ -73,7 +75,8 @@ namespace Social.Services
                 throw new InvalidOperationException($"Author with id={model.AuthorId} not found.");
             }
 
-            var publisher = await _publisherService.AddAsync();
+            var publisher = _publisherService.Create("POST_PUBLISHER");
+            var subject = _subjectService.Create("POST_SUBJECT");
             long? parentPostId = null;
             if (parent != null)
             {
@@ -86,16 +89,20 @@ namespace Social.Services
                 Content = model.Content,
                 MetaData = model.MetaData,
                 PublisherId = publisher.Id,
+                SubjectId = subject.Id,
+                
                 ParentPostId = parentPostId,
                 ParentPost = parent
             };
             
             await _postRepository.SaveAsync(post);
 
-            var authorPublisher = await _publisherService.GetByIdAsync(author.PublisherId);
-            var authorActor = await _actorService.GetByIdAsync(author.ActorId);
-            
-            await _eventService.EmitAsync(authorPublisher, authorActor, "POST_ADD", new {PostId = post.Id});
+            await _publisherService.SaveAsync(publisher);
+            await _subjectService.SaveAsync(subject);
+
+            var publisherIds = new[] {author.PublisherId};
+            var actorIds = new[] {author.ActorId};
+            await _eventService.EmitAsync(publisherIds, actorIds, subject.Id, "POST_ADD", new {PostId = post.Id});
             _logger.LogInformation("New post; id={}", post.Id);
 
             return post;

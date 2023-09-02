@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Traceability.Models
 {
@@ -9,10 +8,8 @@ namespace Traceability.Models
     public class Actor
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = "";
         
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        
-
-        public List<Event> Events { get; set; } = new();
     }
 }

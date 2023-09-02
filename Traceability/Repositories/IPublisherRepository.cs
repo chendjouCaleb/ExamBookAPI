@@ -6,8 +6,11 @@ namespace Traceability.Repositories
 {
     public interface IPublisherRepository
     {
-        Task<Publisher?> GetByIdAsync(string id);
         Publisher? GetById(string id);
+        Task<Publisher?> GetByIdAsync(string id);
+        
+        
+        ICollection<Publisher> GetById(ICollection<string> id);
         Task<ICollection<Publisher>> GetByIdAsync(ICollection<string> id);
 
         Task SaveAsync(Publisher publisher);

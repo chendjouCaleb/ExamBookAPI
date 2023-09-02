@@ -87,8 +87,8 @@ namespace ExamBook.Services
 				throw new DuplicateValueException("TestTeacherDuplicate", test, member);
 			}
 
-			var publisher = _publisherService.Create();
-			var subject = _subjectService.Create();
+			var publisher = _publisherService.Create("TEST_PUBLISHER");
+			var subject = _subjectService.Create("TEST_SUBJECT");
 			TestTeacher testTeacher = new()
 			{
 				Test = test,

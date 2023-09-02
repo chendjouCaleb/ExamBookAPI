@@ -36,6 +36,13 @@ namespace Traceability.EFCore
                 .Where(s => id.Contains(s.Id))
                 .ToListAsync();
         }
+        
+        public ICollection<Publisher> GetById(ICollection<string> id)
+        {
+            return _dbContext.Publishers
+                .Where(s => id.Contains(s.Id))
+                .ToList();
+        }
 
         public async Task SaveAsync(Publisher publisher)
         {
@@ -43,9 +50,9 @@ namespace Traceability.EFCore
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task SaveAllAsync(ICollection<Publisher> publisher)
+        public async Task SaveAllAsync(ICollection<Publisher> publishers)
         {
-            await _dbContext.AddRangeAsync(publisher);
+            await _dbContext.AddRangeAsync(publishers);
             await _dbContext.SaveChangesAsync();
         }
 

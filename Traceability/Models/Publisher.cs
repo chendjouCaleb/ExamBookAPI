@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Traceability.Models
 {
@@ -18,12 +17,17 @@ namespace Traceability.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        public HashSet<Subscription> Subscriptions { get; set; } = new ();
+        public string Name { get; set; } = "";
     }
 
     public class PublisherEvent
     {
+        public PublisherEvent(Publisher publisher, Event @event)
+        {
+            Publisher = publisher;
+            Event = @event;
+        }
+        
         public long Id { get; set; }
         public Publisher? Publisher { get; set; }
         public string PublisherId { get; set; } = null!;

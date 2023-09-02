@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Traceability.Models;
 using Traceability.Repositories;
@@ -25,12 +27,42 @@ namespace Traceability.Services
 
             return actor;
         }
-
-        public async Task<Actor> AddAsync()
+        
+        public async Task<IList<Actor>> GetByIdAsync( ICollection<string> actorIds)
         {
-            Actor actor = new();
+            var actors = await _actorRepository.GetByIdAsync(actorIds);
+
+            var actorIdNotFounds = actorIds.Where(actorId => 
+                    actors.All(p => p.Id != actorId))
+                .ToList();
+
+            if (actorIdNotFounds.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Actors with id=[{string.Join(',', actorIdNotFounds)}] not found.");
+            }
+
+            return actors.ToList();
+        }
+
+       
+        public Actor Create(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+            return new Actor {Name = name};
+        }
+        
+        public async Task SaveAllAsync(ICollection<Actor> actors)
+        {
+            await _actorRepository.SaveAllAsync(actors);
+        }
+        
+        public async Task SaveAsync(Actor actor)
+        {
             await _actorRepository.SaveAsync(actor);
-            return actor;
         }
 
         public async Task DeleteAsync(string actorId)
@@ -43,7 +75,5 @@ namespace Traceability.Services
         {
             await _actorRepository.DeleteAsync(actor);
         }
-        
-        
     }
 }

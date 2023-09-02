@@ -203,7 +203,7 @@ namespace ExamBook.Services
             AssertHelper.IsTrue(members.All(m => m.SpaceId == space.Id), "Bad member space");
     
             var specialized = specialities.Count > 0;
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("TEST_PUBLISHER");
             var test = new Test
             {
                 Space = space,

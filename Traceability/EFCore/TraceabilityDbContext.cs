@@ -14,6 +14,8 @@ namespace Traceability.EFCore
         public DbSet<Publisher> Publishers => Set<Publisher>();
         public DbSet<PublisherEvent> PublisherEvents => Set<PublisherEvent>();
         public DbSet<Actor> Actors => Set<Actor>();
+        public DbSet<ActorEvent> ActorEvents => Set<ActorEvent>();
+        
         public DbSet<Event> Events => Set<Event>();
         public DbSet<Subscription> Subscription => Set<Subscription>();
         public DbSet<Subject> Subjects => Set<Subject>();

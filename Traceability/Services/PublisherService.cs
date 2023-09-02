@@ -65,7 +65,7 @@ namespace Traceability.Services
             return publisher;
         }
         
-        public async Task<ImmutableList<Publisher>> GetByIdAsync(params string[] publisherIds)
+        public async Task<IList<Publisher>> GetSetByIdAsync(params string[] publisherIds)
         {
             var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
 
@@ -83,7 +83,7 @@ namespace Traceability.Services
         }
 
 
-        public async Task<IList<Publisher>> GetByIdAsync( ICollection<string> publisherIds)
+        public async Task<IList<Publisher>> GetSetByIdAsync( ICollection<string> publisherIds)
         {
             var publishers = await _publisherRepository.GetByIdAsync(publisherIds);
 
@@ -135,9 +135,13 @@ namespace Traceability.Services
             return new Publisher();
         }
         
-        public Publisher Create()
+        public Publisher Create(string name)
         {
-            return new Publisher();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+            return new Publisher {Name = name};
         }
 
 

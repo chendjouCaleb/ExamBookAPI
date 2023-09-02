@@ -29,7 +29,7 @@ namespace Social.Services
 
         public async Task<Author> AddAuthorAsync(string name)
         {
-            var emitter = await _actorService.AddAsync();
+            var emitter = _actorService.Create("AUTHOR_ACTOR");
             var publisher = await _publisherService.AddAsync();
             var author = new Author
             {
@@ -41,6 +41,7 @@ namespace Social.Services
                 Publisher = publisher
             };
             await _authorRepository.SaveAsync(author);
+            await _actorService.SaveAsync(emitter);
             await SubscribeAsync(author, author);
             _logger.LogInformation("New author; id={}", author.Name);
             return author;
@@ -70,10 +71,11 @@ namespace Social.Services
                     $"The author id={author.Id}, Name={author.Name} already have a actor.");
             }
 
-            var actor = await _actorService.AddAsync();
+            var actor = _actorService.Create("AUTHOR_ACTOR");
             author.ActorId = actor.Id;
             author.Actor = actor;
             await _authorRepository.UpdateAsync(author);
+            await _actorService.SaveAsync(actor);
 
             return actor;
         }

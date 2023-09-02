@@ -91,7 +91,7 @@ namespace ExamBook.Services
 
            
 
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("EXAMINATION_PUBLISHER");
             Examination examination = new ()
             {
                 Space = space,
@@ -303,7 +303,7 @@ namespace ExamBook.Services
                 throw new IllegalOperationException("ExaminationSpecialityAlreadyExists");
             }
 
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("EXAMINATION_SPECIALITY_PUBLISHER");
             ExaminationSpeciality examinationSpeciality = new ()
             {
                 Examination = examination,

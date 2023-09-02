@@ -320,7 +320,7 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(test, nameof(test));
 
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("PAPER_PUBLISHER");
             var score = new PaperScore();
             Paper paper = new()
             {

@@ -22,20 +22,18 @@ namespace ExamBook.Services
 		private readonly ApplicationDbContext _dbContext;
 		private readonly PublisherService _publisherService;
 		private readonly SubjectService _subjectService;
-		private readonly MemberService _memberService;
 		private readonly EventService _eventService;
 		private readonly ILogger<ClassroomService> _logger;
 
 
 		public ClassroomService(ApplicationDbContext dbContext,
 			PublisherService publisherService, SubjectService subjectService, 
-			MemberService memberService, EventService eventService, 
+			EventService eventService, 
 			ILogger<ClassroomService> logger)
 		{
 			_dbContext = dbContext;
 			_publisherService = publisherService;
 			_subjectService = subjectService;
-			_memberService = memberService;
 			_eventService = eventService;
 			_logger = logger;
 		}
@@ -72,19 +70,19 @@ namespace ExamBook.Services
 
             if (await ContainsAsync(space, model.Name))
             {
-                throw new UsedValueException("ClassroomNameUsed");
+                throw new UsedValueException("ClassroomNameUsed", model.Name, space);
             }
 
             var room = await _dbContext.Set<Room>().FindAsync(model.RoomId);
 
             if (room != null && room.SpaceId != space.Id)
             {
-                throw new IllegalValueException("RoomIsNotFromSpace");
+                throw new IllegalValueException("BadRoomSpace");
             }
 
 
-            var publisher = _publisherService.Create();
-            var subject = _subjectService.Create();
+            var publisher = _publisherService.Create("CLASSROOM_PUBLISHER");
+            var subject = _subjectService.Create("CLASSROOM_SUBJECT");
             Classroom classroom = new()
             {
                 Space = space,
@@ -108,7 +106,8 @@ namespace ExamBook.Services
                 publisherIds.Add(room.PublisherId);
             }
 
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "CLASSROOM_ADD", classroom);
+            var actorIds = new List<string> {user.ActorId};
+            var @event = await _eventService.EmitAsync(publisherIds, actorIds, subject.Id, "CLASSROOM_ADD", classroom);
 
             _logger.LogInformation("New classroom {} in space: {}", classroom.Name, space.Name);
             return new ActionResultModel<Classroom>(classroom, @event);
@@ -120,9 +119,9 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(classroom.Space, nameof(classroom.Space));
 
-            if (await ContainsAsync(classroom.Space!, name))
+            if (await ContainsAsync(classroom.Space, name))
             {
-                throw new UsedValueException("ClassroomNameUsed");
+                throw new UsedValueException("ClassroomNameUsed", name, classroom.Space);
             }
 
             var data = new ChangeValueData<string>(classroom.Name, name);
@@ -131,9 +130,11 @@ namespace ExamBook.Services
             _dbContext.Update(classroom);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new[] {classroom.PublisherId, classroom.Space!.PublisherId};
+            var publisherIds = new[] {classroom.PublisherId, classroom.Space.PublisherId};
 
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "CLASSROOM_CHANGE_NAME", data);
+            return await _eventService.EmitAsync(publisherIds, new[] {user.ActorId}, 
+	            classroom.SubjectId,
+	            "CLASSROOM_CHANGE_NAME", data);
         }
 
 
@@ -162,13 +163,14 @@ namespace ExamBook.Services
             _dbContext.Update(classroom);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {classroom.PublisherId, classroom.Space!.PublisherId, room.PublisherId};
+            var publisherIds = new List<string> {classroom.PublisherId, classroom.Space.PublisherId, room.PublisherId};
             if (currentRoom != null)
             {
                 publisherIds.Add(currentRoom.PublisherId);
             } 
-
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "CLASSROOM_CHANGE_ROOM", data);
+			
+            return await _eventService
+	            .EmitAsync(publisherIds, new[] {user.ActorId}, classroom.SubjectId, "CLASSROOM_CHANGE_ROOM", data);
         }
 
 
@@ -181,7 +183,7 @@ namespace ExamBook.Services
 
             if (classroom == null)
             {
-                throw new ElementNotFoundException("ClassroomNotFoundByName");
+                throw new ElementNotFoundException("ClassroomNotFoundByName", name, space);
             }
 
             return classroom;
@@ -207,14 +209,15 @@ namespace ExamBook.Services
             _dbContext.Update(classroom);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> { classroom.PublisherId, classroom.Space!.PublisherId };
+            var publisherIds = new List<string> { classroom.PublisherId, classroom.Space.PublisherId };
 
             if (room != null)
             {
                 publisherIds.Add(room.PublisherId);
             }
 
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "CLASSROOM_DELETE", classroom);
+            var actorIds = new List<string> {user.ActorId};
+            return await _eventService.EmitAsync(publisherIds, actorIds, classroom.SubjectId, "CLASSROOM_DELETE", classroom);
         }
 	}
 }

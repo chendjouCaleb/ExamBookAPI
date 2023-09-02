@@ -154,7 +154,7 @@ namespace ExamBook.Services
             
             AssertHelper.IsTrue(examinationSpecialities.All(s => s.ExaminationId == examination.Id));
 
-            var publisher = _publisherService.Create();
+            var publisher = _publisherService.Create("PARTICIPANT_SERVICE");
             Participant participant = new()
             {
                 Examination = examination,

@@ -114,7 +114,7 @@ namespace ExamBook.Services
 				throw new UsedValueException("ExaminationSpecialityNameUsed", model.Name);
 			}
 
-			var publisher = _publisherService.Create();
+			var publisher = _publisherService.Create("EXAMINATION_SPECIALITY_PUBLISHER");
 			ExaminationSpeciality examinationSpeciality = new ()
 			{
 				Examination = examination,

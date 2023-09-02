@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Traceability.Models;
@@ -22,6 +23,20 @@ namespace Traceability.EFCore
                 .FirstOrDefaultAsync();
         }
 
+        public ICollection<Actor> GetById(ICollection<string> id)
+        {
+            return _dbContext.Actors
+                .Where(s => id.Contains(s.Id))
+                .ToList();
+        }
+
+        public async Task<ICollection<Actor>> GetByIdAsync(ICollection<string> id)
+        {
+            return await _dbContext.Actors
+                .Where(s => id.Contains(s.Id))
+                .ToListAsync();
+        }
+
         public async Task<bool> AnyAsync(string id)
         {
             return await _dbContext.Actors
@@ -32,6 +47,12 @@ namespace Traceability.EFCore
         public async Task SaveAsync(Actor actor)
         {
             await _dbContext.Actors.AddAsync(actor);
+            await _dbContext.SaveChangesAsync();
+        }
+        
+        public async Task SaveAllAsync(ICollection<Actor> actors)
+        {
+            await _dbContext.AddRangeAsync(actors);
             await _dbContext.SaveChangesAsync();
         }
 

@@ -5,7 +5,7 @@
 		public string Name { get; set; } = "";
 		public string NormalizedName { get; set; } = "";
 
-		public Room Room { get; set; } = null!;
+		public Room? Room { get; set; } = null!;
 		public ulong RoomId { get; set; }
 
 		public Space Space { get; set; } = null!;

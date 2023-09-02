@@ -121,9 +121,13 @@ namespace Traceability.Services
             await _subjectRepository.SaveAsync(subject);
         }
 
-        public Subject Create()
+        public Subject Create(string name)
         {
-            return new Subject();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+            return new Subject {Name = name};
         }
 
 

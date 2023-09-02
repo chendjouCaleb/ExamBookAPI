@@ -134,8 +134,8 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
 
             var actor = await _actorService.GetByIdAsync(user.ActorId);
-            var publishers = await _publisherService.GetByIdAsync(space.PublisherId, memberUser.PublisherId);
-            publishers = publishers.Add(publisher);
+            var publishers = await _publisherService.GetSetByIdAsync(space.PublisherId, memberUser.PublisherId);
+            publishers = publishers.Append(publisher).ToList();
             
             member = await GetByIdAsync(member.Id);
             var @event = await _eventService.EmitAsync(publishers, actor, "MEMBER_ADD", member);
@@ -168,7 +168,7 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
 
             var actor = await _actorService.GetByIdAsync(user.ActorId);
-            var publishers = await _publisherService.GetByIdAsync(
+            var publishers = await _publisherService.GetSetByIdAsync(
                 member.PublisherId, 
                 member.Space!.PublisherId, 
                 member.User!.PublisherId);
@@ -190,7 +190,7 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
 
             var actor = await _actorService.GetByIdAsync(user.ActorId);
-            var publishers = await _publisherService.GetByIdAsync(
+            var publishers = await _publisherService.GetSetByIdAsync(
                 member.PublisherId, 
                 member.Space!.PublisherId, 
                 member.User!.PublisherId);

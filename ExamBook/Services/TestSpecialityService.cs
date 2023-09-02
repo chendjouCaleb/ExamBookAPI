@@ -35,9 +35,9 @@ namespace ExamBook.Services
 				.Include(ts => ts.Speciality)
 				.FirstOrDefaultAsync();
 
-			if (testSpeciality != null)
+			if (testSpeciality == null)
 			{
-				throw new ElementNotFoundException("TestSpecialityById", id);
+				throw new ElementNotFoundException("TestSpecialityNotFoundById", id);
 			}
 
 			return testSpeciality;
@@ -180,7 +180,7 @@ namespace ExamBook.Services
 				throw new DuplicateValueException("TestExaminationSpecialityExists", test, examinationSpeciality);
 			}
 
-			var publisher = _publisherService.Create();
+			var publisher = _publisherService.Create("TEST_SPECIALITY_PUBLISHER");
 
 			return new TestSpeciality
 			{
@@ -209,7 +209,7 @@ namespace ExamBook.Services
 				throw new DuplicateValueException("TestSpecialityExists", test, speciality);
 			}
 
-			var publisher = _publisherService.Create();
+			var publisher = _publisherService.Create("TEST_SPECIALITY_PUBLISHER");
 
 			return new TestSpeciality
 			{

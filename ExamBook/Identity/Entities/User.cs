@@ -19,6 +19,7 @@ namespace ExamBook.Identity.Entities
         public string AuthorId { get; set; } = "";
         public string ActorId { get; set; } = "";
         public string PublisherId { get; set; } = "";
+        public string SubjectId { get; set; } = "";
 
         public DateTime? DeletedAt { get; set; }
         public bool Deleted { get; set; }

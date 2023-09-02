@@ -106,6 +106,8 @@ namespace ExamBookTest
                 });
 
             services.AddTransient<SpaceService>()
+                .AddTransient<ClassroomService>()
+                .AddTransient<ClassroomSpecialityService>()
                 .AddTransient<MemberService>()
                 .AddTransient<RoomService>()
                 .AddTransient<SpecialityService>()

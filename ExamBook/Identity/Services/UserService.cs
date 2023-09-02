@@ -28,6 +28,7 @@ namespace ExamBook.Identity.Services
 		private readonly UserCodeService _userCodeService;
 		private readonly AuthorService _authorService;
 		private readonly ActorService _actorService;
+		private readonly SubjectService _subjectService;
 		private readonly PublisherService _publisherService;
 		private readonly ApplicationIdentityDbContext _dbContext;
 
@@ -35,7 +36,8 @@ namespace ExamBook.Identity.Services
 			ApplicationIdentityDbContext dbContext,
 			AuthorService authorService,
 			ActorService actorService,
-			PublisherService publisherService, IPasswordHasher<User> passwordHasher, UserCodeService userCodeService)
+			PublisherService publisherService, IPasswordHasher<User> passwordHasher,
+			UserCodeService userCodeService, SubjectService subjectService)
 		{
 			_userManager = userManager;
 			_dbContext = dbContext;
@@ -44,6 +46,7 @@ namespace ExamBook.Identity.Services
 			_publisherService = publisherService;
 			_passwordHasher = passwordHasher;
 			_userCodeService = userCodeService;
+			_subjectService = subjectService;
 		}
 		
 		public async Task<ImmutableList<User>> ListById(ICollection<string> userId)
@@ -167,6 +170,10 @@ namespace ExamBook.Identity.Services
 				throw new UsedValueException("UserNameUsed", model.UserName);
 			}
 
+			var publisher = _publisherService.Create("USER_PUBLISHER");
+			var subject = _subjectService.Create("USER_SUBJECT");
+			var actor = _actorService.Create("USER_ACTOR");
+
 			User user = new()
 			{
 				Email = model.Email,
@@ -175,20 +182,18 @@ namespace ExamBook.Identity.Services
 				Sex = model.Sex,
 				UserName = model.UserName,
 				BirthDate = model.BirthDate!.Value,
-				CreatedAt = DateTime.UtcNow
+				CreatedAt = DateTime.UtcNow,
+				PublisherId = publisher.Id,
+				ActorId = actor.Id,
+				SubjectId = subject.Id
 			};
 
 			var result = await _userManager.CreateAsync(user, model.Password);
 			IdentityResultException.ThrowIfError(result);
 
-			var author = await _authorService.AddAuthorAsync(user.UserName);
-			var actor = await _actorService.AddAsync();
-			var publisher = await _publisherService.AddAsync();
-
-			user.AuthorId = author.Id;
-			user.ActorId = actor.Id;
-			user.PublisherId = publisher.Id;
-			await _userManager.UpdateAsync(user);
+			await _publisherService.SaveAsync(publisher);
+			await _actorService.SaveAsync(actor);
+			await _subjectService.SaveAsync(subject);
 
 			return user;
 		}
@@ -196,22 +201,38 @@ namespace ExamBook.Identity.Services
 		public async Task EnsureVx()
 		{
 			var users = await _dbContext.Users.ToListAsync();
+			var publishers = new List<Publisher>();
+			var subjects = new List<Subject>();
+			var actors = new List<Actor>();
 			foreach (var user in users)
 			{
 				if (string.IsNullOrWhiteSpace(user.PublisherId))
 				{
-					var publisher = await _publisherService.AddAsync();
+					var publisher = _publisherService.Create("USER_PUBLISHER");
 					user.PublisherId = publisher.Id;
+					publishers.Add(publisher);
+				}
+				
+				if (string.IsNullOrWhiteSpace(user.SubjectId))
+				{
+					var subject = _subjectService.Create("USER_SUBJECT");
+					user.SubjectId = subject.Id;
+					subjects.Add(subject);
 				}
 				
 				if (string.IsNullOrWhiteSpace(user.ActorId))
 				{
-					var actor = await _actorService.AddAsync();
+					var actor = _actorService.Create("USER_ACTOR");
 					user.ActorId = actor.Id;
+					actors.Add(actor);
 				}
 
 				_dbContext.Update(user);
 				await _dbContext.SaveChangesAsync();
+
+				await _publisherService.SaveAllAsync(publishers);
+				await _subjectService.SaveAllAsync(subjects);
+				await _actorService.SaveAllAsync(actors);
 			}
 		}
 
