@@ -24,8 +24,8 @@ namespace ExamBook.Entities
         public Examination? Examination { get; set; }
         public ulong? ExaminationId { get; set; }
         
-        public Course? Course { get; set; } 
-        public ulong? CourseId { get; set; }
+        public CourseClassroom? CourseClassroom { get; set; } 
+        public ulong? CourseClassroomId { get; set; }
 
         public Room? Room { get; set; }
         public ulong? RoomId { get; set; }
@@ -45,9 +45,9 @@ namespace ExamBook.Entities
                 throw new ArgumentNullException(nameof(Examination));
             }
 
-            if (CourseId != null && Course == null)
+            if (CourseClassroomId != null && CourseClassroom == null)
             {
-                throw new ArgumentNullException(nameof(Course));
+                throw new ArgumentNullException(nameof(CourseClassroom));
             }
         }
         public List<string> GetPublisherIds()
@@ -58,9 +58,9 @@ namespace ExamBook.Entities
                 publisherIds.Add(Examination.PublisherId);
             }
 
-            if (Course != null)
+            if (CourseClassroom != null)
             {
-                publisherIds.Add(Course.PublisherId);
+                publisherIds.Add(CourseClassroom.PublisherId);
             }
 
             return publisherIds;

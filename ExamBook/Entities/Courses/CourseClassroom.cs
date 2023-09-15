@@ -4,10 +4,10 @@ namespace ExamBook.Entities
 {
 	public class CourseClassroom:Entity
 	{
-		public Classroom Classroom { get; set; }
+		public Classroom Classroom { get; set; } = null!;
 		public ulong ClassroomId { get; set; }
-		
-		public Course Course { get; set; }
+
+		public Course Course { get; set; } = null!;
 		public ulong CourseId { get; set; }
 		
 		

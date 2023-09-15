@@ -8,10 +8,10 @@ namespace ExamBook.Models
     {
         public TestAddModel() {}
 
-        public TestAddModel(Course course)
+        public TestAddModel(CourseClassroom courseClassroom)
         {
-            Name = course.Name;
-            Coefficient = course.Coefficient;
+            Name = courseClassroom.Course.Name;
+            Coefficient = courseClassroom.Coefficient;
         }
         public string Name { get; set; } = "";
         public DateTime StartAt { get; set; }

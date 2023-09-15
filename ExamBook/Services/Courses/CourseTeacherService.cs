@@ -46,10 +46,10 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<bool> ContainsAsync(Course course, Member member)
+        public async Task<bool> ContainsAsync(CourseClassroom courseClassroom, Member member)
         {
             return await _dbContext.Set<CourseTeacher>()
-                .Where(ct => ct.CourseId == course.Id && ct.MemberId == member.Id)
+                .Where(ct => ct.CourseClassroomId == courseClassroom.Id && ct.MemberId == member.Id)
                 .Where(ct => ct.DeletedAt == null)
                 .AnyAsync();
         }
@@ -98,26 +98,26 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<CourseTeacher> _CreateCourseTeacherAsync(Course course, Member member)
+        public async Task<CourseTeacher> _CreateCourseTeacherAsync(CourseClassroom courseClassroom, Member member)
         {
-            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(member, nameof(member));
-            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
 
-            if (course.SpaceId != member.SpaceId)
+            if (courseClassroom.Course.SpaceId != member.SpaceId)
             {
-                throw new IncompatibleEntityException(course, member);
+                throw new IncompatibleEntityException(courseClassroom, member);
             }
 
-            if (await ContainsAsync(course, member))
+            if (await ContainsAsync(courseClassroom, member))
             {
-                throw new IllegalOperationException("CourseTeacherAlreadyExists");
+                throw new IllegalOperationException("CourseTeacherAlreadyExists", courseClassroom, member);
             }
 
 
             CourseTeacher courseTeacher = new()
             {
-                Course = course,
+                CourseClassroom = courseClassroom,
                 Member = member
             };
             return courseTeacher;
@@ -182,25 +182,31 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<Event> DeleteAsync(CourseTeacher courseTeacher, User user)
+        public async Task<Event> DeleteAsync(CourseTeacher courseTeacher, Member member)
         {
             AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
-            AssertHelper.NotNull(user, nameof(user));
-
-            var course = await _dbContext.Set<Course>()
-                .Include(c => c.Space)
-                .Where(c => c.Id == courseTeacher.CourseId)
-                .FirstAsync();
-            var member = await _dbContext.Set<Member>().Where(m => m.Id == courseTeacher.MemberId)
-                .FirstAsync();
-            var space = course.Space;
+            AssertHelper.NotNull(courseTeacher.Member, nameof(courseTeacher.Member));
+            AssertHelper.NotNull(courseTeacher.CourseClassroom, nameof(courseTeacher.CourseClassroom));
+            AssertHelper.NotNull(courseTeacher.CourseClassroom!.Course, nameof(courseTeacher.CourseClassroom.Course));
+            AssertHelper.NotNull(courseTeacher.CourseClassroom.Course.Space, nameof(courseTeacher.CourseClassroom.Course.Space));
+            AssertHelper.NotNull(courseTeacher.Member, nameof(courseTeacher.Member));
+            AssertHelper.NotNull(member, nameof(member));
 
             courseTeacher.DeletedAt = DateTime.UtcNow;
             _dbContext.Update(courseTeacher);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {space!.PublisherId, member.PublisherId, course.PublisherId};
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_TEACHER_DELETE", courseTeacher);
+            
+            var publisherIds = new List<string> {
+                courseTeacher.PublisherId, 
+                courseTeacher.CourseClassroom.PublisherId,
+                courseTeacher.CourseClassroom.Course.PublisherId,
+                courseTeacher.CourseClassroom.Course.Space!.PublisherId,
+                courseTeacher.Member!.PublisherId
+            };
+            var actorIds = new[] {member.ActorId, member.User!.ActorId};
+            var data = new {CourseTeacherId = courseTeacher.Id};
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseTeacher.SubjectId, "COURSE_TEACHER_DELETE", data);
         }
     }
 }

@@ -19,6 +19,8 @@ namespace ExamBook.Entities
         public bool IsAdmin { get; set; }
         public bool IsTeacher { get; set; }
 
+        public string ActorId { get; set; } = null!;
+
         public List<TestTeacher> TestTeachers { get; set; } = new();
     }
 }

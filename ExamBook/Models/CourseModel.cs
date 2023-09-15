@@ -6,6 +6,13 @@ namespace ExamBook.Models
     public class CourseAddModel
     {
         public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+    
+    
+    public class CourseClassroomAddModel
+    {
+       
         public string Code { get; set; } = "";
         public string Description { get; set; } = "";
         public uint Coefficient { get; set; }

@@ -11,11 +11,12 @@ namespace ExamBook.Persistence
         }
         
         public DbSet<Course> Courses { get; set; }
+        public DbSet<CourseClassroom> CourseClassrooms { get; set; }
         public DbSet<CourseHour> CourseHours { get; set; }
         public DbSet<CourseSession> CourseSessions { get; set; }
         public DbSet<CourseSpeciality> CourseSpecialities { get; set; }
         public DbSet<CourseTeacher> CourseTeachers { get; set; }
-        public DbSet<Speciality> Specialities { get; set; }
+        
         public DbSet<Student> Students { get; set; }
         public DbSet<StudentSpeciality> StudentSpecialities => Set<StudentSpeciality>();
 
@@ -34,9 +35,13 @@ namespace ExamBook.Persistence
         public DbSet<TestGroup> TestGroups { get; set; }
         public DbSet<TestSpeciality> TestSpecialities { get; set; }
         
+        
+        
         public DbSet<Space> Spaces { get; set; }
-        public DbSet<ClassroomSpeciality> ClassroomSpecialities => Set<ClassroomSpeciality>();
+        public DbSet<Speciality> Specialities { get; set; }
         public DbSet<Classroom> Classrooms { get; set; }
+        public DbSet<ClassroomSpeciality> ClassroomSpecialities => Set<ClassroomSpeciality>();
+        
 
     }
 }

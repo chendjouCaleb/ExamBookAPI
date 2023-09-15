@@ -490,14 +490,6 @@ namespace ExamBook.Services
             return _CreateCourseTeacherAsync(course, member);
         }
         
-        public async Task DeleteCourseTeacherAsync(CourseTeacher courseTeacher)
-        {
-            AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
-            _dbContext.Remove(courseTeacher);
-            await _dbContext.SaveChangesAsync();
-        }
-
-        
         
         public async Task<Event> DeleteAsync(Course course, User user)
         {
