@@ -72,6 +72,7 @@ namespace Traceability.Services
         }
         
         
+        [Obsolete]
         public async Task<Event> EmitAsync(ICollection<Publisher> publishers, Actor actor, string name, object data)
         {
             Event @event = new ()
@@ -103,6 +104,7 @@ namespace Traceability.Services
         }
         
         
+        [Obsolete]
         public async Task<Event> EmitAsync(
             ICollection<string> publisherIds, 
             string actorId, 

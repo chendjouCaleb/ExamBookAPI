@@ -6,8 +6,8 @@ namespace ExamBook.Entities
 {
     public class CourseHour:Entity
     {
-        public Course Course { get; set; } = null!;
-        public ulong? CourseId { get; set; }
+        public CourseClassroom CourseClassroom { get; set; } = null!;
+        public ulong? CourseClassroomId { get; set; }
 
         public DayOfWeek DayOfWeek { get; set; }
         public TimeOnly StartHour { get; set; }

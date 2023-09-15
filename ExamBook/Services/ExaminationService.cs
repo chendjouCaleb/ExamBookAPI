@@ -21,6 +21,7 @@ namespace ExamBook.Services
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly PublisherService _publisherService;
+        private readonly SubjectService _subjectService;
         private readonly EventService _eventService;
         private readonly ILogger<ExaminationService> _logger;
         
@@ -28,12 +29,13 @@ namespace ExamBook.Services
         public ExaminationService(ApplicationDbContext dbContext, 
             PublisherService publisherService, 
             EventService eventService, 
-            ILogger<ExaminationService> logger)
+            ILogger<ExaminationService> logger, SubjectService subjectService)
         {
             _dbContext = dbContext;
             _publisherService = publisherService;
             _eventService = eventService;
             _logger = logger;
+            _subjectService = subjectService;
         }
 
 
@@ -88,10 +90,9 @@ namespace ExamBook.Services
             {
                 throw new IllegalValueException("StartDateBeforeNow");
             }
-
-           
-
+            
             var publisher = _publisherService.Create("EXAMINATION_PUBLISHER");
+            var subject = _subjectService.Create("EXAMINATION_PUBLISHER");
             Examination examination = new ()
             {
                 Space = space,
@@ -114,7 +115,8 @@ namespace ExamBook.Services
             var publisherIds = new List<string> {space.PublisherId, publisher.Id};
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             publisherIds.AddRange(examinationSpecialityPublishers.Select(s => s.Id));
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_ADD", examination);
+            var @event = await _eventService
+                .EmitAsync(publisherIds, new[]{user.ActorId}, subject.Id, "EXAMINATION_ADD", examination);
             _logger.LogInformation("New examination service");
             return new ActionResultModel<Examination>(examination, @event);
         }
@@ -148,7 +150,9 @@ namespace ExamBook.Services
             _dbContext.Update(examination);
             await _dbContext.SaveChangesAsync();
             var publisherIds = new List<string> { examination.PublisherId, examination.Space.PublisherId };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_CHANGE_NAME", eventData);
+            return await _eventService
+                .EmitAsync(publisherIds, new [] {user.ActorId},examination.SubjectId,
+                    "EXAMINATION_CHANGE_NAME", eventData);
         }
 
 
@@ -169,7 +173,8 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
 
             var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_CHANGE_START_AT", eventData);
+            return await _eventService.EmitAsync(publisherIds, new[] {user.ActorId}, examination.SubjectId,
+                "EXAMINATION_CHANGE_START_AT", eventData);
         }
         
         
@@ -195,7 +200,9 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
             publisherIds.AddRange(tests.Select(t => t.PublisherId));
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_LOCK", new {});
+            return await _eventService
+                .EmitAsync(publisherIds, new[] {user.ActorId}, examination.SubjectId,
+                "EXAMINATION_LOCK", new {});
         }
         
         
@@ -222,7 +229,8 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
             publisherIds.AddRange(tests.Select(t => t.PublisherId));
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_UNLOCK", new {});
+            return await _eventService
+                .EmitAsync(publisherIds, new[]{user.ActorId}, examination.SubjectId, "EXAMINATION_UNLOCK", new {});
         }
         
         
@@ -242,7 +250,7 @@ namespace ExamBook.Services
 
             await _dbContext.AddAsync(examinationSpeciality);
             await _dbContext.SaveChangesAsync();
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_SPECIALITY_ADD",
+            var @event = await _eventService.EmitAsync(publisherIds,new[] {user.ActorId}, examination.SubjectId, "EXAMINATION_SPECIALITY_ADD",
                 examinationSpeciality);
             
             return new ActionResultModel<ExaminationSpeciality>(examinationSpeciality, @event);
@@ -264,7 +272,7 @@ namespace ExamBook.Services
             var publisherIds = new List<string> {examination.Space.PublisherId, examination.PublisherId};
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "EXAMINATION_SPECIALITIES_ADD",
+            var @event = await _eventService.EmitAsync(publisherIds, new[] {user.ActorId}, examination.SubjectId, "EXAMINATION_SPECIALITIES_ADD",
                 examinationSpecialities);
             
             return new ActionResultModel<ICollection<ExaminationSpeciality>>(examinationSpecialities, @event);
@@ -364,8 +372,9 @@ namespace ExamBook.Services
             _dbContext.Remove(examination);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {examination.Space.PublisherId, examination.PublisherId};
-            var @event = await _eventService.EmitAsync(publisherIds, user.Id, "EXAMINATION_DELETE", examination);
+            var publisherIds = new List<string> { examination.Space.PublisherId, examination.PublisherId };
+            var @event = await _eventService
+                .EmitAsync(publisherIds, new[] {user.ActorId}, examination.SubjectId, "EXAMINATION_DELETE", examination);
             return @event;
         }
     }
