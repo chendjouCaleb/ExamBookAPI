@@ -80,7 +80,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 			var speciality = await _specialityService.GetAsync(specialityId);
 
 
@@ -94,7 +94,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 			var specialities = specialityId
 				.Select(async id => await _specialityService.GetAsync(id))
 				.Select(t => t.Result)

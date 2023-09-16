@@ -38,5 +38,8 @@ namespace ExamBook.Models
         
         [Required]
         public TimeOnly EndHour { get; set; }
+        
+        public ulong RoomId { get; set; }
+        public ulong CourseTeacherId { get; set; }
     }
 }

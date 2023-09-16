@@ -165,6 +165,45 @@ namespace ExamBook.Services
 
 			return courseSpecialities;
 		}
+		
+		
+		public async Task<bool> CourseTeacherExistsAsync(Course course, Member member)
+		{
+			AssertHelper.NotNull(course, nameof(course));
+			AssertHelper.NotNull(member, nameof(member));
+
+			return await _dbContext.Set<CourseTeacher>()
+				.Where(ct => ct.CourseId == course.Id)
+				.Where(ct => ct.MemberId == member.Id)
+				.Where(ct => ct.DeletedAt == null)
+				.AnyAsync();
+		}
+
+		public async Task<bool> CourseTeacherExists(Course course, ulong memberId)
+		{
+			var member = await _dbContext.Set<Member>().FindAsync(memberId);
+			if (member == null)
+			{
+				throw new InvalidOperationException($"Member with id={memberId} not found.");
+			}
+			return await CourseTeacherExistsAsync(course, member);
+		}
+
+
+		public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(Course course, List<Member> members)
+		{
+			var courseTeachers = new List<CourseTeacher>();
+			foreach (var member in members)
+			{
+				if (!await CourseTeacherExistsAsync(course, member))
+				{
+					var courseTeacher = _CreateCourseTeacherAsync(course, member);
+					courseTeachers.Add(courseTeacher);
+				}
+			}
+
+			return courseTeachers;
+		}
 
 		public async Task<Event> SetAsPrincipalAsync(CourseTeacher courseTeacher, Member member)
 		{

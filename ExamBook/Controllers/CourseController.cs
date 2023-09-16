@@ -38,7 +38,7 @@ namespace ExamBook.Controllers
 		[HttpGet("{courseId}")]
 		public async Task<Course> GetAsync(ulong courseId)
 		{
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 
 			course.CourseSpecialities = await _dbContext.CourseSpecialities
 				.Include(cs => cs.Speciality)
@@ -125,7 +125,7 @@ namespace ExamBook.Controllers
 
 			var course = (await _courseService.AddCourseAsync(space, model, user)).Item;
 
-			course = await _courseService.GetCourseAsync(course.Id);
+			course = await _courseService.GetAsync(course.Id);
 			return CreatedAtAction("Get", new {courseId = course.Id}, course);
 		}
 
@@ -136,7 +136,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
             
 			string name = body["name"];
 			var result = await _courseService.ChangeCourseNameAsync(course, name, user);
@@ -150,7 +150,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
             
 			string code = body["code"];
 			var result = await _courseService.ChangeCourseCodeAsync(course, code, user);
@@ -165,7 +165,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
             
 			string value = body["coefficient"];
 			var coefficient = uint.Parse(value);
@@ -180,7 +180,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
             
 			string description = body["description"];
 			var result = await _courseService.ChangeCourseDescriptionAsync(course, description, user);
@@ -194,7 +194,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
             
 			var result = await _courseService.DeleteAsync(course, user);
 			return Ok(result);

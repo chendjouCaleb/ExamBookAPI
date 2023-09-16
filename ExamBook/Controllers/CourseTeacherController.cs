@@ -83,7 +83,7 @@ namespace ExamBook.Controllers
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 			var members = memberId
 				.Select(async id => await _memberService.GetByIdAsync(id))
 				.Select(t => t.Result)

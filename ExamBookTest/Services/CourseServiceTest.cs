@@ -106,7 +106,7 @@ namespace ExamBookTest.Services
         public async Task GetById()
         {
             var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-            var getResult = await _service.GetCourseAsync(course.Id);
+            var getResult = await _service.GetAsync(course.Id);
             
             Assert.AreEqual(course.Id, getResult.Id);
         }
@@ -116,7 +116,7 @@ namespace ExamBookTest.Services
         {
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
-                await _service.GetCourseAsync(ulong.MaxValue);
+                await _service.GetAsync(ulong.MaxValue);
             });
             
             Assert.AreEqual("CourseNotFoundById", ex!.Code);
@@ -373,7 +373,7 @@ namespace ExamBookTest.Services
         {
             var createdCourse = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
 
-            var course = await _service.GetCourseByNameAsync(_space, createdCourse.Name);
+            var course = await _service.GetByNameAsync(_space, createdCourse.Name);
             Assert.AreEqual(createdCourse.Id, course.Id);
         }
 
@@ -383,7 +383,7 @@ namespace ExamBookTest.Services
             var name = Guid.NewGuid().ToString();
             var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
             {
-                await _service.GetCourseByNameAsync(_space, name);
+                await _service.GetByNameAsync(_space, name);
             });
             Assert.AreEqual("CourseNotFoundByName", ex!.Message);
             Assert.AreEqual(name, ex.Params[0]);

@@ -115,7 +115,7 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 			var room = await _roomService.GetRoomAsync(roomId);
 			var members = await _memberService.ListAsync(memberIds);
 			
@@ -139,7 +139,7 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var examination = await _examinationService.GetByIdAsync(examinationId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 
 			var courseSpecialities = await _dbContext.CourseSpecialities
 				.Where(cs => cs.CourseId == course.Id)
@@ -245,7 +245,7 @@ namespace ExamBook.Controllers
 			var user = await _userService.FindByIdAsync(userId);
 			
 			var test = await _testService.GetByIdAsync(testId);
-			var course = await _courseService.GetCourseAsync(courseId);
+			var course = await _courseService.GetAsync(courseId);
 			return await _testService.AttachCourseAsync(test, course, user);
 		}
 		

@@ -7,6 +7,7 @@ using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
+using ExamBook.Services.Courses;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,31 +20,39 @@ namespace ExamBook.Services
     {
         private readonly DbContext _dbContext;
         private readonly PublisherService _publisherService;
+        private readonly SubjectService _subjectService;
         private readonly EventService _eventService;
+        private readonly CourseClassroomService _courseClassroomService;
+        private readonly CourseTeacherService _courseTeacherService;
         private readonly ILogger<CourseSessionService> _logger;
 
         public CourseSessionService(DbContext dbContext, 
             ILogger<CourseSessionService> logger,
             PublisherService publisherService, 
-            EventService eventService)
+            EventService eventService, SubjectService subjectService,
+            CourseClassroomService courseClassroomService, CourseTeacher courseTeacher, 
+            CourseTeacherService courseTeacherService)
         {
             _dbContext = dbContext;
             _logger = logger;
             _publisherService = publisherService;
             _eventService = eventService;
+            _subjectService = subjectService;
+            _courseClassroomService = courseClassroomService;
+            _courseTeacherService = courseTeacherService;
         }
 
         public async Task<CourseSession> GetAsync(ulong id)
         {
             var courseSession = await _dbContext.Set<CourseSession>()
-                .Include(cs => cs.Course!.Space)
+                .Include(cs => cs.CourseClassroom!.Course.Space)
                 .Include(cs => cs.CourseTeacher!.Member)
                 .Where(cs => cs.Id == id)
                 .FirstOrDefaultAsync();
 
             if (courseSession == null)
             {
-                throw new ElementNotFoundException("CourseSessionNotFound");
+                throw new ElementNotFoundException("CourseSessionNotFound", id);
             }
 
             return courseSession;
@@ -56,18 +65,15 @@ namespace ExamBook.Services
             AssertHelper.NotNull(user, nameof(user));
             AssertHelper.NotNull(model, nameof(model));
 
-            var course = await _dbContext.Set<Course>().FindAsync(model.CourseId);
-            var courseTeacher = await _dbContext.Set<CourseTeacher>()
-                .Include(ct => ct.Member)
-                .Where(ct => ct.Id == model.CourseTeacherId)
-                .FirstAsync();
+            var course = await _courseClassroomService.GetAsync(model.CourseClassroomId);
+            var courseTeacher = await _courseTeacherService.GetAsync(model.CourseTeacherId);
             var courseHour = await _dbContext.Set<CourseHour>().FindAsync(model.CourseHourId);
 
             var publisher = await _publisherService.AddAsync();
             CourseSession courseSession = new()
             {
                 Space = space,
-                Course = course,
+                CourseClassroom = course,
                 CourseTeacher = courseTeacher,
                 CourseHour = courseHour,
                 ExpectedStartDateTime = model.ExpectedStartDateTime,

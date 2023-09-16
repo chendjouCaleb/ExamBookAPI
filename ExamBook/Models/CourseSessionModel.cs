@@ -10,7 +10,7 @@ namespace ExamBook.Models
 
         public string Description { get; set; } = "";
 
-        public ulong CourseId { get; set; }
+        public ulong CourseClassroomId { get; set; }
         public ulong CourseTeacherId { get; set; }
         public ulong? CourseHourId { get; set; }
     }
