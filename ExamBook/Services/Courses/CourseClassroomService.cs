@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -205,6 +206,26 @@ namespace ExamBook.Services
 			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
 		}
 
+		
+		public async Task<Event> DeleteAsync(CourseClassroom courseClassroom, Member adminMember)
+		{
+			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
+			AssertHelper.NotNull(adminMember, nameof(adminMember));
+
+			courseClassroom.Code = "";
+			courseClassroom.NormalizedCode = "";
+			courseClassroom.Description = "";
+			courseClassroom.Coefficient = 0;
+			courseClassroom.DeletedAt = DateTime.UtcNow;
+			_dbContext.Update(courseClassroom);
+			await _dbContext.SaveChangesAsync();
+
+			var publisherIds = GetPublisherIds(courseClassroom);
+			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var data = new {CourseClassroomId = courseClassroom.Id};
+			return await _eventService.EmitAsync(publisherIds,  actorIds, courseClassroom.SubjectId, 
+				"COURSE_CLASSROOM_DELETE", data);
+		}
 
 		public HashSet<string> GetPublisherIds(CourseClassroom courseClassroom)
 		{

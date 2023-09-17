@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Social.Helpers;
 using Traceability.Asserts;
-using Traceability.Services;
 
 #pragma warning disable NUnit2005
 namespace ExamBookTest.Services
@@ -28,7 +27,6 @@ namespace ExamBookTest.Services
 		private SpaceService _spaceService = null!;
 		private MemberService _memberService = null!;
 		private SpecialityService _specialityService = null!;
-		private PublisherService _publisherService = null!;
 		private EventAssertionsBuilder _eventAssertionsBuilder = null!;
 
 		private DbContext _dbContext = null!;
@@ -56,7 +54,6 @@ namespace ExamBookTest.Services
 			var services = new ServiceCollection();
 
 			_provider = services.Setup();
-			_publisherService = _provider.GetRequiredService<PublisherService>();
 			_eventAssertionsBuilder = _provider.GetRequiredService<EventAssertionsBuilder>();
 			_dbContext = _provider.GetRequiredService<DbContext>();
 
@@ -66,6 +63,7 @@ namespace ExamBookTest.Services
 			_memberService = _provider.GetRequiredService<MemberService>();
 			_courseTeacherService = _provider.GetRequiredService<CourseTeacherService>();
 			_courseService = _provider.GetRequiredService<CourseService>();
+			_classroomService = _provider.GetRequiredService<ClassroomService>();
 			_service = _provider.GetRequiredService<CourseClassroomService>();
 			_adminUser = await userService.AddUserAsync(ServiceExtensions.UserAddModel);
 
@@ -282,80 +280,36 @@ namespace ExamBookTest.Services
 		public async Task DeleteCourseAsync()
 		{
 			var result = await _service.AddAsync(_classroom, _course, _model, _adminMember);
-			var course = result.Item;
+			var courseClassroom = result.Item;
 
-			var deleteEvent = await _service.DeleteAsync(course, _adminUser);
-			await _dbContext.Entry(course).ReloadAsync();
+			var deleteEvent = await _service.DeleteAsync(courseClassroom, _adminMember);
+			await _dbContext.Entry(courseClassroom).ReloadAsync();
 
-			Assert.NotNull(course.DeletedAt);
-			Assert.AreEqual("", course.Name);
-			Assert.AreEqual("", course.NormalizedName);
-			Assert.AreEqual("", course.Code);
-			Assert.AreEqual("", course.NormalizedCode);
-			Assert.AreEqual("", course.Description);
-			Assert.AreEqual(0, course.Coefficient);
+			Assert.NotNull(courseClassroom.DeletedAt);
+		
+			Assert.AreEqual("", courseClassroom.Code);
+			Assert.AreEqual("", courseClassroom.NormalizedCode);
+			Assert.AreEqual("", courseClassroom.Description);
+			Assert.AreEqual(0, courseClassroom.Coefficient);
 
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(deleteEvent)
-				.HasName("COURSE_DELETE")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(course);
+			var assertions = _eventAssertionsBuilder.Build(deleteEvent);
+			assertions.HasName("COURSE_CLASSROOM_DELETE");
+			assertions.HasData(new {CourseClassroom = courseClassroom.Id});
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseClassroom.SubjectId);
+			await assertions.HasPublisherIdAsync(courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
 		}
 
-
-		[Test]
-		public async Task FindCourseByCode()
-		{
-			var createdCourse = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
-
-			var course = await _service.GetCourseByCodeAsync(_space, createdCourse.Code);
-			Assert.AreEqual(createdCourse.Id, course.Id);
-		}
-
-		[Test]
-		public void FindCourseByCode_NotFound_ShouldThrow()
-		{
-			var code = Guid.NewGuid().ToString();
-			var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
-			{
-				await _service.GetCourseByCodeAsync(_space, code);
-			});
-			Assert.AreEqual("CourseNotFoundByCode", ex!.Message);
-			Assert.AreEqual(code, ex.Params[0]);
-		}
-
-
-		[Test]
-		public async Task FindCourseByName()
-		{
-			var createdCourse = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
-
-			var course = await _service.GetByNameAsync(_space, createdCourse.Name);
-			Assert.AreEqual(createdCourse.Id, course.Id);
-		}
-
-		[Test]
-		public void FindCourseByName_NotFound_ShouldThrow()
-		{
-			var name = Guid.NewGuid().ToString();
-			var ex = Assert.ThrowsAsync<ElementNotFoundException>(async () =>
-			{
-				await _service.GetByNameAsync(_space, name);
-			});
-			Assert.AreEqual("CourseNotFoundByName", ex!.Message);
-			Assert.AreEqual(name, ex.Params[0]);
-		}
 
 
 		[Test]
 		public async Task IsCourseByCode()
 		{
 			var course = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
-			var hasCourse = await _service.ContainsByCode(_space, course.Code);
+			var hasCourse = await _service.ContainsByCode(_classroom, course.Code);
 			Assert.True(hasCourse);
 		}
 
@@ -363,127 +317,8 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task IsCourseByCode_WithNonCourse_ShouldBeFalse()
 		{
-			var hasCourse = await _service.ContainsByCode(_space, "5D");
+			var hasCourse = await _service.ContainsByCode(_classroom, "5D");
 			Assert.False(hasCourse);
-		}
-
-
-		[Test]
-		public async Task IsCourseByName()
-		{
-			var course = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
-			var hasCourse = await _service.ContainsByName(_space, course.Name);
-			Assert.True(hasCourse);
-		}
-
-
-		[Test]
-		public async Task IsCourseByName_WithNonCourse_ShouldBeFalse()
-		{
-			var hasCourse = await _service.ContainsByName(_space, "5D");
-			Assert.False(hasCourse);
-		}
-
-
-		[Test]
-		public async Task AddCourseSpeciality()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			var result = await _service.AddCourseSpecialityAsync(course, _speciality1, _adminUser);
-			var courseSpeciality = result.Item;
-			await _dbContext.Entry(courseSpeciality).ReloadAsync();
-
-			Assert.AreEqual(course.Id, courseSpeciality.CourseId);
-			Assert.AreEqual(_speciality1.Id, courseSpeciality.SpecialityId);
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var specialityPublisher = await _publisherService.GetByIdAsync(_speciality1.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(result.Event)
-				.HasName("COURSE_SPECIALITY_ADD")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasPublisher(specialityPublisher)
-				.HasData(courseSpeciality);
-		}
-
-
-		[Test]
-		public async Task AddCourseSpecialities()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			var result = await _service.AddCourseSpecialitiesAsync(course, _specialities, _adminUser);
-
-			var courseSpecialities = result.Item;
-
-			foreach (var speciality in _specialities)
-			{
-				var courseSpeciality = courseSpecialities.First(cs => cs.SpecialityId == speciality.Id);
-				Assert.AreEqual(course.Id, courseSpeciality.CourseId);
-			}
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var speciality1Publisher = await _publisherService.GetByIdAsync(_speciality1.PublisherId);
-			var speciality2Publisher = await _publisherService.GetByIdAsync(_speciality2.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(result.Event)
-				.HasName("COURSE_SPECIALITIES_ADD")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasPublisher(speciality1Publisher)
-				.HasPublisher(speciality2Publisher)
-				.HasData(courseSpecialities);
-		}
-
-
-		[Test]
-		public async Task DeleteCourseSpeciality()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			var courseSpeciality = (await _service.AddCourseSpecialityAsync(course, _speciality1, _adminUser)).Item;
-			var @event = await _service.DeleteCourseSpecialityAsync(courseSpeciality, _adminUser);
-			await _dbContext.Entry(courseSpeciality).ReloadAsync();
-
-			Assert.NotNull(courseSpeciality.DeletedAt);
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var specialityPublisher = await _publisherService.GetByIdAsync(_speciality1.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(@event)
-				.HasName("COURSE_SPECIALITY_DELETE")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasPublisher(specialityPublisher)
-				.HasData(courseSpeciality);
-		}
-
-
-		[Test]
-		public async Task CourseSpecialityExists()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			await _service.AddCourseSpecialityAsync(course, _speciality1, _adminUser);
-
-			var exists = await _service.CourseSpecialityExists(course, _speciality1);
-			Assert.True(exists);
-		}
-
-
-		[Test]
-		public async Task CourseSpecialityExists_WithDeleted_ShouldBeFalse()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			var courseSpeciality = (await _service.AddCourseSpecialityAsync(course, _speciality1, _adminUser)).Item;
-			await _service.DeleteCourseSpecialityAsync(courseSpeciality, _adminUser);
-
-			var exists = await _service.CourseSpecialityExists(course, _speciality1);
-			Assert.False(exists);
 		}
 	}
 }
