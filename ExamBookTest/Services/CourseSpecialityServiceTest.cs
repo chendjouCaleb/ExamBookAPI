@@ -18,7 +18,7 @@ using Traceability.Services;
 #pragma warning disable NUnit2005
 namespace ExamBookTest.Services
 {
-    public class CourseClassroomServiceTest
+    public class CourseSpecialityServiceTest
     {
         private IServiceProvider _provider = null!;
         private CourseService _service = null!;

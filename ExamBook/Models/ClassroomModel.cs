@@ -6,7 +6,7 @@ namespace ExamBook.Models
     {
         public string Name { get; set; } = "";
 
-        public List<ulong> SpecialityIds { get; set; } = new();
+        public HashSet<ulong> SpecialityIds { get; set; } = new();
         public ulong RoomId { get; set; }
     }
 }
