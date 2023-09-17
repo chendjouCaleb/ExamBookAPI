@@ -7,7 +7,6 @@ using ExamBook.Exceptions;
 using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
-using ExamBook.Services.Courses;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -97,14 +96,14 @@ namespace ExamBook.Services
         }
 
         
-        public async Task<Event> ReportAsync(CourseSession courseSession, CourseSessionReportModel model, User user)
+        public async Task<Event> ReportAsync(CourseSession courseSession, CourseSessionReportModel model, Member adminMember)
         {
-            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
             AssertHelper.NotNull(courseSession, nameof(courseSession));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
+            AssertHelper.NotNull(courseSession.CourseClassroom!.Course.Space, nameof(courseSession.CourseClassroom.Course.Space));
             AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
             AssertHelper.NotNull(model, nameof(model));
-            var course = courseSession.Course;
+            var courseClassroom = courseSession.CourseClassroom;
             
             courseSession.Report = model.Report;
             courseSession.StartDateTime = model.StartDateTime;
@@ -114,23 +113,24 @@ namespace ExamBook.Services
             
             var publisherIds = new List<string>
             {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
+                courseClassroom.Course.Space!.PublisherId, 
+                courseClassroom.PublisherId, 
                 courseSession.CourseTeacher.PublisherId,
                 courseSession.PublisherId
             };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_HOUR_REPORT", model);
+            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseSession.SubjectId, "COURSE_SESSION_REPORT", model);
         }
 
         
-        public async Task<Event> ChangeHourAsync(CourseSession courseSession, CourseSessionDateModel model, User user)
+        public async Task<Event> ChangeHourAsync(CourseSession courseSession, CourseSessionDateModel model, Member adminMember)
         {
-            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
             AssertHelper.NotNull(courseSession, nameof(courseSession));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
+            AssertHelper.NotNull(courseSession.CourseClassroom!.Course!.Space, nameof(courseSession.CourseClassroom.Course.Space));
             AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
             AssertHelper.NotNull(model, nameof(model));
-            var course = courseSession.Course;
+            var courseClassroom = courseSession.CourseClassroom;
 
             var eventData = new ChangeValueData<CourseSessionDateModel>(new CourseSessionDateModel(courseSession), model);
 
@@ -141,26 +141,29 @@ namespace ExamBook.Services
             
             var publisherIds = new List<string>
             {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
+                courseClassroom.Course.Space!.PublisherId, 
+                courseClassroom.PublisherId, 
                 courseSession.CourseTeacher.PublisherId,
                 courseSession.PublisherId
             };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_HOUR_CHANGE_DATE", eventData);
+            
+            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId,
+                "COURSE_SESSION_CHANGE_DATE", eventData);
         }
 
         
         
-        public async Task<Event> ChangeTeacherAsync(CourseSession courseSession, CourseTeacher courseTeacher, User user)
+        public async Task<Event> ChangeTeacherAsync(CourseSession courseSession, CourseTeacher courseTeacher, Member adminMember)
         {
             AssertHelper.NotNull(courseSession, nameof(courseSession));
             AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
-            AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.NotNull(courseSession.Course, nameof(courseSession.Course));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
-            var course = courseSession.Course;
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
+            AssertHelper.NotNull(courseSession.CourseClassroom!.Course, nameof(courseSession.CourseClassroom.Course));
+            AssertHelper.NotNull(courseSession.CourseClassroom.Course!.Space, nameof(courseSession.CourseClassroom.Course.Space));
+            var courseClassroom = courseSession.CourseClassroom;
 
-            if (courseTeacher.CourseId != course.Id)
+            if (courseTeacher.CourseClassroomId != courseClassroom.Id)
             {
                 throw new IncompatibleEntityException(courseSession, courseTeacher);
             }
@@ -169,26 +172,18 @@ namespace ExamBook.Services
             courseSession.CourseTeacher = courseTeacher;
             _dbContext.Update(courseSession);
             await _dbContext.SaveChangesAsync();
+
+            var publisherIds = GetPublisherIds(courseSession);
             
-            var publisherIds = new List<string>
-            {
-                courseTeacher.Member!.PublisherId,
-                course.Space!.PublisherId,
-                course.PublisherId, 
-                courseSession.PublisherId
-            };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SESSION_CHANGE_TEACHER", eventData);
+            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseSession.SubjectId, "COURSE_SESSION_CHANGE_TEACHER", eventData);
         }
 
         public async Task<Event> ChangeRoomAsync(CourseSession courseSession, Room room, User user)
         {
-            AssertHelper.NotNull(room, nameof(room));
-            AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
-            AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
-            var course = courseSession.Course;
+            AssertNotNull(courseSession);
 
-            if (room.SpaceId != courseSession.Course.SpaceId)
+            if (room.SpaceId != courseSession.CourseClassroom.Course.SpaceId)
             {
                 throw new IncompatibleEntityException(courseSession, room);
             }
@@ -197,38 +192,22 @@ namespace ExamBook.Services
             courseSession.Room = room;
             _dbContext.Update(courseSession);
             await _dbContext.SaveChangesAsync();
-            
-            var publisherIds = new List<string>
-            {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
-                courseSession.CourseTeacher.PublisherId,
-                courseSession.PublisherId
-            };
+
+            var publisherIds = GetPublisherIds(courseSession);
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SESSION_CHANGE_ROOM", eventData);
         }
 
         public async Task<Event> ChangeDescription(CourseSession courseSession, string description, User user)
         {
-            AssertHelper.NotNull(courseSession, nameof(courseSession));
-            AssertHelper.NotNull(courseSession, nameof(courseSession));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
-            AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
-            var course = courseSession.Course!;
+            AssertNotNull(courseSession);
 
             var eventData = new ChangeValueData<string>(courseSession.Description, description);
             courseSession.Description = description;
 
             _dbContext.Update(courseSession);
             await _dbContext.SaveChangesAsync();
-            
-            var publisherIds = new List<string>
-            {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
-                courseSession.CourseTeacher.PublisherId,
-                courseSession.PublisherId
-            };
+
+            var publisherIds = GetPublisherIds(courseSession);
             string eventName = "COURSE_SESSION_CHANGE_DESCRIPTION";
             return await _eventService.EmitAsync(publisherIds, user.ActorId, eventName, eventData);
         }
@@ -236,11 +215,7 @@ namespace ExamBook.Services
 
         public async Task<Event> DeleteAsync(CourseSession courseSession, User user)
         {
-            AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.NotNull(courseSession, nameof(courseSession));
-            AssertHelper.NotNull(courseSession.Course!.Space, nameof(courseSession.Course.Space));
-            AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
-            var course = courseSession.Course!;
+            AssertNotNull(courseSession);
 
             courseSession.Description = "";
             courseSession.Report = "";
@@ -250,15 +225,65 @@ namespace ExamBook.Services
             courseSession.ExpectedStartDateTime = DateTime.MinValue;
             _dbContext.Update(courseSession);
             await _dbContext.SaveChangesAsync();
+
+            var publisherIds = GetPublisherIds(courseSession);
             
-            var publisherIds = new List<string>
-            {
-                courseSession.CourseTeacher.PublisherId,
-                course.Space!.PublisherId,
-                course.PublisherId, 
-                courseSession.PublisherId
-            };
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SESSION_DELETE", courseSession);
+        }
+        
+        
+        private static void AssertNotNull(CourseSession courseSession)
+        {
+            AssertHelper.NotNull(courseSession, nameof(courseSession));
+            AssertHelper.NotNull(courseSession.CourseClassroom, nameof(courseSession.CourseClassroom));
+            AssertHelper.NotNull(courseSession.CourseClassroom!.Course, nameof(courseSession.CourseClassroom.Course));
+            AssertHelper.NotNull(courseSession.CourseClassroom.Course.Space,
+                nameof(courseSession.CourseClassroom.Course.Space));
+
+            if (courseSession.CourseTeacherId != null)
+            {
+                AssertHelper.NotNull(courseSession.CourseTeacher, nameof(courseSession.CourseTeacher));
+                AssertHelper.NotNull(courseSession.CourseTeacher!.Member, nameof(courseSession.CourseTeacher.Member));
+            }
+
+            if (courseSession.RoomId != null)
+            {
+                AssertHelper.NotNull(courseSession.Room, nameof(courseSession.Room));
+            }
+        }
+        
+        
+        public static HashSet<string> GetPublisherIds(CourseSession courseSession)
+        {
+            var publisherIds = new HashSet<string>
+            {
+                courseSession.PublisherId,
+                courseSession.CourseClassroom.PublisherId,
+                courseSession.CourseClassroom.Course.PublisherId,
+                courseSession.CourseClassroom.Course.Space!.PublisherId
+            };
+
+            
+            if (courseSession.CourseTeacherId != null)
+            {
+                var courseTeacher = courseSession.CourseTeacher!;
+                publisherIds = publisherIds.Concat(new[]
+                {
+                    courseTeacher.PublisherId, courseTeacher.Member!.PublisherId
+                }).ToHashSet();
+            }
+
+            if (courseSession.RoomId != null)
+            {
+                publisherIds = publisherIds.Append(courseSession.Room!.PublisherId).ToHashSet();
+            }
+            
+            if (courseSession.CourseHourId != null)
+            {
+                publisherIds = publisherIds.Append(courseSession.CourseHour!.PublisherId).ToHashSet();
+            }
+
+            return publisherIds;
         }
     }
 }

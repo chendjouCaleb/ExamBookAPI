@@ -71,6 +71,17 @@ namespace ExamBook.Services
             return null;
         }
         
+        public async Task<Member> AuthorizeAsync(Space space, string userId)
+        {
+            var memberId = await IsSpaceMemberId(space, userId);
+            if (memberId != null)
+            {
+                return await GetByIdAsync(memberId.Value);
+            }
+
+            throw new IllegalOperationException("NotMember");
+        }
+        
         public async Task<HashSet<Member>> ListAsync(HashSet<ulong> memberIds)
         {
             var members = (await _dbContext.Set<Member>()

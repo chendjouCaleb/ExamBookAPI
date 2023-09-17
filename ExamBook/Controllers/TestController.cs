@@ -26,31 +26,28 @@ namespace ExamBook.Controllers
 		private readonly MemberService _memberService;
 		private readonly RoomService _roomService;
 		private readonly CourseService _courseService;
+		private readonly CourseClassroomService _courseClassroomService;
 		private readonly ExaminationService _examinationService;
-		private readonly ExaminationSpecialityService _examinationSpecialityService;
 		private readonly UserService _userService;
-		private readonly SpecialityService _specialityService;
 
 
 		public TestController(ApplicationDbContext dbContext, 
 			TestService testService, 
 			SpaceService spaceService, 
 			UserService userService, 
-			SpecialityService specialityService, ExaminationService examinationService, 
-			ExaminationSpecialityService examinationSpecialityService,
+			ExaminationService examinationService,
 			CourseService courseService,
-			MemberService memberService, RoomService roomService)
+			MemberService memberService, RoomService roomService, CourseClassroomService courseClassroomService)
 		{
 			_dbContext = dbContext;
 			_testService = testService;
 			_spaceService = spaceService;
 			_userService = userService;
-			_specialityService = specialityService;
 			_examinationService = examinationService;
-			_examinationSpecialityService = examinationSpecialityService;
 			_courseService = courseService;
 			_memberService = memberService;
 			_roomService = roomService;
+			_courseClassroomService = courseClassroomService;
 		}
 
 		[HttpGet("{testId}")]
@@ -59,7 +56,7 @@ namespace ExamBook.Controllers
 			var test = await _dbContext.Tests
 				.Where(t => t.Id == testId)
 				.Include(t => t.Room)
-				.Include(t => t.Course)
+				.Include(t => t.CourseClassroom)
 				.Include(t => t.Space)
 				.Include(t => t.Examination)
 				.FirstOrDefaultAsync();
@@ -75,16 +72,16 @@ namespace ExamBook.Controllers
 		[HttpGet]
 		public async Task<List<Test>> ListAsync(
 			[FromQuery] ulong? spaceId, 
-			[FromQuery] ulong? courseId,
+			[FromQuery] ulong? courseClassroomId,
 			[FromQuery] ulong? examinationId)
 		{
 			IQueryable<Test> query = _dbContext.Tests
 				.Include(t => t.Room)
-				.Include(t => t.Course);
+				.Include(t => t.CourseClassroom.Course);
 
-			if (courseId != null)
+			if (courseClassroomId != null)
 			{
-				query = query.Where(t => t.CourseId == courseId);
+				query = query.Where(t => t.CourseClassroom.CourseId == courseClassroomId);
 			}
 
 			if (examinationId != null)
@@ -105,7 +102,7 @@ namespace ExamBook.Controllers
 		[HttpPost]
 		public async Task<CreatedAtActionResult> AddTestCourseAsync(
 			[FromQuery] ulong spaceId,
-			[FromQuery] ulong courseId,
+			[FromQuery] ulong courseClassroomId,
 			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
@@ -115,12 +112,12 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
-			var course = await _courseService.GetAsync(courseId);
+			var courseClassroom = await _courseClassroomService.GetAsync(courseClassroomId);
 			var room = await _roomService.GetRoomAsync(roomId);
 			var members = await _memberService.ListAsync(memberIds);
 			
 
-			var result = await _testService.AddAsync(space, course, model, members, room, user);
+			var result = await _testService.AddAsync(space, courseClassroom, model, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -129,7 +126,7 @@ namespace ExamBook.Controllers
 		[HttpPost("test-examinations")]
 		public async Task<CreatedAtActionResult> AddTestCourseExaminationAsync(
 			[FromQuery] ulong examinationId,
-			[FromQuery] ulong courseId,
+			[FromQuery] ulong courseClassroomId,
 			[FromQuery] ulong roomId,
 			[FromQuery] HashSet<ulong> memberIds,
 			[FromBody] TestAddModel model)
@@ -139,10 +136,10 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 			var user = await _userService.FindByIdAsync(userId);
 			var examination = await _examinationService.GetByIdAsync(examinationId);
-			var course = await _courseService.GetAsync(courseId);
+			var courseClassroom = await _courseClassroomService.GetAsync(courseClassroomId);
 
 			var courseSpecialities = await _dbContext.CourseSpecialities
-				.Where(cs => cs.CourseId == course.Id)
+				.Where(cs => cs.CourseClassroomId == courseClassroom.Id)
 				.ToListAsync();
 			var specialityIds = courseSpecialities.Select(cs => cs.SpecialityId)
 				.ToList();
@@ -155,7 +152,7 @@ namespace ExamBook.Controllers
 			var members = await _memberService.ListAsync(memberIds);
 			var room = await _roomService.GetRoomAsync(roomId);
 			
-			var result = await _testService.AddAsync(examination,course, model, examinationSpecialities, members, room, user);
+			var result = await _testService.AddAsync(examination,courseClassroom, model, examinationSpecialities, members, room, user);
 			return CreatedAtAction("Get", new {testId = result.Item.Id}, result.Item);
 		}
 		
@@ -238,27 +235,7 @@ namespace ExamBook.Controllers
 			return await _testService.UnLockAsync(test, user);
 		}
 
-		[HttpPut("{testId}/attach-course")]
-		public async Task<Event> AttachCourse(ulong testId, [FromQuery] ulong courseId)
-		{
-			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-			var user = await _userService.FindByIdAsync(userId);
-			
-			var test = await _testService.GetByIdAsync(testId);
-			var course = await _courseService.GetAsync(courseId);
-			return await _testService.AttachCourseAsync(test, course, user);
-		}
 		
-		[HttpPut("{testId}/detach-course")]
-		public async Task<Event> DetachCourse(ulong testId)
-		{
-			var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-			var user = await _userService.FindByIdAsync(userId);
-			
-			var test = await _testService.GetByIdAsync(testId);
-			return await _testService.DetachCourseAsync(test, user);
-		}
-
 
 		[HttpDelete("{testId}")]
 		public async Task<NoContentResult> DeleteAsync(ulong testId)

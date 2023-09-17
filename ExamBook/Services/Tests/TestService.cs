@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
-using ExamBook.Helpers;
 using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
@@ -56,7 +55,7 @@ namespace ExamBook.Services
                 .Where(c => c.Id == id)
                 .Include(c => c.Space)
                 .Include(t => t.Examination)
-                .Include(t => t.Course)
+                .Include(t => t.CourseClassroom)
                 .Include(t => t.TestSpecialities)
                 
                 .FirstOrDefaultAsync();
@@ -70,7 +69,7 @@ namespace ExamBook.Services
         }
 
         
-        public async Task<ActionResultModel<Test>> AddAsync(Space space, Course course,
+        public async Task<ActionResultModel<Test>> AddAsync(Space space, CourseClassroom courseClassroom,
             TestAddModel model,
             HashSet<Member> members,
             Room room,
@@ -78,20 +77,20 @@ namespace ExamBook.Services
         {
             AssertHelper.NotNull(room, nameof(room));
             AssertHelper.NotNull(space, nameof(space));
-            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(user, nameof(user));
 
             var courseSpecialities = await _dbContext.CourseSpecialities
                 .Include(cs => cs.Speciality)
-                .Where(cs => cs.CourseId == course.Id)
+                .Where(cs => cs.CourseClassroomId == courseClassroom.Id)
                 .ToListAsync();
             var specialities = courseSpecialities.Select(cs => cs.Speciality!).ToList();
             
 
             var test = await CreateTestAsync(space, model, specialities, members, room);
-            test.Course = course;
-            test.CourseId = course.Id;
+            test.CourseClassroom = courseClassroom;
+            test.CourseClassroomId = courseClassroom.Id;
 
             foreach (var testSpeciality in test.TestSpecialities)
             {
@@ -112,7 +111,7 @@ namespace ExamBook.Services
             await _publisherService.SaveAllAsync(publishers);
 
             var publisherIds = ImmutableList<string>.Empty
-                .AddRange(new []{ space.PublisherId, course.PublisherId })
+                .AddRange(new []{ space.PublisherId, courseClassroom.PublisherId })
                 .AddRange(specialities.Select(r => r.PublisherId).ToList())
                 .AddRange(courseSpecialities.Select(cs => cs.PublisherId).ToList())
                 .AddRange(publishers.Select(p => p.Id).ToList());
@@ -125,14 +124,15 @@ namespace ExamBook.Services
         
         
         public async Task<ActionResultModel<Test>> AddAsync(Examination examination, 
-            Course course, TestAddModel model, ICollection<ExaminationSpeciality> examinationSpecialities,
+            CourseClassroom courseClassroom, TestAddModel model, 
+            ICollection<ExaminationSpeciality> examinationSpecialities,
             HashSet<Member> members,
             Room room,
             User user)
         {
             AssertHelper.NotNull(examination, nameof(examination));
             AssertHelper.NotNull(examination.Space, nameof(examination.Space));
-            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(model, nameof(model));
             AssertHelper.NotNull(examinationSpecialities, nameof(examinationSpecialities));
             AssertHelper.NotNull(user, nameof(user));
@@ -142,14 +142,14 @@ namespace ExamBook.Services
             var specialities = examinationSpecialities.Select(es => es.Speciality!).ToList();
             var specialityIds = specialities.Select(s => s.Id).ToList();
             var courseSpecialities = await _dbContext.CourseSpecialities
-                .Where(cs => cs.CourseId == course.Id)
+                .Where(cs => cs.CourseClassroomId == courseClassroom.Id)
                 .Where(cs => specialityIds.Contains(cs.SpecialityId))
                 .ToListAsync();
             var test = await CreateTestAsync(space, model, specialities, members, room);
 
 
             test.Examination = examination;
-            test.Course = course;
+            test.CourseClassroom = courseClassroom;
             foreach (var testSpeciality in test.TestSpecialities)
             {
                 var examinationSpeciality =
@@ -177,7 +177,7 @@ namespace ExamBook.Services
             var publisherIds = ImmutableList<string>.Empty
                 .Add(space.PublisherId)
                 .Add(examination.PublisherId)
-                .Add(course.PublisherId)
+                .Add(courseClassroom.PublisherId)
                 .AddRange(specialities.Select(r => r.PublisherId).ToList())
                 //.AddRange(examinationSpecialities.Select(es => es.PublisherId))
                 //.AddRange(courseSpecialities.Select(es => es.PublisherId))
@@ -241,22 +241,6 @@ namespace ExamBook.Services
         }
 
 
-        
-        public async Task SpecializeAsync(Test test, List<Speciality> specialities, User user)
-        {
-            AssertHelper.NotNull(test, nameof(test));
-            AssertHelper.NotNull(specialities, nameof(specialities));
-            AssertHelper.NotNull(user, nameof(user));
-            AssertHelper.IsTrue(test.ExaminationId == null);
-            AssertHelper.IsTrue(specialities.Count > 0);
-            AssertHelper.IsFalse(test.IsSpecialized);
-            AssertHelper.IsTrue(specialities.TrueForAll(s => s.SpaceId == test.Id));
-
-            test.IsSpecialized = true;
-
-            var testSpecialities = new List<TestSpeciality>();
-
-        }
 
 
         public async Task<Event> ChangeCoefficientAsync(Test test, uint coefficient, User user)
@@ -391,108 +375,7 @@ namespace ExamBook.Services
         }
         
         
-        public async Task<Event> AttachCourseAsync(Test test, Course course, User adminUser)
-        {
-            AssertHelper.NotNull(test.Space, nameof(test.Space));
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(adminUser, nameof(adminUser));
-            AssertHelper.IsTrue(course.SpaceId == test.SpaceId);
-
-            if (test.CourseId != null)
-            {
-                throw new InvalidStateException("CannotAttachTestWithCourse", test);
-            }
-
-            var testSpecialities = await _dbContext.TestSpecialities
-                .Where(ts => ts.TestId == test.Id)
-                .ToListAsync();
-
-            var courseSpecialities = await _dbContext.CourseSpecialities
-                .Include(cs => cs.Speciality)
-                .Where(ts => ts.CourseId == course.Id)
-                .ToListAsync();
-            
-            test.Course = course;
-            foreach (var testSpeciality in testSpecialities)
-            {
-                var courseSpeciality = courseSpecialities
-                    .FirstOrDefault(cs => cs.SpecialityId == testSpeciality.SpecialityId);
-
-                if (courseSpeciality != null)
-                {
-                    testSpeciality.CourseSpeciality = courseSpeciality;
-                }
-            }
-
-            _dbContext.Update(test);
-            await _dbContext.SaveChangesAsync();
-
-            var publisherIds = ImmutableList<string>.Empty
-                .AddRange(test.GetPublisherIds())
-                .AddRange(courseSpecialities.Select(cs => cs.Speciality!.PublisherId))
-                .AddRange(courseSpecialities.Select(cs => cs.PublisherId))
-                .AddRange(testSpecialities.Select(cs => cs.PublisherId));
-
-            const string eventName = "TEST_ATTACH_COURSE";
-            var data = new {CourseId = course.Id, TestId = test.Id};
-            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
-        }
-
-
-        public async Task<Event> DetachCourseAsync(Test test, User adminUser)
-        {
-            AssertHelper.NotNull(test.Space, nameof(test.Space));
-            AssertHelper.NotNull(adminUser, nameof(adminUser));
-
-            if (test.CourseId == null)
-            {
-                throw new InvalidStateException("CannotDetachTestWithoutCourse", test);
-            }
-
-            var testSpecialities = await _dbContext.TestSpecialities
-                .Where(ts => ts.TestId == test.Id)
-                .ToListAsync();
-
-            var courseSpecialities = await _dbContext.CourseSpecialities
-                .Include(cs => cs.Speciality)
-                .Where(ts => ts.CourseId == test.CourseId)
-                .ToListAsync();
-
-            var publisherIds = ImmutableList<string>.Empty
-                .AddRange(test.GetPublisherIds());
-
-            test.Course = null;
-            test.CourseId = null;
-            foreach (var testSpeciality in testSpecialities)
-            {
-                var courseSpeciality = courseSpecialities
-                    .Find(cs => cs.SpecialityId == testSpeciality.CourseSpecialityId);
-
-                if (courseSpeciality != null)
-                {
-                    publisherIds = publisherIds.AddRange(new[]
-                    {
-                        testSpeciality.PublisherId, 
-                        courseSpeciality.PublisherId,
-                        courseSpeciality.Speciality!.PublisherId
-                    });
-                }
-
-                testSpeciality.CourseSpeciality = null;
-                testSpeciality.CourseSpecialityId = null;
-            }
-
-            _dbContext.Update(test);
-            await _dbContext.SaveChangesAsync();
-
-            
-
-            const string eventName = "TEST_DETACH_COURSE";
-            var data = new {};
-            return await _eventService.EmitAsync(publisherIds, adminUser.ActorId, eventName, data);
-        }
-        
-        
+       
         public async Task<Event> ChangeRoomAsync(Test test, Room room, User adminUser)
         {
             AssertHelper.NotNull(test.Space, nameof(test.Space));

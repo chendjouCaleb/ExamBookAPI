@@ -1,11 +1,43 @@
-﻿namespace ExamBook.Services
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using ExamBook.Entities;
+using ExamBook.Exceptions;
+using ExamBook.Identity.Entities;
+using ExamBook.Models;
+using ExamBook.Persistence;
+using ExamBook.Utils;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Traceability.Models;
+using Traceability.Services;
+
+namespace ExamBook.Services
 {
 	public class CourseSpecialityService
 	{
-		public async Task<CourseSpeciality> GetCourseSpecialityAsync(ulong courseSpecialityId)
+        private readonly ApplicationDbContext _dbContext;
+        private readonly EventService _eventService;
+        private readonly SubjectService _subjectService;
+        private readonly PublisherService _publisherService;
+        private readonly ILogger<CourseTeacherService> _logger;
+
+
+        public CourseSpecialityService(ApplicationDbContext dbContext, 
+            EventService eventService, SubjectService subjectService, PublisherService publisherService, ILogger<CourseTeacherService> logger)
+        {
+            _dbContext = dbContext;
+            _eventService = eventService;
+            _subjectService = subjectService;
+            _publisherService = publisherService;
+            _logger = logger;
+        }
+
+        public async Task<CourseSpeciality> GetCourseSpecialityAsync(ulong courseSpecialityId)
 		{
 			var courseSpeciality = await _dbContext.Set<CourseSpeciality>()
-				.Include(cs => cs.Course)
+				.Include(cs => cs.CourseClassroom.Course.Space)
 				.Include(cs => cs.Speciality)
 				.Where(cs => cs.Id == courseSpecialityId)
 				.FirstOrDefaultAsync();
@@ -20,27 +52,27 @@
 		}
 		
 		
-		 public async Task<bool> CourseSpecialityExists(Course course, Speciality speciality)
+		 public async Task<bool> CourseSpecialityExists(CourseClassroom courseClassroom, Speciality speciality)
         {
-            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(speciality, nameof(speciality));
 
             return await _dbContext.Set<CourseSpeciality>()
-                .Where(cs => cs.CourseId == course.Id)
+                .Where(cs => cs.CourseClassroomId == courseClassroom.Id)
                 .Where(cs => cs.SpecialityId == speciality.Id)
                 .Where(cs => cs.DeletedAt == null)
                 .AnyAsync();
         }
 
-        public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(Course course, 
+        public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(CourseClassroom courseClassroom, 
             Speciality speciality, User user)
         {
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
+            AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
             AssertHelper.NotNull(speciality, nameof(speciality));
             AssertHelper.NotNull(user, nameof(user));
 
-            CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
+            CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(courseClassroom, speciality);
             var publisher = courseSpeciality.Publisher!;
             await _dbContext.AddAsync(courseSpeciality);
             await _dbContext.SaveChangesAsync();
@@ -48,8 +80,9 @@
 
             var publisherIds = new List<string>
             {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
+                courseClassroom.Course.Space!.PublisherId, 
+                courseClassroom.Course!.PublisherId, 
+                courseClassroom.PublisherId, 
                 speciality.PublisherId
             };
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_ADD", courseSpeciality);
@@ -58,15 +91,16 @@
         }
         
         
-        public async Task<ActionResultModel<ICollection<CourseSpeciality>>> AddCourseSpecialitiesAsync(Course course, 
+        public async Task<ActionResultModel<ICollection<CourseSpeciality>>> AddCourseSpecialitiesAsync(
+            CourseClassroom courseClassroom, 
             ICollection<Speciality> specialities, User user)
         {
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
+            AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
             AssertHelper.NotNull(specialities, nameof(specialities));
             AssertHelper.NotNull(user, nameof(user));
 
-            var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
+            var courseSpecialities = await _CreateCourseSpecialitiesAsync(courseClassroom, specialities);
             var publishers = courseSpecialities.Select(c => c.Publisher!).ToList();
             await _dbContext.AddRangeAsync(courseSpecialities);
             await _dbContext.SaveChangesAsync();
@@ -74,7 +108,12 @@
             
             
 
-            var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId};
+            var publisherIds = new List<string>
+            {
+                courseClassroom.Course.Space!.PublisherId, 
+                courseClassroom.Course!.PublisherId, 
+                courseClassroom.PublisherId
+            };
             publisherIds.AddRange(specialities.Select(s => s.PublisherId));
             publisherIds.AddRange(publishers.Select(p => p.Id).ToList());
             var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITIES_ADD", courseSpecialities);
@@ -82,15 +121,15 @@
             return new ActionResultModel<ICollection<CourseSpeciality>>(courseSpecialities, @event);
         }
 
-        public async Task<List<CourseSpeciality>> _CreateCourseSpecialitiesAsync(Course course, 
+        public async Task<List<CourseSpeciality>> _CreateCourseSpecialitiesAsync(CourseClassroom courseClassroom, 
             ICollection<Speciality> specialities)
         {
             var courseSpecialities = new List<CourseSpeciality>();
             foreach (var speciality in specialities)
             {
-                if (!await CourseSpecialityExists(course, speciality))
+                if (!await CourseSpecialityExists(courseClassroom, speciality))
                 {
-                    var courseSpeciality = await _CreateCourseSpecialityAsync(course, speciality);
+                    var courseSpeciality = await _CreateCourseSpecialityAsync(courseClassroom, speciality);
                     courseSpecialities.Add(courseSpeciality);
                 }
             }
@@ -98,29 +137,32 @@
             return courseSpecialities;
         }
 
-        public async Task<CourseSpeciality> _CreateCourseSpecialityAsync(Course course, Speciality speciality)
+        public async Task<CourseSpeciality> _CreateCourseSpecialityAsync(CourseClassroom courseClassroom, Speciality speciality)
         {
-            AssertHelper.NotNull(course, nameof(course));
+            AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(speciality, nameof(speciality));
-            AssertHelper.NotNull(course.Space, nameof(course.Space));
+            AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
 
-            if (course.SpaceId != speciality.SpaceId)
+            if (courseClassroom.Course.SpaceId != speciality.SpaceId)
             {
-                throw new IncompatibleEntityException(course, speciality);
+                throw new IncompatibleEntityException(courseClassroom, speciality);
             }
 
-            if (await CourseSpecialityExists(course, speciality))
+            if (await CourseSpecialityExists(courseClassroom, speciality))
             {
                 throw new IllegalOperationException("CourseSpecialityAlreadyExists");
             }
 
-            var publisher = await _publisherService.CreateAsync();
+            var publisher = _publisherService.Create("COURSE_SPECIALITY_PUBLISHER");
+            var subject = _subjectService.Create("COURSE_SPECIALITY_SUBJECT");
 
             CourseSpeciality courseSpeciality = new()
             {
                 PublisherId = publisher.Id,
                 Publisher = publisher,
-                Course = course,
+                Subject = subject,
+                SubjectId = subject.Id,
+                CourseClassroom = courseClassroom,
                 Speciality = speciality
             };
             return courseSpeciality;
@@ -130,19 +172,13 @@
         {
             AssertHelper.NotNull(courseSpeciality, nameof(courseSpeciality));
             AssertHelper.NotNull(user, nameof(user));
-            var course = await _dbContext.Set<Course>().FindAsync(courseSpeciality.CourseId);
-            var speciality = await _dbContext.Set<Speciality>().FindAsync(courseSpeciality.SpecialityId);
-            var space = await _dbContext.Set<Space>().FindAsync(course!.SpaceId);
             
-            AssertHelper.NotNull(course, nameof(course));
-            AssertHelper.NotNull(speciality, nameof(speciality));
-            AssertHelper.NotNull(space, nameof(space));
 
             courseSpeciality.DeletedAt = DateTime.UtcNow;
             _dbContext.Update(courseSpeciality);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {space!.PublisherId, speciality!.PublisherId, course.PublisherId};
+            var publisherIds = new List<string> {courseSpeciality.PublisherId};
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_DELETE", courseSpeciality);
         }
 	}

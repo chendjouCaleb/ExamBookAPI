@@ -11,7 +11,7 @@ namespace ExamBook.Entities
         public CourseHour? CourseHour { get; set; }
         public ulong? CourseHourId { get; set; }
 
-        public CourseClassroom? CourseClassroom { get; set; }
+        public CourseClassroom CourseClassroom { get; set; } = null!;
         public ulong? CourseClassroomId { get; set; }
 
         public Room? Room { get; set; }

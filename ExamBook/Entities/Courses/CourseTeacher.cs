@@ -5,7 +5,7 @@ namespace ExamBook.Entities
 {
     public class CourseTeacher:Entity
     {
-        public CourseClassroom? CourseClassroom { get; set; }
+	    public CourseClassroom CourseClassroom { get; set; } = null!;
         public ulong? CourseClassroomId { get; set; }
 
         public Member? Member { get; set; }

@@ -18,6 +18,7 @@ namespace ExamBook.Controllers
 	public class CourseTeacherController:ControllerBase
 	{
 		private readonly CourseService _courseService;
+		private readonly CourseClassroomService _courseClassroomService;
 		private readonly CourseTeacherService _courseTeacherService;
 		private readonly MemberService _memberService;
 		private readonly UserService _userService;
@@ -26,13 +27,14 @@ namespace ExamBook.Controllers
 		public CourseTeacherController(
 			UserService userService, 
 			ApplicationDbContext dbContext, 
-			CourseService courseService, MemberService memberService, CourseTeacherService courseTeacherService)
+			CourseService courseService, MemberService memberService, CourseTeacherService courseTeacherService, CourseClassroomService courseClassroomService)
 		{
 			_userService = userService;
 			_dbContext = dbContext;
 			_courseService = courseService;
 			_memberService = memberService;
 			_courseTeacherService = courseTeacherService;
+			_courseClassroomService = courseClassroomService;
 		}
 
 
@@ -40,7 +42,7 @@ namespace ExamBook.Controllers
 		public async Task<CourseTeacher> GetAsync(ulong courseTeacherId)
 		{
 			var courseTeacher = await _dbContext.CourseTeachers
-				.Include(cs => cs.Course)
+				.Include(cs => cs.CourseClassroom.Course)
 				.Include(cs => cs.Member)
 				.Where(cs => cs.Id == courseTeacherId)
 				.FirstOrDefaultAsync();
@@ -55,15 +57,23 @@ namespace ExamBook.Controllers
 
 		
 		[HttpGet]
-		public async Task<IList<CourseTeacher>> ListAsync([FromQuery] ulong? courseId, [FromQuery] ulong? memberId)
+		public async Task<IList<CourseTeacher>> ListAsync(
+			[FromQuery] ulong? courseId, 
+			[FromQuery] ulong? courseClassroomId,
+			[FromQuery] ulong? memberId)
 		{
 			IQueryable<CourseTeacher> query = _dbContext.CourseTeachers
-				.Include(cs => cs.Course)
+				.Include(cs => cs.CourseClassroom.Course)
 				.Include(cs => cs.Member);
 
 			if (courseId != null)
 			{
-				query = query.Where(cs => cs.CourseId == courseId);
+				query = query.Where(cs => cs.CourseClassroom.CourseId == courseId);
+			}
+			
+			if (courseId != null)
+			{
+				query = query.Where(cs => cs.CourseClassroomId == courseClassroomId);
 			}
 			
 			if (memberId != null)
@@ -79,17 +89,18 @@ namespace ExamBook.Controllers
 		
 		[Authorize]
 		[HttpPost]
-		public async Task<OkObjectResult> AddTeachersAsync(ulong courseId, [FromBody] HashSet<ulong> memberId)
+		public async Task<OkObjectResult> AddTeachersAsync(ulong courseClassroomId, [FromBody] HashSet<ulong> memberId)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetAsync(courseId);
+			var courseClassroom = await _courseClassroomService.GetAsync(courseClassroomId);
+			var member = await _memberService.GetAsync(courseClassroom.Course.Space, userId);
 			var members = memberId
 				.Select(async id => await _memberService.GetByIdAsync(id))
 				.Select(t => t.Result)
 				.ToList();
 
-			var result = await _courseTeacherService.AddCourseTeachersAsync(course, members, user);
+			var result = await _courseTeacherService.AddCourseTeachersAsync(courseClassroom, members, member);
 			return Ok(result.Item);
 		}
 
@@ -102,7 +113,8 @@ namespace ExamBook.Controllers
 			var user = await _userService.GetByIdAsync(userId);
 			
 			var courseTeacher = await _courseTeacherService.GetAsync(courseTeacherId);
-			var result = await _courseTeacherService.DeleteAsync(courseTeacher, user);
+			var member = await _memberService.AuthorizeAsync(courseTeacher.Member!.Space, userId);
+			var result = await _courseTeacherService.DeleteAsync(courseTeacher, member);
 			return Ok(result);
 		}
 	}

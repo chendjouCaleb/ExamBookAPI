@@ -171,11 +171,7 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId };
             publisherIds.AddRange(students.Select(s => s.PublisherId));
-            if (test.CourseId != null)
-            {
-                AssertHelper.NotNull(test.Course, nameof(test.Course));
-                publisherIds.Add(test.Course!.PublisherId);
-            }
+            publisherIds.Add(test.CourseClassroom!.PublisherId);
 
             var paperIds = papers.Select(p => p.Id).ToList();
             var actionData = new {PaperIds = paperIds};
@@ -217,11 +213,7 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId };
             publisherIds.AddRange(participants.Select(s => s.PublisherId));
-            if (test.CourseId != null)
-            {
-                AssertHelper.NotNull(test.Course, nameof(test.Course));
-                publisherIds.Add(test.Course!.PublisherId);
-            }
+            publisherIds.Add(test.CourseClassroom.PublisherId);
 
             var paperIds = papers.Select(p => p.Id).ToList();
             var actionData = new {PaperIds = paperIds};
@@ -265,11 +257,7 @@ namespace ExamBook.Services
             var publisherIds = new List<string> {test.PublisherId, test.Space.PublisherId};
             publisherIds.AddRange(papers.Select(p => p.PublisherId));
             publisherIds.AddRange(papers.Select(p => p.Student!.PublisherId));
-
-            if (test.Course != null)
-            {
-                publisherIds.Add(test.Course.PublisherId);
-            }
+            publisherIds.Add(test.CourseClassroom.PublisherId);
 
             if (test.Examination != null)
             {

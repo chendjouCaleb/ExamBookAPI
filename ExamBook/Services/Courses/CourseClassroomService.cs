@@ -29,13 +29,15 @@ namespace ExamBook.Services
 			SubjectService subjectService, 
 			ILogger<CourseClassroomService> logger, 
 			EventService eventService, 
-			ApplicationDbContext dbContext)
+			ApplicationDbContext dbContext, MemberService memberService, SpecialityService specialityService)
 		{
 			_publisherService = publisherService;
 			_subjectService = subjectService;
 			_logger = logger;
 			_eventService = eventService;
 			_dbContext = dbContext;
+			_memberService = memberService;
+			_specialityService = specialityService;
 		}
 
 
@@ -95,11 +97,10 @@ namespace ExamBook.Services
 			}
 			
 			string normalizedCode = StringHelper.Normalize(model.Code);
-			string normalizedName = StringHelper.Normalize(model.Name);
 
-			if (await ContainsByCode(space, model.Code))
+			if (await ContainsByCode(classroom, model.Code))
 			{
-				throw new UsedValueException("CourseCodeUsed", model.Code);
+				throw new UsedValueException("CourseClassroomCodeUsed", classroom, model.Code);
 			}
 
 			var subject = _subjectService.Create("COURSE_CLASSROOM_SUBJECT");
@@ -118,11 +119,11 @@ namespace ExamBook.Services
 			};
 
 			await _dbContext.AddAsync(courseClassroom);
-			var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
-			await _dbContext.AddRangeAsync(courseSpecialities);
-
-			var courseTeachers = await _CreateCourseTeachersCourseAsync(course, members);
-			await _dbContext.AddRangeAsync(courseTeachers);
+			// var courseSpecialities = await _CreateCourseSpecialitiesAsync(course, specialities);
+			// await _dbContext.AddRangeAsync(courseSpecialities);
+			//
+			// var courseTeachers = await _CreateCourseTeachersCourseAsync(course, members);
+			// await _dbContext.AddRangeAsync(courseTeachers);
 			
 			
 			await _dbContext.SaveChangesAsync();

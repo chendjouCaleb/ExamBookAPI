@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
-using ExamBook.Exceptions;
-using ExamBook.Identity.Entities;
 using ExamBook.Models;
 using ExamBook.Models.Data;
 using ExamBook.Utils;
@@ -90,9 +88,9 @@ namespace ExamBook.Services
             return new ActionResultModel<CourseHour>(courseHour, @event);
         }
 
-        public async Task<Event> ChangeHourAsync(CourseHour courseHour, CourseHourHourModel model, Member memberId)
+        public async Task<Event> ChangeHourAsync(CourseHour courseHour, CourseHourHourModel model, Member adminMember)
         {
-            AssertHelper.NotNull(memberId, nameof(memberId));
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
             AssertNotNull(courseHour);
             AssertHelper.NotNull(model, nameof(model));
 
@@ -105,8 +103,8 @@ namespace ExamBook.Services
             await _dbContext.SaveChangesAsync();
             
             var actorIds = new[] {adminMember.ActorId, adminMember.User!.ActorId};
-            var publisherIds = new List<string> {course.Space!.PublisherId, course.PublisherId, courseHour.PublisherId};
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_HOUR_CHANGE", eventData);
+            var publisherIds = GetPublisherIds(courseHour);
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseHour.SubjectId, "COURSE_HOUR_CHANGE", eventData);
         }
 
         
@@ -114,14 +112,13 @@ namespace ExamBook.Services
         
 
 
-        public async Task<Event> DeleteAsync(CourseHour courseHour, bool courseSession, Member member)
+        public async Task<Event> DeleteAsync(CourseHour courseHour, bool courseSession, Member adminMember)
         {
-            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
             AssertHelper.NotNull(courseHour, nameof(courseHour));
-            AssertHelper.NotNull(courseHour.Course.Space, nameof(courseHour.Course.Space));
+            AssertHelper.NotNull(courseHour.CourseClassroom.Course.Space, nameof(courseHour.CourseClassroom.Course.Space));
             AssertHelper.NotNull(courseHour.CourseTeacher!.Member, nameof(courseHour.CourseTeacher.Member));
-            var course = courseHour.Course;
-            
+
             var courseSessions = await  _dbContext.Set<CourseSession>()
                 .Where(cs => cs.CourseHour == courseHour)
                 .ToListAsync();
@@ -142,15 +139,11 @@ namespace ExamBook.Services
             
             _dbContext.Remove(courseHour);
             await _dbContext.SaveChangesAsync();
-            
-            var publisherIds = new List<string>
-            {
-                course.Space!.PublisherId, 
-                course.PublisherId, 
-                courseHour.PublisherId,
-                courseHour.CourseTeacher.Member!.PublisherId
-            };
-            return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_HOUR_DELETE", courseHour);
+
+            var publisherIds = GetPublisherIds(courseHour);
+            var actorIds = new[] {adminMember.ActorId, adminMember.User!.ActorId};
+            var data = new {CourseHourId = courseHour.Id};
+            return await _eventService.EmitAsync(publisherIds, actorIds, courseHour.SubjectId, "COURSE_HOUR_DELETE", data);
             
         }
 
@@ -160,7 +153,7 @@ namespace ExamBook.Services
             var publisherIds = new HashSet<string>
             {
                 courseHour.PublisherId,
-                courseHour.CourseClassroom!.PublisherId,
+                courseHour.CourseClassroom.PublisherId,
                 courseHour.CourseClassroom.Course.PublisherId,
                 courseHour.CourseClassroom.Course.Space!.PublisherId
             };
@@ -182,12 +175,12 @@ namespace ExamBook.Services
 
             return publisherIds;
         }
-        
-        public static void AssertNotNull(CourseHour courseHour)
+
+        private static void AssertNotNull(CourseHour courseHour)
         {
             AssertHelper.NotNull(courseHour, nameof(courseHour));
             AssertHelper.NotNull(courseHour.CourseClassroom, nameof(courseHour.CourseClassroom));
-            AssertHelper.NotNull(courseHour.CourseClassroom!.Course, nameof(courseHour.CourseClassroom.Course));
+            AssertHelper.NotNull(courseHour.CourseClassroom.Course, nameof(courseHour.CourseClassroom.Course));
             AssertHelper.NotNull(courseHour.CourseClassroom.Course.Space,
                 nameof(courseHour.CourseClassroom.Course.Space));
 

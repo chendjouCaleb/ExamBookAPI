@@ -2,7 +2,7 @@
 {
 	public class ItemData<TID>
 	{
-		public TID ItemId { get; set; }
+		public TID Id { get; set; }
 	}
 	
 	

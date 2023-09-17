@@ -1,12 +1,10 @@
-﻿using Newtonsoft.Json;
-
-namespace ExamBook.Entities
+﻿namespace ExamBook.Entities
 {
     public class CourseSpeciality:Entity
     {
-        
-     
-        public CourseClassroom? CourseClassroom { get; set; }
+
+
+        public CourseClassroom CourseClassroom { get; set; } = null!;
         public ulong? CourseClassroomId { get; set; }
 
 

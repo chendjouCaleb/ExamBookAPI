@@ -118,7 +118,7 @@ namespace ExamBook.Services
 			var subjectIds = subjects.Select(s => s.Id).ToList();
 			var actorIds = new[] { adminMember.ActorId, adminMember.User.ActorId};
 			var @event =
-				await _eventService.EmitAsync(publisherIds, subjectIds, actorIds, "COURSE_TEACHERS_ADD", courseTeachers);
+				await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, "COURSE_TEACHERS_ADD", courseTeachers);
 
 			return new ActionResultModel<ICollection<CourseTeacher>>(courseTeachers, @event);
 		}
@@ -167,37 +167,38 @@ namespace ExamBook.Services
 		}
 		
 		
-		public async Task<bool> CourseTeacherExistsAsync(Course course, Member member)
+		public async Task<bool> CourseTeacherExistsAsync(CourseClassroom courseClassroom, Member member)
 		{
-			AssertHelper.NotNull(course, nameof(course));
+			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
 			AssertHelper.NotNull(member, nameof(member));
 
 			return await _dbContext.Set<CourseTeacher>()
-				.Where(ct => ct.CourseId == course.Id)
+				.Where(ct => ct.CourseClassroomId == courseClassroom.Id)
 				.Where(ct => ct.MemberId == member.Id)
 				.Where(ct => ct.DeletedAt == null)
 				.AnyAsync();
 		}
 
-		public async Task<bool> CourseTeacherExists(Course course, ulong memberId)
+		public async Task<bool> CourseTeacherExists(CourseClassroom courseClassroom, ulong memberId)
 		{
 			var member = await _dbContext.Set<Member>().FindAsync(memberId);
 			if (member == null)
 			{
 				throw new InvalidOperationException($"Member with id={memberId} not found.");
 			}
-			return await CourseTeacherExistsAsync(course, member);
+			return await CourseTeacherExistsAsync(courseClassroom, member);
 		}
 
 
-		public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(Course course, List<Member> members)
+		public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(CourseClassroom courseClassroom, 
+			List<Member> members)
 		{
 			var courseTeachers = new List<CourseTeacher>();
 			foreach (var member in members)
 			{
-				if (!await CourseTeacherExistsAsync(course, member))
+				if (!await CourseTeacherExistsAsync(courseClassroom, member))
 				{
-					var courseTeacher = _CreateCourseTeacherAsync(course, member);
+					var courseTeacher = await _CreateCourseTeacherAsync(courseClassroom, member);
 					courseTeachers.Add(courseTeacher);
 				}
 			}

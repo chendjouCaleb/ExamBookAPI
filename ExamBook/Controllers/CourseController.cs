@@ -22,16 +22,18 @@ namespace ExamBook.Controllers
 		private readonly CourseService _courseService;
 		private readonly UserService _userService;
 		private readonly SpaceService _spaceService;
+		private readonly MemberService _memberService;
 		private readonly ApplicationDbContext _dbContext;
 
 		public CourseController(CourseService courseService,
 			UserService userService, SpaceService spaceService, 
-			ApplicationDbContext dbContext)
+			ApplicationDbContext dbContext, MemberService memberService)
 		{
 			_courseService = courseService;
 			_userService = userService;
 			_spaceService = spaceService;
 			_dbContext = dbContext;
+			_memberService = memberService;
 		}
 
 
@@ -63,11 +65,7 @@ namespace ExamBook.Controllers
 		public async Task<ICollection<Course>> ListAsync([FromQuery] ulong? spaceId)
 		{
 			IQueryable<Course> query = _dbContext.Courses
-				//.Include(c => c.Space)
-				.Include(c => c.CourseSpecialities)
-				.ThenInclude(cs => cs.Speciality)
-				.Include(c => c.CourseTeachers)
-				.ThenInclude(ct => ct.Member);
+				.Include(c => c.Space);
 
 			if (spaceId != null)
 			{
@@ -76,14 +74,14 @@ namespace ExamBook.Controllers
 
 			var courses = await query.ToListAsync();
 
-			var courseTeachers = courses.SelectMany(c => c.CourseTeachers).ToList();
-			
-			var memberUserId = courseTeachers.Select(ct => ct.Member!.UserId!).ToList();
-			var users = await _userService.ListById(memberUserId);
-			foreach (var courseTeacher in courseTeachers)
-			{
-				courseTeacher.Member!.User = users.Find(u => u.Id == courseTeacher.Member.UserId);
-			}
+			// var courseTeachers = courses.SelectMany(c => c.CourseTeachers).ToList();
+			//
+			// var memberUserId = courseTeachers.Select(ct => ct.Member!.UserId!).ToList();
+			// var users = await _userService.ListById(memberUserId);
+			// foreach (var courseTeacher in courseTeachers)
+			// {
+			// 	courseTeacher.Member!.User = users.Find(u => u.Id == courseTeacher.Member.UserId);
+			// }
 
 			return courses;
 		}
@@ -122,10 +120,11 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
-
-			var course = (await _courseService.AddCourseAsync(space, model, user)).Item;
-
+			var member = await _memberService.AuthorizeAsync(space, userId);
+			
+			var course = (await _courseService.AddCourseAsync(space, model, member)).Item;
 			course = await _courseService.GetAsync(course.Id);
+			
 			return CreatedAtAction("Get", new {courseId = course.Id}, course);
 		}
 
@@ -137,7 +136,7 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
 			var course = await _courseService.GetAsync(courseId);
-            
+			var member = await _memberService.AuthorizeAsync(course.Space, userId);
 			string name = body["name"];
 			var result = await _courseService.ChangeCourseNameAsync(course, name, user);
 			return Ok(result);
@@ -183,7 +182,8 @@ namespace ExamBook.Controllers
 			var course = await _courseService.GetAsync(courseId);
             
 			string description = body["description"];
-			var result = await _courseService.ChangeCourseDescriptionAsync(course, description, user);
+			var member = await _memberService.AuthorizeAsync(course.Space!, userId);
+			var result = await _courseService.ChangeCourseDescriptionAsync(course, description, member);
 			return Ok(result);
 		}
 		
@@ -195,8 +195,9 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
 			var course = await _courseService.GetAsync(courseId);
-            
-			var result = await _courseService.DeleteAsync(course, user);
+
+			var member = await _memberService.AuthorizeAsync(course.Space!, userId);
+			var result = await _courseService.DeleteAsync(course, member);
 			return Ok(result);
 		}
 		
