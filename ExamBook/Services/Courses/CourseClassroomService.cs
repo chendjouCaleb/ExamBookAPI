@@ -88,6 +88,7 @@ namespace ExamBook.Services
 			AssertHelper.NotNull(course.Space, nameof(course.Space));
 			AssertHelper.NotNull(model, nameof(model));
 			AssertHelper.NotNull(member, nameof(member));
+			AssertHelper.IsTrue(course.SpaceId == classroom.SpaceId, "Bad entity");
 
 			var members = await _memberService.ListAsync(model.MemberIds);
 			var specialities = await _specialityService.ListAsync(model.SpecialityIds);

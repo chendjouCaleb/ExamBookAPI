@@ -10,8 +10,6 @@ using ExamBook.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Traceability.Asserts;
-using Traceability.Models;
-using Traceability.Services;
 
 #pragma warning disable NUnit2005
 namespace ExamBookTest.Services
@@ -141,66 +139,34 @@ namespace ExamBookTest.Services
 
 
 		[Test]
-		public async Task AddCourseTeachers()
-		{
-			var course = (await _courseService.AddCourseAsync(_space, _courseAddModel, _adminUser)).Item;
-			var result = await _courseClassroomService.AddCourseTeachersAsync(course, _members, _adminUser);
-
-			var courseTeachers = result.Item;
-
-			foreach (var member in _members)
-			{
-				var courseMember = courseTeachers.First(cs => cs.MemberId == member.Id);
-				Assert.AreEqual(course.Id, courseMember.CourseId);
-			}
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var member1Publisher = await _publisherService.GetByIdAsync(_member1.PublisherId);
-			var member2Publisher = await _publisherService.GetByIdAsync(_member2.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(result.Event)
-				.HasName("COURSE_TEACHERS_ADD")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasPublisher(member1Publisher)
-				.HasPublisher(member2Publisher)
-				.HasData(courseTeachers);
-		}
-
-
-		[Test]
 		public async Task DeleteCourseTeacher()
 		{
-			var course = (await _courseService.AddCourseAsync(_space, _courseAddModel, _adminUser)).Item;
-			var courseMember = (await _courseClassroomService.AddAsync(course, _member1, _adminUser)).Item;
-			var @event = await _courseClassroomService.DeleteAsync(courseMember, _adminUser);
-			await _dbContext.Entry(courseMember).ReloadAsync();
 
-			Assert.NotNull(courseMember.DeletedAt);
+			var courseTeacher = (await _courseTeacherService.AddAsync(_courseClassroom, _member1, _adminMember)).Item;
+			var @event = await _courseTeacherService.DeleteAsync(courseTeacher, _adminMember);
+			await _dbContext.Entry(courseTeacher).ReloadAsync();
 
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var memberPublisher = await _publisherService.GetByIdAsync(_member1.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
+			Assert.NotNull(courseTeacher.DeletedAt);
 
-			_eventAssertionsBuilder.Build(@event)
-				.HasName("COURSE_TEACHER_DELETE")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasPublisher(memberPublisher)
-				.HasData(courseMember);
+			var assertions = _eventAssertionsBuilder.Build(@event);
+			assertions.HasName("COURSE_TEACHER_DELETE");
+			assertions.HasData(new { });
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseTeacher.SubjectId);
+			await assertions.HasPublisherIdAsync(courseTeacher.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			await assertions.HasPublisherIdAsync(_member1.PublisherId);
 		}
-
 
 		[Test]
 		public async Task CourseTeacherExists()
 		{
-			var course = (await _courseService.AddCourseAsync(_space, _courseAddModel, _adminUser)).Item;
-			await _courseClassroomService.AddAsync(course, _member1, _adminUser);
-
-			var exists = await _courseClassroomService.ContainsAsync(course, _member1);
+			await _courseTeacherService.AddAsync(_courseClassroom, _member1, _adminMember);
+			
+			var exists = await _courseTeacherService.ContainsAsync(_courseClassroom, _member1);
 			Assert.True(exists);
 		}
 
@@ -208,11 +174,11 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task CourseTeacherExists_WithDeleted_ShouldBeFalse()
 		{
-			var course = (await _courseService.AddCourseAsync(_space, _courseAddModel, _adminUser)).Item;
-			var courseMember = (await _courseClassroomService.AddAsync(course, _member1, _adminUser)).Item;
-			await _courseClassroomService.DeleteAsync(courseMember, _adminUser);
+			var courseTeacher = (await _courseTeacherService.AddAsync(_courseClassroom, _member1, _adminMember)).Item;
 
-			var exists = await _courseClassroomService.ContainsAsync(course, _member1);
+			await _courseTeacherService.DeleteAsync(courseTeacher, _adminMember);
+
+			var exists = await _courseTeacherService.ContainsAsync(_courseClassroom, _member1);
 			Assert.False(exists);
 		}
 	}
