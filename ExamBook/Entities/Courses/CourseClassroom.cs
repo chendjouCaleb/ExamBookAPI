@@ -16,6 +16,7 @@ namespace ExamBook.Entities
 		public string NormalizedCode { get; set; } = "";
 
 		public uint Coefficient { get; set; }
+		public string Description { get; set; } = "";
 
 		/// <summary>
 		/// Tells if the course is restricted to some specialities.

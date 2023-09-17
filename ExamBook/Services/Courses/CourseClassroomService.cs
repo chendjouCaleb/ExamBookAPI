@@ -171,6 +171,7 @@ namespace ExamBook.Services
 			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
 		}
 		
+		
 		public async Task<Event> ChangeCoefficientAsync(CourseClassroom courseClassroom, uint coefficient, Member adminMember)
 		{
 			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
@@ -183,6 +184,24 @@ namespace ExamBook.Services
 			var publisherIds = GetPublisherIds(courseClassroom);
 			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
 			var name = "COURSE_CLASSROOM_CHANGE_COEFFICIENT";
+			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
+		}
+		
+		public async Task<Event> ChangeDescriptionAsync(CourseClassroom courseClassroom, string description, Member adminMember)
+		{
+			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
+			AssertHelper.NotNull(courseClassroom.Classroom, nameof(courseClassroom.Classroom));
+			AssertHelper.NotNull(adminMember, nameof(adminMember));
+
+			var eventData = new ChangeValueData<string>(courseClassroom.Description, description);
+
+			courseClassroom.Description = description;
+			_dbContext.Update(courseClassroom);
+			await _dbContext.SaveChangesAsync();
+
+			var publisherIds = GetPublisherIds(courseClassroom);
+			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var name = "COURSE_CLASSROOM_CHANGE_DESCRIPTION";
 			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
 		}
 

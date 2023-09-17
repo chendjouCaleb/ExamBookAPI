@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Social.Helpers;
 using Traceability.Asserts;
-using Traceability.Models;
 using Traceability.Services;
 
 #pragma warning disable NUnit2005
@@ -143,199 +142,146 @@ namespace ExamBookTest.Services
 		public async Task AddCourseAsync()
 		{
 			_model.MemberIds = new HashSet<ulong> {_member1.Id, _member2.Id};
-			var result = await _service.AddCourseAsync(_space, _model, _adminUser);
-			var course = result.Item;
-			await _dbContext.Entry(course).ReloadAsync();
+			var result = await _service.AddAsync(_classroom, _course, _model, _adminMember);
+			var courseClassroom = result.Item;
+			await _dbContext.Entry(courseClassroom).ReloadAsync();
 
-			Assert.AreEqual(_space.Id, course.SpaceId);
-			Assert.AreEqual(_model.Name, course.Name);
-			Assert.AreEqual(StringHelper.Normalize(_model.Name), course.NormalizedName);
-			Assert.AreEqual(_model.Code, course.Code);
-			Assert.AreEqual(StringHelper.Normalize(_model.Code), course.NormalizedCode);
-			Assert.AreEqual(_model.Coefficient, course.Coefficient);
-			Assert.NotZero(course.Coefficient);
-			Assert.AreEqual(_model.Description, course.Description);
-			Assert.IsNotEmpty(course.PublisherId);
+			Assert.AreEqual(_classroom.Id, courseClassroom.ClassroomId);
+			Assert.AreEqual(_course.Id, courseClassroom.CourseId);
+			Assert.AreEqual(_model.Code, courseClassroom.Code);
+			Assert.AreEqual(StringHelper.Normalize(_model.Code), courseClassroom.NormalizedCode);
+			Assert.AreEqual(_model.Coefficient, courseClassroom.Coefficient);
+			Assert.NotZero(courseClassroom.Coefficient);
+			Assert.AreEqual(_model.Description, courseClassroom.Description);
+			
+			Assert.IsNotEmpty(courseClassroom.PublisherId);
+			Assert.IsNotEmpty(courseClassroom.SubjectId);
 
-			Assert.True(await _courseTeacherService.ContainsAsync(course, _member1));
-			Assert.True(await _courseTeacherService.ContainsAsync(course, _member2));
+			Assert.True(await _courseTeacherService.ContainsAsync(courseClassroom, _member1));
+			Assert.True(await _courseTeacherService.ContainsAsync(courseClassroom, _member2));
 
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			_eventAssertionsBuilder.Build(result.Event)
-				.HasName("COURSE_ADD")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(course);
+			var assertions = _eventAssertionsBuilder.Build(result.Event)
+				.HasName("COURSE_CLASSROOM_ADD");
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseClassroom.SubjectId);
+			await assertions.HasPublisherIdAsync(courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
+			assertions.HasData(courseClassroom);
 		}
 
 
 		[Test]
 		public async Task TryAddCourse_WithUsedCode_ShouldThrow()
 		{
-			await _service.AddCourseAsync(_space, _model, _adminUser);
-			_model.Name = Guid.NewGuid().ToString();
+			await _service.AddAsync(_classroom, _course, _model, _adminMember);
 
 			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
 			{
-				await _service.AddCourseAsync(_space, _model, _adminUser);
+				await _service.AddAsync(_classroom, _course, _model, _adminMember);
 			});
-			Assert.AreEqual("CourseCodeUsed", ex!.Code);
-			Assert.AreEqual(_model.Code, ex.Params[0]);
+			Assert.AreEqual("CourseClassroomCodeUsed", ex!.Code);
+			Assert.AreEqual(_classroom, ex.Params[0]);
+			Assert.AreEqual(_model.Code, ex.Params[1]);
 		}
 
-		[Test]
-		public async Task TryAddCourse_WithUsedName_ShouldThrow()
-		{
-			await _service.AddCourseAsync(_space, _model, _adminUser);
-			_model.Code = Guid.NewGuid().ToString();
-
-			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
-			{
-				await _service.AddCourseAsync(_space, _model, _adminUser);
-			});
-			Assert.AreEqual("CourseNameUsed", ex!.Code);
-			Assert.AreEqual(_model.Name, ex.Params[0]);
-		}
 
 
 		[Test]
 		public async Task ChangeCourseCode()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var courseClassroom = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 			var newCode = "9632854";
 
-			var eventData = new ChangeValueData<string>(course.Code, newCode);
-			var changeEvent = await _service.ChangeCourseCodeAsync(course, newCode, _adminUser);
+			var eventData = new ChangeValueData<string>(courseClassroom.Code, newCode);
+			var changeEvent = await _service.ChangeCodeAsync(courseClassroom, newCode, _adminMember);
+			await _dbContext.Entry(courseClassroom).ReloadAsync();
 
-			await _dbContext.Entry(course).ReloadAsync();
-
-			Assert.AreEqual(newCode, course.Code);
-			Assert.AreEqual(StringHelper.Normalize(newCode), course.NormalizedCode);
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			Assert.NotNull(publisher);
-			_eventAssertionsBuilder.Build(changeEvent)
-				.HasName("COURSE_CHANGE_CODE")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(eventData);
+			Assert.AreEqual(newCode, courseClassroom.Code);
+			Assert.AreEqual(StringHelper.Normalize(newCode), courseClassroom.NormalizedCode);
+			
+			var assertions = _eventAssertionsBuilder.Build(changeEvent);
+			assertions.HasName("COURSE_CLASSROOM_CHANGE_CODE");
+			assertions.HasData(eventData);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseClassroom.SubjectId);
+			await assertions.HasPublisherIdAsync(courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
 		}
 
 
 		[Test]
 		public async Task TryChangeCourseCode_WithUsedCode_ShouldThrow()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var course = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 
 			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
 			{
-				await _service.ChangeCourseCodeAsync(course, course.Code, _adminUser);
+				await _service.ChangeCodeAsync(course, course.Code, _adminMember);
 			});
-			Assert.AreEqual("CourseCodeUsed", ex!.Code);
-			Assert.AreEqual(course.Code, ex.Params[0]);
+			Assert.AreEqual("CourseClassroomCodeUsed", ex!.Code);
+			Assert.AreEqual(_classroom, ex.Params[0]);
+			Assert.AreEqual(course.Code, ex.Params[1]);
 		}
 
-		[Test]
-		public async Task ChangeCourseName()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-			var newName = "9632854";
+	
 
-			var eventData = new ChangeValueData<string>(course.Name, newName);
-			var changeEvent = await _service.ChangeCourseNameAsync(course, newName, _adminUser);
-
-			await _dbContext.Entry(course).ReloadAsync();
-
-			Assert.AreEqual(newName, course.Name);
-			Assert.AreEqual(StringHelper.Normalize(newName), course.NormalizedName);
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			Assert.NotNull(publisher);
-			_eventAssertionsBuilder.Build(changeEvent)
-				.HasName("COURSE_CHANGE_NAME")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(eventData);
-		}
-
-
-		[Test]
-		public async Task TryChangeCourseName_WithUsedName_ShouldThrow()
-		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
-
-			var ex = Assert.ThrowsAsync<UsedValueException>(async () =>
-			{
-				await _service.ChangeCourseNameAsync(course, course.Name, _adminUser);
-			});
-			Assert.AreEqual("CourseNameUsed", ex!.Message);
-			Assert.AreEqual(course.Name, ex.Params[0]);
-		}
 
 		[Test]
 		public async Task ChangeCourseDescription()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var courseClassroom = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 			var newDescription = "9632854";
 
-			var eventData = new ChangeValueData<string>(course.Description, newDescription);
-			var changeEvent = await _service.ChangeCourseDescriptionAsync(course, newDescription, _adminUser);
+			var eventData = new ChangeValueData<string>(courseClassroom.Description, newDescription);
+			var changeEvent = await _service.ChangeDescriptionAsync(courseClassroom, newDescription, _adminMember);
+			await _dbContext.Entry(courseClassroom).ReloadAsync();
 
-			await _dbContext.Entry(course).ReloadAsync();
+			Assert.AreEqual(newDescription, courseClassroom.Description);
 
-			Assert.AreEqual(newDescription, course.Description);
-
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			Assert.NotNull(publisher);
-			_eventAssertionsBuilder.Build(changeEvent)
-				.HasName("COURSE_CHANGE_DESCRIPTION")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(eventData);
+			var assertions = _eventAssertionsBuilder.Build(changeEvent);
+			assertions.HasName("COURSE_CLASSROOM_CHANGE_DESCRIPTION");
+			assertions.HasData(eventData);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseClassroom.SubjectId);
+			await assertions.HasPublisherIdAsync(courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
 		}
 
 
 		[Test]
 		public async Task ChangeCourseCoefficient()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var courseClassroom = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 			uint newCoefficient = 20;
 
-			var eventData = new ChangeValueData<uint>(course.Coefficient, newCoefficient);
-			var changeEvent = await _service.ChangeCourseCoefficientAsync(course, newCoefficient, _adminUser);
+			var eventData = new ChangeValueData<uint>(courseClassroom.Coefficient, newCoefficient);
+			var changeEvent = await _service.ChangeCoefficientAsync(courseClassroom, newCoefficient, _adminMember);
 
-			await _dbContext.Entry(course).ReloadAsync();
+			await _dbContext.Entry(courseClassroom).ReloadAsync();
 
-			Assert.AreEqual(newCoefficient, course.Coefficient);
+			Assert.AreEqual(newCoefficient, courseClassroom.Coefficient);
 
-			var publisher = await _publisherService.GetByIdAsync(course.PublisherId);
-			var spacePublisher = await _publisherService.GetByIdAsync(_space.PublisherId);
-
-			Assert.NotNull(publisher);
-			_eventAssertionsBuilder.Build(changeEvent)
-				.HasName("COURSE_CHANGE_COEFFICIENT")
-				.HasActor(_actor)
-				.HasPublisher(publisher)
-				.HasPublisher(spacePublisher)
-				.HasData(eventData);
+			var assertions = _eventAssertionsBuilder.Build(changeEvent);
+			assertions.HasName("COURSE_CLASSROOM_CHANGE_DESCRIPTION");
+			assertions.HasData(eventData);
+			await assertions.HasActorIdAsync(_adminUser.ActorId);
+			await assertions.HasActorIdAsync(_adminMember.ActorId);
+			await assertions.HasSubjectIdAsync(courseClassroom.SubjectId);
+			await assertions.HasPublisherIdAsync(courseClassroom.PublisherId);
+			await assertions.HasPublisherIdAsync(_course.PublisherId);
+			await assertions.HasPublisherIdAsync(_space.PublisherId);
 		}
 
 		[Test]
 		public async Task DeleteCourseAsync()
 		{
-			var result = await _service.AddCourseAsync(_space, _model, _adminUser);
+			var result = await _service.AddAsync(_classroom, _course, _model, _adminMember);
 			var course = result.Item;
 
 			var deleteEvent = await _service.DeleteAsync(course, _adminUser);
@@ -364,7 +310,7 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task FindCourseByCode()
 		{
-			var createdCourse = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var createdCourse = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 
 			var course = await _service.GetCourseByCodeAsync(_space, createdCourse.Code);
 			Assert.AreEqual(createdCourse.Id, course.Id);
@@ -386,7 +332,7 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task FindCourseByName()
 		{
-			var createdCourse = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var createdCourse = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 
 			var course = await _service.GetByNameAsync(_space, createdCourse.Name);
 			Assert.AreEqual(createdCourse.Id, course.Id);
@@ -408,7 +354,7 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task IsCourseByCode()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var course = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 			var hasCourse = await _service.ContainsByCode(_space, course.Code);
 			Assert.True(hasCourse);
 		}
@@ -425,7 +371,7 @@ namespace ExamBookTest.Services
 		[Test]
 		public async Task IsCourseByName()
 		{
-			var course = (await _service.AddCourseAsync(_space, _model, _adminUser)).Item;
+			var course = (await _service.AddAsync(_classroom, _course, _model, _adminMember)).Item;
 			var hasCourse = await _service.ContainsByName(_space, course.Name);
 			Assert.True(hasCourse);
 		}
