@@ -6,7 +6,7 @@
         public string NormalizedName { get; set; } = "";
         public string Description { get; set; } = "";
 
-        public Space? Space { get; set; }
+        public Space Space { get; set; } = null!;
         public ulong SpaceId { get; set; }
     }
 }

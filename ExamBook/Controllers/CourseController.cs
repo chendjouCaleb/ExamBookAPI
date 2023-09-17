@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Helpers;
-using ExamBook.Identity.Services;
 using ExamBook.Models;
 using ExamBook.Persistence;
 using ExamBook.Services;
@@ -20,17 +18,15 @@ namespace ExamBook.Controllers
 	public class CourseController:ControllerBase
 	{
 		private readonly CourseService _courseService;
-		private readonly UserService _userService;
 		private readonly SpaceService _spaceService;
 		private readonly MemberService _memberService;
 		private readonly ApplicationDbContext _dbContext;
 
 		public CourseController(CourseService courseService,
-			UserService userService, SpaceService spaceService, 
+			SpaceService spaceService, 
 			ApplicationDbContext dbContext, MemberService memberService)
 		{
 			_courseService = courseService;
-			_userService = userService;
 			_spaceService = spaceService;
 			_dbContext = dbContext;
 			_memberService = memberService;
@@ -41,22 +37,6 @@ namespace ExamBook.Controllers
 		public async Task<Course> GetAsync(ulong courseId)
 		{
 			var course = await _courseService.GetAsync(courseId);
-
-			course.CourseSpecialities = await _dbContext.CourseSpecialities
-				.Include(cs => cs.Speciality)
-				.Where(cs => cs.CourseId == courseId)
-				.ToListAsync();
-			
-			course.CourseTeachers = await _dbContext.CourseTeachers
-				.Include(ct => ct.Member)
-				.Where(cs => cs.CourseId == courseId)
-				.ToListAsync();
-			var memberUserId = course.CourseTeachers.Select(ct => ct.Member!.UserId!).ToList();
-			var users = await _userService.ListById(memberUserId);
-			foreach (var courseTeacher in course.CourseTeachers)
-			{
-				courseTeacher.Member!.User = users.Find(u => u.Id == courseTeacher.Member.UserId);
-			}
 			return course;
 		}
 
@@ -74,21 +54,12 @@ namespace ExamBook.Controllers
 
 			var courses = await query.ToListAsync();
 
-			// var courseTeachers = courses.SelectMany(c => c.CourseTeachers).ToList();
-			//
-			// var memberUserId = courseTeachers.Select(ct => ct.Member!.UserId!).ToList();
-			// var users = await _userService.ListById(memberUserId);
-			// foreach (var courseTeacher in courseTeachers)
-			// {
-			// 	courseTeacher.Member!.User = users.Find(u => u.Id == courseTeacher.Member.UserId);
-			// }
-
 			return courses;
 		}
 
 
 		[HttpGet("contains")]
-		public async Task<bool> ContainsAsync([FromQuery] ulong spaceId, [FromQuery] string name, [FromQuery] string code)
+		public async Task<bool> ContainsAsync([FromQuery] ulong spaceId, [FromQuery] string name)
 		{
 
 			if (!string.IsNullOrWhiteSpace(name))
@@ -96,14 +67,6 @@ namespace ExamBook.Controllers
 				var normalizedName = StringHelper.Normalize(name);
 				return await _dbContext.Courses
 					.Where(c => c.SpaceId == spaceId && c.NormalizedName == normalizedName)
-					.AnyAsync();
-			}
-			
-			if (!string.IsNullOrWhiteSpace(code))
-			{
-				var normalizedCode = StringHelper.Normalize(code);
-				return await _dbContext.Courses
-					.Where(c => c.SpaceId == spaceId && c.NormalizedCode == normalizedCode)
 					.AnyAsync();
 			}
 
@@ -118,7 +81,6 @@ namespace ExamBook.Controllers
 			[FromBody] CourseAddModel model)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
 			var space = await _spaceService.GetByIdAsync(spaceId);
 			var member = await _memberService.AuthorizeAsync(space, userId);
 			
@@ -134,43 +96,14 @@ namespace ExamBook.Controllers
 		public async Task<OkObjectResult> ChangeNameAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
 			var course = await _courseService.GetAsync(courseId);
 			var member = await _memberService.AuthorizeAsync(course.Space, userId);
 			string name = body["name"];
-			var result = await _courseService.ChangeCourseNameAsync(course, name, user);
+			var result = await _courseService.ChangeCourseNameAsync(course, name, member);
 			return Ok(result);
 		}
 		
 		
-		[Authorize]
-		[HttpPut("{courseId}/code")]
-		public async Task<OkObjectResult> ChangeCodeAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
-		{
-			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetAsync(courseId);
-            
-			string code = body["code"];
-			var result = await _courseService.ChangeCourseCodeAsync(course, code, user);
-			return Ok(result);
-		}
-		
-		
-			
-		[Authorize]
-		[HttpPut("{courseId}/coefficient")]
-		public async Task<OkObjectResult> ChangeCoefficientAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
-		{
-			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetAsync(courseId);
-            
-			string value = body["coefficient"];
-			var coefficient = uint.Parse(value);
-			var result = await _courseService.ChangeCourseCoefficientAsync(course, coefficient, user);
-			return Ok(result);
-		}
 		
 
 		[Authorize]
@@ -178,11 +111,10 @@ namespace ExamBook.Controllers
 		public async Task<OkObjectResult> ChangeDescriptionAsync(ulong courseId, [FromBody] IDictionary<string, string> body)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
 			var course = await _courseService.GetAsync(courseId);
             
 			string description = body["description"];
-			var member = await _memberService.AuthorizeAsync(course.Space!, userId);
+			var member = await _memberService.AuthorizeAsync(course.Space, userId);
 			var result = await _courseService.ChangeCourseDescriptionAsync(course, description, member);
 			return Ok(result);
 		}
@@ -193,10 +125,9 @@ namespace ExamBook.Controllers
 		public async Task<OkObjectResult> DeleteAsync(ulong courseId)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
 			var course = await _courseService.GetAsync(courseId);
 
-			var member = await _memberService.AuthorizeAsync(course.Space!, userId);
+			var member = await _memberService.AuthorizeAsync(course.Space, userId);
 			var result = await _courseService.DeleteAsync(course, member);
 			return Ok(result);
 		}
