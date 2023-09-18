@@ -51,6 +51,15 @@ namespace Traceability.Services
 
         public async Task<Event> EmitAsync(ICollection<Publisher> publishers, ICollection<Actor> actors, Subject subject, string name, object data)
         {
+            return await EmitAsync(publishers, new[] {subject}, actors, name, data);
+        }
+        
+        
+        public async Task<Event> EmitAsync(ICollection<Publisher> publishers,
+            ICollection<Subject> subjects, 
+            ICollection<Actor> actors, 
+            string name, object data)
+        {
             if (actors.Count == 0)
             {
                 throw new InvalidOperationException("Should provide a least one actor for event.");
@@ -58,10 +67,10 @@ namespace Traceability.Services
             Event @event = new ()
             {
                 Name = name,
-                DataValue = _dataSerializer.Serialize(data),
-                Subject = subject
+                DataValue = _dataSerializer.Serialize(data)
             };
             @event.PublisherEvents = CreateEventPublishers(publishers, @event);
+            @event.SubjectEvents = CreateEventSubjects(subjects, @event);
             @event.ActorEvents = CreateEventActors(actors, @event);
             
             await _eventRepository.SaveAsync(@event);
@@ -104,6 +113,7 @@ namespace Traceability.Services
         }
         
         
+        
         [Obsolete]
         public async Task<Event> EmitAsync(
             ICollection<string> publisherIds, 
@@ -127,10 +137,33 @@ namespace Traceability.Services
             publishers = publishers.ToHashSet();
             return publishers.Select(publisher => new PublisherEvent(publisher, @event)).ToList();
         }
+        
+        private List<SubjectEvent> CreateEventSubjects(ICollection<Subject> subjects, Event @event)
+        {
+            subjects = subjects.ToHashSet();
+            return subjects.Select(subject => new SubjectEvent(subject, @event)).ToList();
+        }
 
         public async Task<IEnumerable<Event>> GetSubscriptionEvents(IEnumerable<string> subscriptionIds)
         {
             return await _eventRepository.GetAllAsync(subscriptionIds);
+        }
+
+
+
+        public async Task<IList<Publisher>> GetPublishers(ICollection<string> publisherIds)
+        {
+            return await _publisherService.GetSetByIdAsync(publisherIds);
+        }
+        
+        public async Task<IList<Subject>> GetSubjects(ICollection<string> subjectIds)
+        {
+            return await _subjectService.GetByIdAsync(subjectIds);
+        }
+        
+        public async Task<IList<Actor>> GetActors(ICollection<string> actorIds)
+        {
+            return await _actorService.GetByIdAsync(actorIds);
         }
     }
     

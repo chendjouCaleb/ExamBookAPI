@@ -11,10 +11,8 @@ namespace Traceability.Models
         public string Name { get; set; } = "";
         public string DataValue { get; set; } = "";
 
-        public Subject Subject { get; set; } = null!;
-        public string? SubjectId { get; set; } = null!;
-
         public List<PublisherEvent> PublisherEvents { get; set; } = new();
+        public List<SubjectEvent> SubjectEvents { get; set; } = new();
         public List<ActorEvent> ActorEvents { get; set; } = new ();
     }
 }

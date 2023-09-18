@@ -39,8 +39,8 @@ namespace ExamBook.Controllers
 		public async Task<CourseSpeciality> GetAsync(ulong courseSpecialityId)
 		{
 			var courseSpeciality = await _dbContext.CourseSpecialities
-				.Include(cs => cs.Course)
-				.Include(cs => cs.Speciality)
+				.Include(cs => cs.CourseClassroom.Course)
+				.Include(cs => cs.Speciality.Space)
 				.Where(cs => cs.Id == courseSpecialityId)
 				.FirstOrDefaultAsync();
 

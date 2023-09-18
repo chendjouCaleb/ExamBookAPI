@@ -21,17 +21,35 @@ namespace ExamBook.Services
         private readonly EventService _eventService;
         private readonly SubjectService _subjectService;
         private readonly PublisherService _publisherService;
-        private readonly ILogger<CourseTeacherService> _logger;
+        private readonly ILogger<CourseSpecialityService> _logger;
 
 
         public CourseSpecialityService(ApplicationDbContext dbContext, 
-            EventService eventService, SubjectService subjectService, PublisherService publisherService, ILogger<CourseTeacherService> logger)
+            EventService eventService, SubjectService subjectService, PublisherService publisherService,
+            ILogger<CourseSpecialityService> logger)
         {
             _dbContext = dbContext;
             _eventService = eventService;
             _subjectService = subjectService;
             _publisherService = publisherService;
             _logger = logger;
+        }
+
+
+        public async Task<CourseSpeciality> GetByIdAsync(ulong id)
+        {
+            var courseSpeciality = await _dbContext.CourseSpecialities
+                .Where(cs => cs.Id == id)
+                .Include(cs => cs.Speciality.Space)
+                .Include(cs => cs.CourseClassroom.Course)
+                .FirstOrDefaultAsync();
+
+            if (courseSpeciality == null)
+            {
+                throw new ElementNotFoundException("CourseSpecialityNotFoundById", id);
+            }
+
+            return courseSpeciality;
         }
 
         public async Task<CourseSpeciality> GetCourseSpecialityAsync(ulong courseSpecialityId)
@@ -65,27 +83,24 @@ namespace ExamBook.Services
         }
 
         public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(CourseClassroom courseClassroom, 
-            Speciality speciality, User user)
+            Speciality speciality, Member adminMember)
         {
             AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
             AssertHelper.NotNull(speciality, nameof(speciality));
-            AssertHelper.NotNull(user, nameof(user));
+            AssertHelper.NotNull(adminMember, nameof(adminMember));
 
             CourseSpeciality courseSpeciality = await _CreateCourseSpecialityAsync(courseClassroom, speciality);
             var publisher = courseSpeciality.Publisher!;
             await _dbContext.AddAsync(courseSpeciality);
             await _dbContext.SaveChangesAsync();
             await _publisherService.SaveAsync(publisher);
+            await _subjectService.SaveAsync(courseSpeciality.Subject);
 
-            var publisherIds = new List<string>
-            {
-                courseClassroom.Course.Space!.PublisherId, 
-                courseClassroom.Course!.PublisherId, 
-                courseClassroom.PublisherId, 
-                speciality.PublisherId
-            };
-            var @event = await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_ADD", courseSpeciality);
+            var publisherIds = courseSpeciality.GetPublisherIds();
+            var actorIds = adminMember.GetActorIds();
+            var data = new {CourseSpecialityId = courseSpeciality.Id};
+            var @event = await _eventService.EmitAsync(publisherIds, actorIds, courseSpeciality.SubjectId, "COURSE_SPECIALITY_ADD", data);
 
             return new ActionResultModel<CourseSpeciality>(courseSpeciality, @event);
         }
@@ -143,14 +158,12 @@ namespace ExamBook.Services
             AssertHelper.NotNull(speciality, nameof(speciality));
             AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
 
-            if (courseClassroom.Course.SpaceId != speciality.SpaceId)
-            {
-                throw new IncompatibleEntityException(courseClassroom, speciality);
-            }
+            AssertHelper.IsTrue(courseClassroom.Course.SpaceId == speciality.SpaceId, "Bad entities");
+            
 
             if (await CourseSpecialityExists(courseClassroom, speciality))
             {
-                throw new IllegalOperationException("CourseSpecialityAlreadyExists");
+                throw new IllegalOperationException("CourseSpecialityAlreadyExists", courseClassroom, speciality);
             }
 
             var publisher = _publisherService.Create("COURSE_SPECIALITY_PUBLISHER");
@@ -180,6 +193,19 @@ namespace ExamBook.Services
 
             var publisherIds = new List<string> {courseSpeciality.PublisherId};
             return await _eventService.EmitAsync(publisherIds, user.ActorId, "COURSE_SPECIALITY_DELETE", courseSpeciality);
+        }
+
+
+        public HashSet<String> GetPublisherIds(CourseSpeciality courseSpeciality)
+        {
+            return new HashSet<string>
+            {
+                courseSpeciality.CourseClassroom.Course.Space.PublisherId, 
+                courseSpeciality.CourseClassroom.Course.PublisherId, 
+                courseSpeciality.CourseClassroom.PublisherId, 
+                courseSpeciality.Speciality.PublisherId,
+                courseSpeciality.PublisherId
+            };
         }
 	}
 }

@@ -22,5 +22,13 @@ namespace ExamBook.Entities
         public string ActorId { get; set; } = null!;
 
         public List<TestTeacher> TestTeachers { get; set; } = new();
+
+        public HashSet<string> GetActorIds()
+        {
+            return new HashSet<string>
+            {
+                ActorId, User!.ActorId
+            };
+        }
     }
 }
