@@ -18,12 +18,14 @@ namespace Traceability.Asserts
         public Event Event { get; set; }
         public IEnumerable<PublisherEvent> PublisherEvents { get; set; }
         public IEnumerable<ActorEvent> ActorEvents { get; set; }
+        public IEnumerable<SubjectEvent> SubjectEvents { get; set; }
 
         public EventAssertions(Event @event, IServiceProvider provider)
         {
             Event = @event;
             PublisherEvents = Event.PublisherEvents;
             ActorEvents = Event.ActorEvents;
+            SubjectEvents = Event.SubjectEvents;
             _serializer = provider.GetRequiredService<IDataSerializer>();
             _publisherService = provider.GetRequiredService<PublisherService>();
             _actorService = provider.GetRequiredService<ActorService>();
@@ -44,7 +46,7 @@ namespace Traceability.Asserts
         
         public EventAssertions HasSubject(Subject subject)
         {
-            var any = Event.SubjectId == subject.Id;
+            var any = SubjectEvents.Any(pe => pe.SubjectId == subject.Id);
 
             if (!any)
             {

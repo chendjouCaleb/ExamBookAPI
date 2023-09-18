@@ -29,5 +29,16 @@ namespace ExamBook.Entities
 		public List<CourseSession> CourseSessions { get; set; } = new();
 		public List<CourseHour> CourseHours { get; set; } = new();
 		public List<CourseTeacher> CourseTeachers { get; set; } = new();
+		
+		
+		public HashSet<string> GetPublisherIds()
+		{
+			return new HashSet<string> {
+				PublisherId, 
+				Course.PublisherId,
+				Classroom.PublisherId,
+				Classroom.Space.PublisherId
+			};
+		}
 	}
 }

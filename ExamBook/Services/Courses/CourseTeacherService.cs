@@ -116,7 +116,7 @@ namespace ExamBook.Services
 				.AddRange(members.Select(s => s.PublisherId))
 				.AddRange(publishers.Select(p => p.Id));
 			var subjectIds = subjects.Select(s => s.Id).ToList();
-			var actorIds = new[] { adminMember.ActorId, adminMember.User.ActorId};
+			var actorIds = adminMember.GetActorIds();
 			var @event =
 				await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, "COURSE_TEACHERS_ADD", courseTeachers);
 
