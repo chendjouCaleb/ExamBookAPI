@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
 using ExamBook.Exceptions;
 using ExamBook.Models;
+using ExamBook.Persistence;
 using ExamBook.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,13 +16,13 @@ namespace ExamBook.Services
 {
 	public class CourseTeacherService
 	{
-		private readonly DbContext _dbContext;
+		private readonly ApplicationDbContext _dbContext;
 		private readonly EventService _eventService;
 		private readonly SubjectService _subjectService;
 		private readonly PublisherService _publisherService;
 		private readonly ILogger<CourseTeacherService> _logger;
 
-		public CourseTeacherService(DbContext dbContext,
+		public CourseTeacherService(ApplicationDbContext dbContext,
 			EventService eventService,
 			ILogger<CourseTeacherService> logger, SubjectService subjectService, PublisherService publisherService)
 		{
@@ -56,36 +56,25 @@ namespace ExamBook.Services
 				.Where(ct => ct.DeletedAt == null)
 				.AnyAsync();
 		}
+		
 
-
-		public async Task<ActionResultModel<CourseTeacher>> AddAsync(CourseClassroom courseClassroom,
-			Member member, Member adminMember)
+		public async Task<bool> ContainsAsync(CourseClassroom courseClassroom, ulong memberId)
 		{
-			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
-			AssertHelper.NotNull(member, nameof(member));
-			AssertHelper.NotNull(adminMember, nameof(adminMember));
-			AssertHelper.NotNull(member, nameof(member));
-
-			if (await ContainsAsync(courseClassroom, member))
+			var member = await _dbContext.Set<Member>().FindAsync(memberId);
+			if (member == null)
 			{
-				throw new IllegalOperationException("CourseTeacherAlreadyExists", courseClassroom, member);
+				throw new InvalidOperationException($"Member with id={memberId} not found.");
 			}
-
-
-			CourseTeacher courseTeacher = await _CreateCourseTeacherAsync(courseClassroom, member);
-			await _dbContext.AddAsync(courseTeacher);
-			await _dbContext.SaveChangesAsync();
-
-			await _publisherService.SaveAsync(courseTeacher.Publisher!);
-			await _subjectService.SaveAsync(courseTeacher.Subject);
-
-			var publisherIds = GetPublisherIds(courseTeacher);
-			var actorIds = new[] {adminMember.ActorId, adminMember.User!.ActorId};
-			var data = new {CourseTeacher = courseTeacher.Id};
-			var @event = await _eventService.EmitAsync(publisherIds, actorIds, courseTeacher.SubjectId,
-				"COURSE_TEACHER_ADD", data);
-			_logger.LogInformation("New course Teacher: {}", data);
-			return new ActionResultModel<CourseTeacher>(courseTeacher, @event);
+			return await ContainsAsync(courseClassroom, member);
+		}
+		
+		public async Task<List<CourseTeacher>> GetAllAsync(CourseClassroom courseClassroom,
+			ICollection<Member> members)
+		{
+			var memberIds = members.Select(s => s.Id).ToHashSet();
+			return await _dbContext.CourseTeachers
+				.Where(cc => cc.CourseClassroomId == courseClassroom.Id && memberIds.Contains(cc.MemberId ?? 0))
+				.ToListAsync();
 		}
 
 
@@ -98,8 +87,14 @@ namespace ExamBook.Services
 			AssertHelper.NotNull(courseClassroom.Course.Space, nameof(courseClassroom.Course.Space));
 			AssertHelper.NotNull(members, nameof(members));
 			AssertHelper.NotNull(adminMember, nameof(adminMember));
+			
+			var duplicate = await GetAllAsync(courseClassroom, members);
+			if (members.Any())
+			{
+				throw new DuplicateValueException("CourseTeacherExists", courseClassroom, duplicate);
+			}
 
-			var courseTeachers = await _CreateCourseTeachersAsync(courseClassroom, members);
+			var courseTeachers = _CreateCourseTeachers(courseClassroom, members);
 			var subjects = courseTeachers.Select(ct => ct.Subject).ToList();
 			var publishers = courseTeachers.Select(ct => ct.Publisher!).ToList();
 			await _dbContext.AddRangeAsync(courseTeachers);
@@ -108,23 +103,23 @@ namespace ExamBook.Services
 			await _subjectService.SaveAllAsync(subjects);
 			await _publisherService.SaveAllAsync(publishers);
 
+			var otherPublisherIds = courseClassroom.GetPublisherIds()
+				.Concat(members.Select(s => s.PublisherId)).ToHashSet();
+			var otherPublishers = await _eventService.GetPublishers(otherPublisherIds);
 
-			var publisherIds = ImmutableList
-				.Create(courseClassroom.Course.Space!.PublisherId,
-					courseClassroom.Course.PublisherId,
-					courseClassroom.PublisherId)
-				.AddRange(members.Select(s => s.PublisherId))
-				.AddRange(publishers.Select(p => p.Id));
-			var subjectIds = subjects.Select(s => s.Id).ToList();
-			var actorIds = adminMember.GetActorIds();
-			var @event =
-				await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, "COURSE_TEACHERS_ADD", courseTeachers);
 
-			return new ActionResultModel<ICollection<CourseTeacher>>(courseTeachers, @event);
+			publishers = publishers.Concat(otherPublishers).ToList();
+			var actors = await _eventService.GetActors(adminMember.GetActorIds());
+			var data = new {CourseTeacherIds = courseTeachers.Select(ct => ct.Id).ToList()};
+			
+			var action = await _eventService.EmitAsync(publishers, subjects, actors,"COURSE_TEACHERS_ADD", data);
+			
+			_logger.LogInformation("New course teacher: {}", data);
+			return new ActionResultModel<ICollection<CourseTeacher>>(courseTeachers, action);
 		}
 
 
-		public async Task<CourseTeacher> _CreateCourseTeacherAsync(CourseClassroom courseClassroom, Member member)
+		public CourseTeacher _CreateCourseTeacher(CourseClassroom courseClassroom, Member member)
 		{
 			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
 			AssertHelper.NotNull(member, nameof(member));
@@ -150,61 +145,14 @@ namespace ExamBook.Services
 			return courseTeacher;
 		}
 
-		public async Task<List<CourseTeacher>> _CreateCourseTeachersAsync(CourseClassroom courseClassroom,
-			IEnumerable<Member> members)
+		public List<CourseTeacher> _CreateCourseTeachers(CourseClassroom courseClassroom, IEnumerable<Member> members)
 		{
 			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
 			AssertHelper.NotNull(members, nameof(members));
 
-			var courseSpecialities = new List<CourseTeacher>();
-			foreach (var member in members)
-			{
-				var courseMember = await _CreateCourseTeacherAsync(courseClassroom, member);
-				courseSpecialities.Add(courseMember);
-			}
-
-			return courseSpecialities;
-		}
-		
-		
-		public async Task<bool> CourseTeacherExistsAsync(CourseClassroom courseClassroom, Member member)
-		{
-			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
-			AssertHelper.NotNull(member, nameof(member));
-
-			return await _dbContext.Set<CourseTeacher>()
-				.Where(ct => ct.CourseClassroomId == courseClassroom.Id)
-				.Where(ct => ct.MemberId == member.Id)
-				.Where(ct => ct.DeletedAt == null)
-				.AnyAsync();
+			return members.Select(member => _CreateCourseTeacher(courseClassroom, member)).ToList();
 		}
 
-		public async Task<bool> CourseTeacherExists(CourseClassroom courseClassroom, ulong memberId)
-		{
-			var member = await _dbContext.Set<Member>().FindAsync(memberId);
-			if (member == null)
-			{
-				throw new InvalidOperationException($"Member with id={memberId} not found.");
-			}
-			return await CourseTeacherExistsAsync(courseClassroom, member);
-		}
-
-
-		public async Task<List<CourseTeacher>> _CreateCourseTeachersCourseAsync(CourseClassroom courseClassroom, 
-			List<Member> members)
-		{
-			var courseTeachers = new List<CourseTeacher>();
-			foreach (var member in members)
-			{
-				if (!await CourseTeacherExistsAsync(courseClassroom, member))
-				{
-					var courseTeacher = await _CreateCourseTeacherAsync(courseClassroom, member);
-					courseTeachers.Add(courseTeacher);
-				}
-			}
-
-			return courseTeachers;
-		}
 
 		public async Task<Event> SetAsPrincipalAsync(CourseTeacher courseTeacher, Member member)
 		{
@@ -270,7 +218,7 @@ namespace ExamBook.Services
 			AssertHelper.NotNull(courseTeacher, nameof(courseTeacher));
 			AssertHelper.NotNull(courseTeacher.Member, nameof(courseTeacher.Member));
 			AssertHelper.NotNull(courseTeacher.CourseClassroom, nameof(courseTeacher.CourseClassroom));
-			AssertHelper.NotNull(courseTeacher.CourseClassroom!.Course, nameof(courseTeacher.CourseClassroom.Course));
+			AssertHelper.NotNull(courseTeacher.CourseClassroom.Course, nameof(courseTeacher.CourseClassroom.Course));
 			AssertHelper.NotNull(courseTeacher.CourseClassroom.Course.Space,
 				nameof(courseTeacher.CourseClassroom.Course.Space));
 			AssertHelper.NotNull(courseTeacher.Member, nameof(courseTeacher.Member));
@@ -281,9 +229,9 @@ namespace ExamBook.Services
 			return new HashSet<string>
 			{
 				courseTeacher.PublisherId,
-				courseTeacher.CourseClassroom!.PublisherId,
+				courseTeacher.CourseClassroom.PublisherId,
 				courseTeacher.CourseClassroom.Course.PublisherId,
-				courseTeacher.CourseClassroom.Course.Space!.PublisherId,
+				courseTeacher.CourseClassroom.Course.Space.PublisherId,
 				courseTeacher.Member!.PublisherId
 			};
 		}
