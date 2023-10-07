@@ -9,9 +9,11 @@ namespace ExamBook.Entities
         public CourseClassroom CourseClassroom { get; set; } = null!;
         public ulong? CourseClassroomId { get; set; }
 
+        public ClassroomSpeciality ClassroomSpeciality { get; set; } = null!;
+        public ulong ClassroomSpecialityId { get; set; }
 
-        public Speciality Speciality { get; set; } = null!;
-        public ulong SpecialityId { get; set; }
+        // public Speciality Speciality { get; set; } = null!;
+        //public ulong SpecialityId { get; set; }
         
         
         public HashSet<string> GetPublisherIds()
@@ -21,7 +23,8 @@ namespace ExamBook.Entities
                 CourseClassroom.Course.Space.PublisherId, 
                 CourseClassroom.Course.PublisherId, 
                 CourseClassroom.PublisherId, 
-                Speciality.PublisherId,
+                ClassroomSpeciality.PublisherId,
+                ClassroomSpeciality.Speciality!.PublisherId,
                 PublisherId
             };
         }

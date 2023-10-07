@@ -19,19 +19,29 @@ namespace ExamBook.Controllers
 	{
 		
 		private readonly CourseService _courseService;
+		private readonly MemberService _memberService;
+		private readonly CourseClassroomService _courseClassroomService;
 		private readonly SpecialityService _specialityService;
+		private readonly CourseSpecialityService _courseSpecialityService;
+		private readonly ClassroomSpecialityService _classroomSpecialityService;
 		private readonly UserService _userService;
 		private readonly ApplicationDbContext _dbContext;
 
 		public CourseSpecialityController(SpecialityService specialityService, 
 			UserService userService, 
 			ApplicationDbContext dbContext, 
-			CourseService courseService)
+			CourseService courseService, CourseClassroomService courseClassroomService, 
+			ClassroomSpecialityService classroomSpecialityService, 
+			CourseSpecialityService courseSpecialityService, MemberService memberService)
 		{
 			_specialityService = specialityService;
 			_userService = userService;
 			_dbContext = dbContext;
 			_courseService = courseService;
+			_courseClassroomService = courseClassroomService;
+			_classroomSpecialityService = classroomSpecialityService;
+			_courseSpecialityService = courseSpecialityService;
+			_memberService = memberService;
 		}
 
 
@@ -54,15 +64,22 @@ namespace ExamBook.Controllers
 
 		
 		[HttpGet]
-		public async Task<IList<CourseSpeciality>> ListAsync([FromQuery] ulong? courseId, [FromQuery] ulong? specialityId)
+		public async Task<IList<CourseSpeciality>> ListAsync([FromQuery] ulong? courseId, 
+			[FromQuery] ulong? courseClassroomId, 
+			[FromQuery] ulong? specialityId)
 		{
 			IQueryable<CourseSpeciality> query = _dbContext.CourseSpecialities
-				.Include(cs => cs.Course)
+				.Include(cs => cs.CourseClassroom)
 				.Include(cs => cs.Speciality);
 
 			if (courseId != null)
 			{
-				query = query.Where(cs => cs.CourseId == courseId);
+				query = query.Where(cs => cs.CourseClassroom.CourseId == courseId);
+			}
+			
+			if (courseClassroomId != null)
+			{
+				query = query.Where(cs => cs.CourseClassroomId == courseClassroomId);
 			}
 			
 			if (specialityId != null)
@@ -74,34 +91,23 @@ namespace ExamBook.Controllers
 		}
 		
 		
-		[Authorize]
-		[HttpPost]
-		public async Task<OkObjectResult> AddSpecialityAsync(ulong courseId, [FromBody] ulong specialityId)
-		{
-			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
-			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetAsync(courseId);
-			var speciality = await _specialityService.GetAsync(specialityId);
-
-
-			var result = await _courseService.AddCourseSpecialityAsync(course, speciality, user);
-			return Ok(result.Item);
-		}
 		
 		[Authorize]
-		[HttpPost("{courseId}/specialities")]
-		public async Task<OkObjectResult> AddSpecialitiesAsync(ulong courseId, [FromBody] HashSet<ulong> specialityId)
+		[HttpPost]
+		public async Task<OkObjectResult> AddSpecialitiesAsync(ulong courseClassroomId,
+			[FromQuery] HashSet<ulong> classroomSpecialityIds)
 		{
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
-			var course = await _courseService.GetAsync(courseId);
+			var courseClassroom = await _courseClassroomService.GetAsync(courseClassroomId);
+			var courseSpecialities = await _classroomSpecialityService.
 			var specialities = specialityId
 				.Select(async id => await _specialityService.GetAsync(id))
 				.Select(t => t.Result)
 				.ToList();
 
 
-			var result = await _courseService.AddCourseSpecialitiesAsync(course, specialities, user);
+			var result = await _spec
 			return Ok(result.Item);
 		}
 
@@ -113,8 +119,12 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
 			
-			var courseSpeciality = await _courseService.GetCourseSpecialityAsync(courseSpecialityId);
-			var result = await _courseService.DeleteCourseSpecialityAsync(courseSpeciality, user);
+			var courseSpeciality = await _courseSpecialityService.GetByIdAsync(courseSpecialityId);
+			
+			var member = await _memberService.AuthorizeAsync(courseSpeciality.CourseClassroom.Classroom.Space, userId);
+			
+			
+			var result = await _courseSpecialityService.DeleteAsync(courseSpeciality, user);
 			return Ok(result);
 		}
 	}
