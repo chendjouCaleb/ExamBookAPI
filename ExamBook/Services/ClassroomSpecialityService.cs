@@ -34,6 +34,39 @@ namespace ExamBook.Services
 			_publisherService = publisherService;
 		}
 
+		public async Task<ClassroomSpeciality> GetAsync(ulong id)
+		{
+			var classroomSpeciality = await _dbContext.ClassroomSpecialities
+				.Include(cs => cs.Classroom!.Space)
+				.Include(cs => cs.Speciality)
+				.Where(cs => cs.Id == id)
+				.FirstOrDefaultAsync();
+
+			if (classroomSpeciality == null)
+			{
+				throw new ElementNotFoundException("ClassroomSpecialityNotFoundById", id);
+			}
+
+			return classroomSpeciality;
+		}
+		
+		public async Task<List<ClassroomSpeciality>> GetAsync(HashSet<ulong> ids)
+		{
+			var classroomSpecialities = await _dbContext.ClassroomSpecialities
+				.Where(s => ids.Contains(s.Id))
+				.Include(r => r.Classroom!.Space)
+				.Include(cs => cs.Speciality)
+				.ToListAsync();
+
+			var notFounds = ids.TakeWhile(id => classroomSpecialities.All(s => s.Id != id));
+			if (notFounds.Any())
+			{
+				throw new ElementNotFoundException("ClassroomSpecialityNotFoundByIds", notFounds);
+			}
+
+			return classroomSpecialities;
+		}
+
 
 		public async Task<ActionResultModel<ClassroomSpeciality>> AddSpeciality(Classroom classroom,
 			Speciality speciality, User user)
