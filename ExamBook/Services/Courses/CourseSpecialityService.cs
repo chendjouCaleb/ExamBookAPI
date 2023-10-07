@@ -78,7 +78,7 @@ namespace ExamBook.Services
 		}
 		
 		
-		 public async Task<bool> CourseSpecialityExists(CourseClassroom courseClassroom, Speciality speciality)
+		 public async Task<bool> Exists(CourseClassroom courseClassroom, Speciality speciality)
         {
             AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
             AssertHelper.NotNull(speciality, nameof(speciality));
@@ -90,7 +90,7 @@ namespace ExamBook.Services
                 .AnyAsync();
         }
 
-        public async Task<ActionResultModel<CourseSpeciality>> AddCourseSpecialityAsync(CourseClassroom courseClassroom, 
+        public async Task<ActionResultModel<CourseSpeciality>> AddAsync(CourseClassroom courseClassroom, 
             Speciality speciality, Member adminMember)
         {
             AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));
@@ -98,7 +98,7 @@ namespace ExamBook.Services
             AssertHelper.NotNull(speciality, nameof(speciality));
             AssertHelper.NotNull(adminMember, nameof(adminMember));
             
-            if (await CourseSpecialityExists(courseClassroom, speciality))
+            if (await Exists(courseClassroom, speciality))
             {
                 throw new IllegalOperationException("CourseSpecialityAlreadyExists", courseClassroom, speciality);
             }

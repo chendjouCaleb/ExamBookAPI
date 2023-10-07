@@ -28,9 +28,7 @@ namespace ExamBookTest.Services
 		private User _user1 = null!;
 		
 		private Member _adminMember = null!;
-
 		private Space _space = null!;
-
 		private CourseAddModel _model = null!;
 
 

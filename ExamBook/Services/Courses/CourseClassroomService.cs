@@ -144,8 +144,20 @@ namespace ExamBook.Services
 			_logger.LogInformation("New CourseClassroom: {}", courseClassroom);
 			return new ActionResultModel<CourseClassroom>(courseClassroom, action);
 		}
-		
-		
+
+
+		public async Task<Event> GeneralizeAsync(CourseClassroom courseClassroom)
+		{
+			throw new NotImplementedException();
+		}
+
+
+		public async Task<Event> SpecializeAsync()
+		{
+			throw new NotImplementedException();
+		}
+
+
 		public async Task<Event> ChangeCodeAsync(CourseClassroom courseClassroom, string code, Member adminMember)
 		{
 			AssertHelper.NotNull(courseClassroom, nameof(courseClassroom));

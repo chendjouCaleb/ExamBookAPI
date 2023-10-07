@@ -32,14 +32,13 @@ namespace ExamBookTest.Services
         private DbContext _dbContext = null!;
         private User _adminUser = null!;
         private Actor _actor = null!;
+        
+        private User _user1 = null!;
+        private User _user2 = null!;
 
-        private User _adminUser;
-        private User _user1;
-        private User _user2;
-
-        private Member _member1;
-        private Member _member2;
-        private Member _adminMember;
+        private Member _member1 = null!;
+        private Member _member2 = null!;
+        private Member _adminMember = null!;
 
         private Space _space = null!;
         private Speciality _speciality1 = null!;
