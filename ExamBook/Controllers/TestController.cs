@@ -141,7 +141,7 @@ namespace ExamBook.Controllers
 			var courseSpecialities = await _dbContext.CourseSpecialities
 				.Where(cs => cs.CourseClassroomId == courseClassroom.Id)
 				.ToListAsync();
-			var specialityIds = courseSpecialities.Select(cs => cs.SpecialityId)
+			var specialityIds = courseSpecialities.Select(cs => cs.ClassroomSpecialityId)
 				.ToList();
 
 			var examinationSpecialities = await _dbContext.ExaminationSpecialities

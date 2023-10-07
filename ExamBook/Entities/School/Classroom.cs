@@ -1,4 +1,6 @@
-﻿namespace ExamBook.Entities
+﻿using System.Collections.Generic;
+
+namespace ExamBook.Entities
 {
 	public class Classroom:Entity
 	{
@@ -10,6 +12,8 @@
 
 		public Space Space { get; set; } = null!;
 		public ulong SpaceId { get; set; }
+
+		public List<ClassroomSpeciality> ClassroomSpecialities { get; set; } = new();
 	}
 
 

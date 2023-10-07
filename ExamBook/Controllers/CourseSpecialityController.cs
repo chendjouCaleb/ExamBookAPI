@@ -115,7 +115,7 @@ namespace ExamBook.Controllers
 			var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
 			var user = await _userService.GetByIdAsync(userId);
 
-			var courseSpeciality = await _courseSpecialityService.GetByIdAsync(courseSpecialityId);
+			var courseSpeciality = await _courseSpecialityService.GetAsync(courseSpecialityId);
 
 			var member = await _memberService.AuthorizeAsync(courseSpeciality.CourseClassroom.Classroom.Space, user.Id);
 

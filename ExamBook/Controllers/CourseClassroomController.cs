@@ -44,7 +44,7 @@ namespace ExamBook.Controllers
 			var courseClassroom = await _courseClassroomService.GetAsync(courseClassroomId);
 
 			courseClassroom.CourseSpecialities = await _dbContext.CourseSpecialities
-				.Include(cs => cs.Speciality)
+				.Include(cs => cs.ClassroomSpeciality.Speciality)
 				.Where(cs => cs.CourseClassroomId == courseClassroomId)
 				.ToListAsync();
 

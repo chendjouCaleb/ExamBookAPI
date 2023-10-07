@@ -35,7 +35,7 @@ namespace ExamBook.Services
         }
 
 
-        public async Task<CourseSpeciality> GetByIdAsync(ulong id)
+        public async Task<CourseSpeciality> GetAsync(ulong id)
         {
             var courseSpeciality = await _dbContext.CourseSpecialities
                 .Where(cs => cs.Id == id)
@@ -75,6 +75,7 @@ namespace ExamBook.Services
                 .AnyAsync();
         }
 
+       
 
          public async Task<ActionResultModel<List<CourseSpeciality>>> AddAsync(
             CourseClassroom courseClassroom, List<ClassroomSpeciality> classroomSpecialities, Member adminMember)
