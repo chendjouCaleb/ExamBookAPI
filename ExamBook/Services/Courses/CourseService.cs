@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamBook.Entities;
@@ -28,13 +27,16 @@ namespace ExamBook.Services
 
         public CourseService(DbContext dbContext, ILogger<CourseService> logger, 
             PublisherService publisherService, 
-            EventService eventService, MemberService memberService)
+            EventService eventService, 
+            MemberService memberService, 
+            SubjectService subjectService)
         {
             _dbContext = dbContext;
             _logger = logger;
             _publisherService = publisherService;
             _eventService = eventService;
             _memberService = memberService;
+            _subjectService = subjectService;
         }
         
         
@@ -124,14 +126,13 @@ namespace ExamBook.Services
             _logger.LogInformation("New course");
 
             var publisherIds = new[] { publisher.Id, space.PublisherId };
-            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+            var actors = await _eventService.GetActors(adminMember.GetActorIds());
+            var publishers = await _eventService.GetPublishers(publisherIds);
             var data = new {CourseId = course.Id};
-            var @event = await _eventService.EmitAsync(publisherIds, actorIds,subject.Id, "COURSE_ADD", data);
+            var @event = await _eventService.EmitAsync(publishers, actors,subject, "COURSE_ADD", data);
             return new ActionResultModel<Course>(course, @event);
         }
 
-        
-        
         
 
         public async Task<Event> ChangeCourseNameAsync(Course course, string name, Member adminMember)
@@ -140,9 +141,9 @@ namespace ExamBook.Services
             AssertHelper.NotNull(course.Space, nameof(course.Space));
             AssertHelper.NotNull(adminMember, nameof(adminMember));
 
-            if (await ContainsByName(course.Space!, name))
+            if (await ContainsByName(course.Space, name))
             {
-                throw new UsedValueException("CourseNameUsed", course.Space!, name);
+                throw new UsedValueException("CourseNameUsed", course.Space, name);
             }
 
             var eventData = new ChangeValueData<string>(course.Name, name);
@@ -152,12 +153,11 @@ namespace ExamBook.Services
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
             
-            var publisherIds = new List<string> {
-                course.PublisherId, 
-                course.Space!.PublisherId
-            };
-            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
-            return await _eventService.EmitAsync(publisherIds, actorIds,course.SubjectId, "COURSE_CHANGE_NAME", eventData);
+            var publisherIds = new [] { course.PublisherId, course.Space.PublisherId };
+            var actors = await _eventService.GetActors(adminMember.GetActorIds());
+            var publishers = await _eventService.GetPublishers(publisherIds);
+            var subject = await _subjectService.GetByIdAsync(course.SubjectId);
+            return await _eventService.EmitAsync(publishers, actors, subject, "COURSE_CHANGE_NAME", eventData);
         }
 
 
@@ -168,16 +168,17 @@ namespace ExamBook.Services
             AssertHelper.NotNull(course, nameof(course));
             AssertHelper.NotNull(course.Space, nameof(course.Space));
 
-            var eventData = new ChangeValueData<string>(course.Description, description);
+            var data = new ChangeValueData<string>(course.Description, description);
 
             course.Description = description;
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> {course.PublisherId, course.Space!.PublisherId};
-            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
-            return await _eventService.EmitAsync(publisherIds, actorIds, course.SubjectId, "COURSE_CHANGE_DESCRIPTION",
-                eventData);
+            var publisherIds = new [] { course.PublisherId, course.Space.PublisherId };
+            var actors = await _eventService.GetActors(adminMember.GetActorIds());
+            var publishers = await _eventService.GetPublishers(publisherIds);
+            var subject = await _subjectService.GetByIdAsync(course.SubjectId);
+            return await _eventService.EmitAsync(publishers, actors, subject, "COURSE_CHANGE_DESCRIPTION", data);
         }
 
 
@@ -191,13 +192,15 @@ namespace ExamBook.Services
             course.Name = "";
             course.NormalizedName = "";
             course.Description = "";
-            course.DeletedAt = DateTime.UtcNow;
+            course.DeletedAt = DateTimeOffset.UtcNow;
             _dbContext.Update(course);
             await _dbContext.SaveChangesAsync();
 
-            var publisherIds = new List<string> { course.Space!.PublisherId, course.PublisherId };
-            var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
-            return await _eventService.EmitAsync(publisherIds,  actorIds, course.SubjectId, "COURSE_DELETE", course);
+            var publisherIds = new [] { course.PublisherId, course.Space.PublisherId };
+            var actors = await _eventService.GetActors(adminMember.GetActorIds());
+            var publishers = await _eventService.GetPublishers(publisherIds);
+            var subject = await _subjectService.GetByIdAsync(course.SubjectId);
+            return await _eventService.EmitAsync(publishers, actors, subject, "COURSE_DELETE", course);
         }
 
         public async Task DestroyAsync(Course course, User user)
@@ -210,11 +213,11 @@ namespace ExamBook.Services
                 .ToListAsync();
             
             var courseSpecialities = await _dbContext.Set<CourseSpeciality>()
-                .Where(cs => cs.CourseClassroom!.CourseId == course.Id)
+                .Where(cs => cs.CourseClassroom.CourseId == course.Id)
                 .ToListAsync();
             
             var courseTeachers = await _dbContext.Set<CourseTeacher>()
-                .Where(ct => ct.CourseClassroom!.CourseId == course.Id)
+                .Where(ct => ct.CourseClassroom.CourseId == course.Id)
                 .ToListAsync();
             
             _dbContext.RemoveRange(courseClassrooms);

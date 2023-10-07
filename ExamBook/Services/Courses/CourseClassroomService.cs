@@ -113,6 +113,7 @@ namespace ExamBook.Services
 				Course = course,
 				Classroom = classroom,
 				Code = model.Code,
+				NormalizedCode = normalizedCode,
 				Coefficient = model.Coefficient,
 				Subject = subject,
 				SubjectId = subject.Id,
@@ -133,12 +134,14 @@ namespace ExamBook.Services
 			await _publisherService.SaveAsync(publisher);
 
 			var publisherIds = new[]
-				{course.Space!.PublisherId, course.PublisherId, classroom.PublisherId, publisher.Id};
-			var actorIds = new[] {member.User!.ActorId, member.ActorId};
+				{course.Space.PublisherId, course.PublisherId, classroom.PublisherId, publisher.Id};
+			var publishers = await _eventService.GetPublishers(publisherIds);
+			var actors = await _eventService.GetActors(member.GetActorIds());
 			var data = new {CourseClassroomId = courseClassroom.Id};
-			var action = await _eventService.EmitAsync(publisherIds, actorIds, subject.Id, "COURSE_CLASSROOM_PUBLISHER",
+			var action = await _eventService.EmitAsync(publishers, actors, subject, "COURSE_CLASSROOM_PUBLISHER",
 				data);
 
+			_logger.LogInformation("New CourseClassroom: {}", courseClassroom);
 			return new ActionResultModel<CourseClassroom>(courseClassroom, action);
 		}
 		
@@ -162,15 +165,12 @@ namespace ExamBook.Services
 			_dbContext.Update(courseClassroom);
 			await _dbContext.SaveChangesAsync();
             
-			var publisherIds = new List<string> {
-				courseClassroom.PublisherId, 
-				courseClassroom.Course.PublisherId,
-				classroom.PublisherId,
-				classroom.Space.PublisherId
-			};
-			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var publisherIds = GetPublisherIds(courseClassroom);
+			var publishers = await _publisherService.GetSetByIdAsync(publisherIds);
+			var actors = await _eventService.GetActors(adminMember.GetActorIds());
+			var subject = await _subjectService.GetByIdAsync(courseClassroom.SubjectId);
 			var name = "COURSE_CLASSROOM_CHANGE_CODE";
-			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
+			return await _eventService.EmitAsync(publishers, actors, subject, name, eventData);
 		}
 		
 		
@@ -184,9 +184,11 @@ namespace ExamBook.Services
 			await _dbContext.SaveChangesAsync();
 
 			var publisherIds = GetPublisherIds(courseClassroom);
-			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var publishers = await _publisherService.GetSetByIdAsync(publisherIds);
+			var actors = await _eventService.GetActors(adminMember.GetActorIds());
+			var subject = await _subjectService.GetByIdAsync(courseClassroom.SubjectId);
 			var name = "COURSE_CLASSROOM_CHANGE_COEFFICIENT";
-			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
+			return await _eventService.EmitAsync(publishers, actors, subject, name, eventData);
 		}
 		
 		public async Task<Event> ChangeDescriptionAsync(CourseClassroom courseClassroom, string description, Member adminMember)
@@ -202,9 +204,11 @@ namespace ExamBook.Services
 			await _dbContext.SaveChangesAsync();
 
 			var publisherIds = GetPublisherIds(courseClassroom);
-			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var publishers = await _publisherService.GetSetByIdAsync(publisherIds);
+			var actors = await _eventService.GetActors(adminMember.GetActorIds());
+			var subject = await _subjectService.GetByIdAsync(courseClassroom.SubjectId);
 			var name = "COURSE_CLASSROOM_CHANGE_DESCRIPTION";
-			return await _eventService.EmitAsync(publisherIds, actorIds, courseClassroom.SubjectId, name, eventData);
+			return await _eventService.EmitAsync(publishers, actors, subject, name, eventData);
 		}
 
 		
@@ -222,9 +226,11 @@ namespace ExamBook.Services
 			await _dbContext.SaveChangesAsync();
 
 			var publisherIds = GetPublisherIds(courseClassroom);
-			var actorIds = new[] {adminMember.User!.ActorId, adminMember.ActorId};
+			var publishers = await _publisherService.GetSetByIdAsync(publisherIds);
+			var actors = await _eventService.GetActors(adminMember.GetActorIds());
+			var subject = await _subjectService.GetByIdAsync(courseClassroom.SubjectId);
 			var data = new {CourseClassroomId = courseClassroom.Id};
-			return await _eventService.EmitAsync(publisherIds,  actorIds, courseClassroom.SubjectId, 
+			return await _eventService.EmitAsync(publishers,  actors, subject, 
 				"COURSE_CLASSROOM_DELETE", data);
 		}
 
